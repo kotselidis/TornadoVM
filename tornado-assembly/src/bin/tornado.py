@@ -77,6 +77,7 @@ __CUDNN_MODULE__ = "tornado.cudnn"
 __CUSPARSE_MODULE__ = "tornado.cusparse"
 __CUDF_MODULE__ = "tornado.cudf"
 __CUTLASS_MODULE__ = "tornado.cutlass"
+__SNMP4J_MODULE__ = "snmp4j"
 
 # ########################################################
 # JAVA FLAGS
@@ -1336,6 +1337,13 @@ class TornadoVMRunnerTool():
         if ("cuda-backend" in self.listOfBackends):
             javaFlags = javaFlags + "@" + cuda + " "
             tornadoAddModules = tornadoAddModules + "," + __CUDA_MODULE__ + "," + __CUBLAS_MODULE__ + "," + __CURAND_MODULE__ + "," + __CUFFT_MODULE__ + "," + __CUDNN_MODULE__ + "," + __CUSPARSE_MODULE__ + "," + __CUTLASS_MODULE__ + "," + __CUDF_MODULE__
+
+        # snmp4j is an optional (requires static) dependency of tornado.runtime, used only by the
+        # UPS power reader. It is an automatic module, and resolving any automatic module drags every
+        # non-modular jar in share/java/tornado into the boot layer -- which stops the JDK from
+        # archiving the module graph in a CDS/AOT (Project Leyden) cache. Resolve it only on request.
+        if (args.jvm_options != None and "tornado.ups.ip" in args.jvm_options):
+            tornadoAddModules = tornadoAddModules + "," + __SNMP4J_MODULE__
 
         javaFlags = javaFlags + tornadoAddModules + " "
 
