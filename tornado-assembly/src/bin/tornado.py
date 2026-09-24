@@ -416,6 +416,10 @@ class TornadoVMRunnerTool():
         # with the frozen JDK-21 jvmci classes so the runtime SPI matches the compiled code
         # (uniform vendoring; mirrors the compile-time --patch-module in the jdk25/jdk26 profiles).
         self.jvmci_patched = 22 <= self.java_version <= 26
+        # share/java/graalJars only needs --upgrade-module-path where the platform ships same-named
+        # org.graalvm.* modules (GraalVM); elsewhere on JDK 22+ it goes on --module-path, which keeps
+        # the command line usable with a Project Leyden AOT cache (see buildTornadoVMOptions).
+        self.graal_jars_on_module_path = self.java_version >= 22 and not self.isGraalVM
         self.sdk_jdk_floor, self.sdk_jdk_preview = self.readSDKJDKContract()
         self.checkCompatibilityWithTornadoVM()
         self.platform = sys.platform
@@ -1044,6 +1048,10 @@ class TornadoVMRunnerTool():
             tornadoFlags = tornadoFlags + " -Djava.ext.dirs=" + self.sdk + "/share/java/tornado "
         else:
             tornadoFlags = tornadoFlags + " --module-path ." + os.pathsep + self.sdk + "/share/java/tornado"
+            # graalJars rides on the plain module path whenever the platform ships no module it could
+            # shadow (see the --upgrade-module-path block below for the GraalVM case).
+            if (self.graal_jars_on_module_path):
+                tornadoFlags = tornadoFlags + os.pathsep + self.sdk + "/share/java/graalJars"
             # On JDK 27+ the platform no longer ships jdk.internal.vm.ci; add the vendored
             # same-named module. It must NOT be on the module-path on JDK <=26 (the platform
             # module of the same name would cause a "two versions of module" resolution error).
@@ -1083,9 +1091,15 @@ class TornadoVMRunnerTool():
             # org.graalvm.word.impl.WordBoxFactory, on GraalVM 22+), it fails with
             # NoClassDefFoundError at first use instead of a build-time or startup error.
             # --upgrade-module-path is the JPMS-sanctioned way to supply a replacement for a
-            # module that already exists in the boot layer; under a non-GraalVM JDK, where no
-            # module of these names exists at all, it behaves exactly like --module-path.
-            tornadoFlags = tornadoFlags + " --upgrade-module-path " + self.sdk + "/share/java/graalJars"
+            # module that already exists in the boot layer, so GraalVM keeps it.
+            #
+            # Under a non-GraalVM JDK 22+ no module of these names exists, so the upgrade path buys
+            # nothing -- and it costs Project Leyden: the JVM refuses to dump or map a CDS/AOT cache
+            # (-XX:AOTCacheOutput / -XX:AOTCache) when --upgrade-module-path is given. There the
+            # jars go on --module-path instead (above). JDK 21 keeps the upgrade path unchanged: it
+            # has no AOT cache to gain, and its platform still ships jdk.internal.vm.compiler.
+            if (not self.graal_jars_on_module_path):
+                tornadoFlags = tornadoFlags + " --upgrade-module-path " + self.sdk + "/share/java/graalJars"
 
         tornadoFlags = tornadoFlags + " "
 
@@ -1294,8 +1308,9 @@ class TornadoVMRunnerTool():
 
         javaFlags = javaFlags + tornadoFlags + __TORNADOVM_PROVIDERS__ + " "
 
-        # share/java/graalJars goes on --upgrade-module-path as a WHOLE (see above), and that
-        # includes tornado-graal-<ver>.jar. The directory holds two kinds of module:
+        # share/java/graalJars goes on --upgrade-module-path as a WHOLE (see above) whenever the
+        # upgrade path is used (GraalVM, and JDK 21), and that includes tornado-graal-<ver>.jar.
+        # On any other JDK 22+ the whole directory is on --module-path instead. The directory holds two kinds of module:
         #
         #   org.graalvm.word / .collections / .truffle.compiler   original names, not relocated
         #   tornado.graal                                          TornadoVM's relocated compiler
