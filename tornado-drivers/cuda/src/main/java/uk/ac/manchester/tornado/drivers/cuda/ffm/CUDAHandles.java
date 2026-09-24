@@ -22,9 +22,10 @@
 package uk.ac.manchester.tornado.drivers.cuda.ffm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * The opaque {@code long} handles the CUDA backend's Java layer passes around, and the state each
@@ -41,6 +42,16 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p>
  * Handles start above zero because the Java layer already treats {@code 0} as "no handle".
+ *
+ * <p>
+ * The table is on the dispatch hot path: every kernel launch and every transfer resolves several
+ * handles and registers and releases events. It therefore avoids allocating: a handle encodes a slot
+ * index (low 32 bits, offset by {@link #FIRST_HANDLE}) and that slot's generation (high 32 bits).
+ * Slots are recycled through a free list; releasing a slot bumps its generation, so a stale handle
+ * to a recycled slot still resolves to {@code null}. {@link #resolve} is lock-free: it reads the
+ * slot's generation, the object, then the generation again. {@link #register} and {@link #release}
+ * are serialised on a lock. Slots live in fixed-size chunks that are allocated on demand and never
+ * moved, so a concurrent reader never sees a stale copy of the table.
  */
 public final class CUDAHandles {
 
@@ -53,30 +64,136 @@ public final class CUDAHandles {
      */
     private static final long FIRST_HANDLE = 0x1000_0000L;
 
-    private static final AtomicLong NEXT_HANDLE = new AtomicLong(FIRST_HANDLE);
+    private static final int CHUNK_BITS = 10;
+    private static final int CHUNK_SIZE = 1 << CHUNK_BITS;
+    private static final int CHUNK_MASK = CHUNK_SIZE - 1;
+    private static final int MAX_CHUNKS = 1 << 14;
 
-    private static final ConcurrentHashMap<Long, Object> OBJECTS = new ConcurrentHashMap<>();
+    /** Live handles the table can hold at once (16M); slot indices stay far below 2^32 - FIRST_HANDLE. */
+    static final int MAX_SLOTS = MAX_CHUNKS * CHUNK_SIZE;
+
+    private static final AtomicReferenceArray<Chunk> CHUNKS = new AtomicReferenceArray<>(MAX_CHUNKS);
+
+    private static final Object LOCK = new Object();
+
+    /** Recycled slots (a stack), guarded by {@link #LOCK}. */
+    private static int[] freeSlots = new int[CHUNK_SIZE];
+    private static int freeCount;
+
+    /** Next never-used slot, guarded by {@link #LOCK}. */
+    private static int nextSlot;
+
+    /**
+     * A fixed block of slots. {@code generations[i]} is the generation a handle to slot {@code i}
+     * must carry to resolve; it starts at 1 (so every handle is above {@code 2^32}) and is bumped on
+     * every release, which invalidates all handles issued for the slot so far.
+     */
+    private static final class Chunk {
+        private final AtomicIntegerArray generations = new AtomicIntegerArray(CHUNK_SIZE);
+        private final AtomicReferenceArray<Object> objects = new AtomicReferenceArray<>(CHUNK_SIZE);
+
+        Chunk() {
+            for (int i = 0; i < CHUNK_SIZE; i++) {
+                generations.setPlain(i, 1);
+            }
+        }
+    }
 
     private CUDAHandles() {
     }
 
+    private static long encode(int slot, int generation) {
+        return ((long) generation << 32) | (FIRST_HANDLE + slot);
+    }
+
+    /** The slot a handle names, or {@code -1} if it cannot be one this table issued. */
+    private static int slotOf(long handle) {
+        long slot = (handle & 0xFFFF_FFFFL) - FIRST_HANDLE;
+        return (slot >= 0 && slot < MAX_SLOTS && (handle >>> 32) > 0) ? (int) slot : -1;
+    }
+
     /** Registers {@code object} and returns the handle the Java layer will address it by. */
     public static long register(Object object) {
-        long handle = NEXT_HANDLE.getAndIncrement();
-        OBJECTS.put(handle, object);
-        return handle;
+        synchronized (LOCK) {
+            int slot;
+            if (freeCount > 0) {
+                slot = freeSlots[--freeCount];
+            } else {
+                if (nextSlot == MAX_SLOTS) {
+                    throw new IllegalStateException("CUDA handle table is full: " + MAX_SLOTS + " live handles");
+                }
+                slot = nextSlot++;
+            }
+            Chunk chunk = CHUNKS.get(slot >>> CHUNK_BITS);
+            if (chunk == null) {
+                chunk = new Chunk();
+                CHUNKS.set(slot >>> CHUNK_BITS, chunk);
+            }
+            int index = slot & CHUNK_MASK;
+            chunk.objects.set(index, object);
+            return encode(slot, chunk.generations.get(index));
+        }
     }
 
     /** Resolves a handle, or returns {@code null} if it was never registered or has been released. */
     @SuppressWarnings("unchecked")
     public static <T> T resolve(long handle, Class<T> type) {
-        Object object = OBJECTS.get(handle);
+        int slot = slotOf(handle);
+        if (slot < 0) {
+            return null;
+        }
+        Chunk chunk = CHUNKS.get(slot >>> CHUNK_BITS);
+        if (chunk == null) {
+            return null;
+        }
+        int index = slot & CHUNK_MASK;
+        int generation = (int) (handle >>> 32);
+        if (chunk.generations.get(index) != generation) {
+            return null;
+        }
+        Object object = chunk.objects.get(index);
+        // A release (and possibly a re-register) between the two generation reads means the object
+        // just read may belong to the slot's next owner: treat the handle as released.
+        if (chunk.generations.get(index) != generation) {
+            return null;
+        }
         return type.isInstance(object) ? (T) object : null;
+    }
+
+    /** Handles currently registered and not yet released. */
+    static int liveHandleCount() {
+        synchronized (LOCK) {
+            return nextSlot - freeCount;
+        }
     }
 
     /** Drops a handle. Returns what it referred to so the caller can release native resources. */
     public static Object release(long handle) {
-        return OBJECTS.remove(handle);
+        int slot = slotOf(handle);
+        if (slot < 0) {
+            return null;
+        }
+        synchronized (LOCK) {
+            Chunk chunk = CHUNKS.get(slot >>> CHUNK_BITS);
+            if (chunk == null) {
+                return null;
+            }
+            int index = slot & CHUNK_MASK;
+            int generation = (int) (handle >>> 32);
+            if (chunk.generations.get(index) != generation) {
+                return null;
+            }
+            // Invalidate first, then clear: a concurrent resolve either fails its generation check
+            // or reads the object before it is cleared, exactly as with a map lookup racing remove.
+            int next = generation + 1;
+            chunk.generations.set(index, next > 0 ? next : 1);
+            Object object = chunk.objects.getAndSet(index, null);
+            if (freeCount == freeSlots.length) {
+                freeSlots = Arrays.copyOf(freeSlots, freeSlots.length * 2);
+            }
+            freeSlots[freeCount++] = slot;
+            return object;
+        }
     }
 
     /** A CUDA device: the driver's {@code CUdevice} plus the ordinal it was enumerated at. */
