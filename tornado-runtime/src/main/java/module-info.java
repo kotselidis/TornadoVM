@@ -10,8 +10,8 @@ open module tornado.runtime {
     requires transitive jdk.internal.vm.ci;
     requires transitive tornado.graal;
     requires transitive tornado.api;
-    requires commons.math3;
-    requires snmp4j;
+    // Optional: only UpsMeterReader uses it (see there); the launcher adds it when tornado.ups.ip is set.
+    requires static snmp4j;
     requires java.management;
 
     exports uk.ac.manchester.tornado.runtime;
