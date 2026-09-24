@@ -416,6 +416,11 @@ class TornadoVMRunnerTool():
         # with the frozen JDK-21 jvmci classes so the runtime SPI matches the compiled code
         # (uniform vendoring; mirrors the compile-time --patch-module in the jdk25/jdk26 profiles).
         self.jvmci_patched = 22 <= self.java_version <= 26
+        # A JDK linked by bin/tornado-jvmci-jdk.py already carries the overlay inside its
+        # jdk.internal.vm.ci module. On it the --patch-module is dropped -- HotSpot disables CDS
+        # for patched modules, so only then can the JVM use its default CDS archive and a
+        # Project Leyden AOT cache (-XX:AOTCacheOutput / -XX:AOTCache).
+        self.jvmci_baked = self.jvmci_patched and self.hasBakedJVMCIOverlay()
         self.sdk_jdk_floor, self.sdk_jdk_preview = self.readSDKJDKContract()
         self.checkCompatibilityWithTornadoVM()
         self.platform = sys.platform
@@ -436,6 +441,22 @@ class TornadoVMRunnerTool():
         # Check macOS compatibility
         if (self.platform == 'darwin'):
             self.checkMacOSCompatibility()
+
+    def hasBakedJVMCIOverlay(self):
+        """True when JAVA_HOME was linked by tornado-jvmci-jdk.py with this SDK's JVMCI overlay."""
+        overlay = os.path.join(self.sdk, "share", "java", "jvmci", "jvmci-21.0.2.jar")
+        try:
+            with open(os.path.join(self.java_home, "release")) as f:
+                m = re.search(r'^TORNADOVM_JVMCI_OVERLAY="([^"]*)"', f.read(), re.M)
+        except OSError:
+            return False
+        if m is None:
+            return False
+        if m.group(1) + ".jar" != os.path.basename(overlay):
+            print("[WARNING] JAVA_HOME carries JVMCI overlay " + m.group(1) + " but this SDK ships "
+                  + os.path.basename(overlay) + "; falling back to --patch-module. Re-run tornado-jvmci-jdk.py.")
+            return False
+        return True
 
     def getJavaVersion(self):
         try:
@@ -1068,7 +1089,9 @@ class TornadoVMRunnerTool():
             # patched-in JDK-21 jdk.vm.ci.services.Services.checkJVMCIEnabled() reads the saved
             # property jdk.internal.vm.ci.enabled, so set it explicitly (HotSpot's own +EnableJVMCI
             # bookkeeping is not visible to the overlaid classes).
-            if (self.jvmci_patched):
+            if (self.jvmci_baked):
+                tornadoFlags = tornadoFlags + " -Djdk.internal.vm.ci.enabled=true"
+            elif (self.jvmci_patched):
                 tornadoFlags = tornadoFlags + " -Djdk.internal.vm.ci.enabled=true --patch-module jdk.internal.vm.ci=" + self.sdk + "/share/java/jvmci/jvmci-21.0.2.jar"
 
             # share/java/graalJars vendors GraalVM's foundational-API jars (word, collections,
