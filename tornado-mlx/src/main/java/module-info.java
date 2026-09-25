@@ -4,6 +4,7 @@ open module tornado.mlx {
 
     exports uk.ac.manchester.tornado.mlx;
     exports uk.ac.manchester.tornado.mlx.benchmarks;
+    exports uk.ac.manchester.tornado.mlx.jit;
     exports uk.ac.manchester.tornado.mlx.provider;
 
     provides uk.ac.manchester.tornado.runtime.library.spi.TornadoLibraryProvider with //

@@ -8,6 +8,7 @@
     "bound": 33,
     "tested": 33,
     "benchmarked": 10,
+    "jitBaselines": 14,
     "remaining": 259,
     "byTier": {
       "1": {
@@ -42,6 +43,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.add"
+        ],
+        "sources": [
+          "tornado-unittests/.../kernelcontext/api/TestVectorAdditionKernelContext.java (pattern)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -672,6 +682,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.divide"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -717,6 +736,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.erf"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -743,6 +771,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.exp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1227,6 +1264,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.maximum"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1317,6 +1363,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.minimum"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1344,6 +1399,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.multiply"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1371,6 +1435,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.negative"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1668,6 +1741,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.rsqrt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1793,6 +1875,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.sigmoid"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1996,6 +2087,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.sqrt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2013,6 +2113,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.square"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2113,6 +2222,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.subtract"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2203,6 +2321,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.tanh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
