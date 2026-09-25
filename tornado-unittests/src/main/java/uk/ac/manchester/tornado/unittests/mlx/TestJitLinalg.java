@@ -740,6 +740,133 @@ public class TestJitLinalg extends MlxTestBase {
         }
     }
 
+    /** Indices of the n (re, im) pairs of matrix b, ordered by real then imaginary part. */
+    private static Integer[] order(FloatArray values, int b, int n) {
+        Integer[] idx = new Integer[n];
+        for (int k = 0; k < n; k++) {
+            idx[k] = k;
+        }
+        java.util.Arrays.sort(idx, (x, y) -> {
+            float rx = values.get(2 * (b * n + x));
+            float ry = values.get(2 * (b * n + y));
+            if (Math.abs(rx - ry) > 1e-3f * (Math.abs(rx) + 1)) {
+                return Float.compare(rx, ry);
+            }
+            return Float.compare(values.get(2 * (b * n + x) + 1), values.get(2 * (b * n + y) + 1));
+        });
+        return idx;
+    }
+
+    /** Column k of matrix b's eigenvectors as (re, im) pairs, multiplied by the unit factor that makes its largest component real and positive. */
+    private static double[] phaseNormalised(FloatArray vectors, int b, int n, int k) {
+        double[] v = new double[2 * n];
+        int big = 0;
+        for (int i = 0; i < n; i++) {
+            v[2 * i] = vectors.get(2 * ((b * n + i) * n + k));
+            v[2 * i + 1] = vectors.get(2 * ((b * n + i) * n + k) + 1);
+            if (Math.hypot(v[2 * i], v[2 * i + 1]) > Math.hypot(v[2 * big], v[2 * big + 1])) {
+                big = i;
+            }
+        }
+        double mag = Math.hypot(v[2 * big], v[2 * big + 1]);
+        double cr = v[2 * big] / mag;
+        double ci = -v[2 * big + 1] / mag;
+        for (int i = 0; i < n; i++) {
+            double re = v[2 * i];
+            double im = v[2 * i + 1];
+            v[2 * i] = re * cr - im * ci;
+            v[2 * i + 1] = re * ci + im * cr;
+        }
+        return v;
+    }
+
+    /** max_k |A v_k - lambda_k v_k| over the eigenpairs of matrix b. */
+    private static double residual(double[] a, FloatArray values, FloatArray vectors, int b, int n) {
+        double worst = 0;
+        for (int k = 0; k < n; k++) {
+            double lr = values.get(2 * (b * n + k));
+            double li = values.get(2 * (b * n + k) + 1);
+            for (int i = 0; i < n; i++) {
+                double sr = 0;
+                double si = 0;
+                for (int j = 0; j < n; j++) {
+                    double aij = a[(b * n + i) * n + j];
+                    sr += aij * vectors.get(2 * ((b * n + j) * n + k));
+                    si += aij * vectors.get(2 * ((b * n + j) * n + k) + 1);
+                }
+                double vr = vectors.get(2 * ((b * n + i) * n + k));
+                double vi = vectors.get(2 * ((b * n + i) * n + k) + 1);
+                sr -= lr * vr - li * vi;
+                si -= lr * vi + li * vr;
+                worst = Math.max(worst, Math.hypot(sr, si));
+            }
+        }
+        return worst;
+    }
+
+    @Test
+    public void testEig() throws TornadoExecutionPlanException {
+        for (int n : ORDERS) {
+            double[] a = matrices(BATCH, n, 0, 351L + n);
+            FloatArray fa = FloatArray.fromArray(toFloat(a));
+            FloatArray wMlx = new FloatArray(2 * BATCH * n);
+            FloatArray wJit = new FloatArray(2 * BATCH * n);
+            FloatArray vMlx = new FloatArray(2 * a.length);
+            FloatArray vJit = new FloatArray(2 * a.length);
+            FloatArray w2Mlx = new FloatArray(2 * BATCH * n);
+            FloatArray w2Jit = new FloatArray(2 * BATCH * n);
+            FloatArray unused = new FloatArray(1);
+            TaskGraph g = new TaskGraph("eg").transferToDevice(DataTransferMode.FIRST_EXECUTION, fa) //
+                    .libraryTask("m1", MlxLinalg::eig, fa, wMlx, vMlx, BATCH, n) //
+                    .libraryTask("m2", MlxLinalg::eigvals, fa, w2Mlx, BATCH, n) //
+                    .task("j1", JitLinalg::eig, new KernelContext(), fa, wJit, vJit, n, 1) //
+                    .task("j2", JitLinalg::eig, new KernelContext(), fa, w2Jit, unused, n, 0) //
+                    .transferToHost(DataTransferMode.EVERY_EXECUTION, wMlx, wJit, vMlx, vJit, w2Mlx, w2Jit);
+            GridScheduler gs = new GridScheduler();
+            gs.addWorkerGrid("eg.j1", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+            gs.addWorkerGrid("eg.j2", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+            execute(g, gs);
+            for (int b = 0; b < BATCH; b++) {
+                String what = "eig n=" + n + " matrix " + b;
+                double trace = 0;
+                for (int i = 0; i < n; i++) {
+                    trace += a[(b * n + i) * n + i];
+                }
+                FloatArray[] valueSets = { wMlx, wJit, w2Mlx, w2Jit };
+                String[] names = { "MLX eig", "JIT eig", "MLX eigvals", "JIT eigvals" };
+                Integer[] ref = order(wMlx, b, n);
+                for (int w = 0; w < 4; w++) {
+                    double sum = 0;
+                    for (int k = 0; k < n; k++) {
+                        sum += valueSets[w].get(2 * (b * n + k));
+                    }
+                    assertClose(what + " " + names[w] + " sum of eigenvalues = trace", 0, trace, sum, 1e-3, 1e-3);
+                    Integer[] idx = order(valueSets[w], b, n);
+                    for (int k = 0; k < n; k++) {
+                        for (int part = 0; part < 2; part++) {
+                            assertClose(what + " " + names[w] + " eigenvalue " + k, part, wMlx.get(2 * (b * n + ref[k]) + part), valueSets[w].get(2 * (b * n + idx[k]) + part), 1e-3,
+                                    1e-3);
+                        }
+                    }
+                }
+                double rMlx = residual(a, wMlx, vMlx, b, n);
+                double rJit = residual(a, wJit, vJit, b, n);
+                assertTrue(what + " MLX residual " + rMlx, rMlx < 1e-3 * n);
+                assertTrue(what + " JIT residual " + rJit, rJit < 1e-3 * n);
+                // Eigenvectors are unique up to a unit complex factor: compare them with their
+                // largest component rotated to the positive real axis.
+                Integer[] jdx = order(wJit, b, n);
+                for (int k = 0; k < n; k++) {
+                    double[] m = phaseNormalised(vMlx, b, n, ref[k]);
+                    double[] j = phaseNormalised(vJit, b, n, jdx[k]);
+                    for (int e = 0; e < 2 * n; e++) {
+                        assertClose(what + " eigenvector " + k + " JIT vs MLX", e, m[e], j[e], 1e-2, 5e-3);
+                    }
+                }
+            }
+        }
+    }
+
     @Test
     public void testHalfCrossAndNorm() throws TornadoExecutionPlanException {
         final int count = 100;

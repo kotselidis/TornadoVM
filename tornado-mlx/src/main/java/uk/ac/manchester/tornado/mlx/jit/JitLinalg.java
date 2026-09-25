@@ -849,4 +849,368 @@ public final class JitLinalg {
             out.set(e, acc);
         }
     }
+
+    // ---------------------------------------------------------------- general eigenproblem
+
+    /** Largest QR iterations per eigenvalue in {@link #eig} before it gives up on that block. */
+    private static final int MAX_QR_ITERATIONS = 60;
+    private static final float EPS = 1.2e-7f;
+
+    /**
+     * Eigenvalues and, if {@code writeVectors != 0}, right eigenvectors of each real a[m]
+     * ([batch, n, n]); complex results are interleaved (real, imaginary) pairs: values
+     * {@code [batch, n, 2]}, vectors {@code [batch, n, n, 2]} with eigenvector k in column k, of
+     * unit norm with its largest component real and positive (LAPACK geev also makes it real but
+     * leaves its sign free, so the two agree up to sign). The matrix is reduced
+     * to Hessenberg form with Householder reflectors (in parallel), thread 0 runs the Francis
+     * double-shift QR iteration of Numerical Recipes' hqr (with explicit tolerances in place of its
+     * exact floating-point deflation tests, which fast math does not preserve), and each
+     * eigenvector is found by two steps of complex inverse iteration, a Gauss-Jordan solve of
+     * (A - lambda I) x = b in threadgroup memory. Eigenvalues are in the order the QR iteration
+     * deflates them.
+     */
+    @JitBaseline({ "mlx_linalg_eig", "mlx_linalg_eigvals" })
+    public static void eig(KernelContext ctx, FloatArray a, FloatArray values, FloatArray vectors, int n, int writeVectors) {
+        float[] a0 = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] h = ctx.allocateFloatLocalArray(MAX_NN + MAX_N);
+        float[] mi = ctx.allocateFloatLocalArray(MAX_NN + MAX_N);
+        float[] wr = ctx.allocateFloatLocalArray(MAX_N);
+        float[] wi = ctx.allocateFloatLocalArray(MAX_N);
+        float[] v = ctx.allocateFloatLocalArray(MAX_N);
+        float[] scal = ctx.allocateFloatLocalArray(4);
+        int[] pivot = ctx.allocateIntLocalArray(1);
+        int tid = ctx.localIdx;
+        int base = ctx.groupIdx * n * n;
+        for (int e = tid; e < n * n; e += THREADS) {
+            float x = a.get(base + e);
+            a0[e] = x;
+            h[e] = x;
+        }
+        ctx.localBarrier();
+
+        // Hessenberg reduction: reflector k zeroes column k below the subdiagonal; H = P H P.
+        for (int k = 0; k < n - 2; k++) {
+            if (tid == 0) {
+                float norm = 0.0f;
+                for (int i = k + 1; i < n; i++) {
+                    norm += h[i * n + k] * h[i * n + k];
+                }
+                norm = TornadoMath.sqrt(norm);
+                float x0 = h[(k + 1) * n + k];
+                float alpha = x0 >= 0.0f ? -norm : norm;
+                float vv = 0.0f;
+                for (int i = k + 1; i < n; i++) {
+                    float vi = h[i * n + k] - (i == k + 1 ? alpha : 0.0f);
+                    v[i] = vi;
+                    vv += vi * vi;
+                }
+                scal[0] = vv > 0.0f ? 2.0f / vv : 0.0f;
+            }
+            ctx.localBarrier();
+            float beta = scal[0];
+            for (int j = tid; j < n; j += THREADS) {
+                float dot = 0.0f;
+                for (int i = k + 1; i < n; i++) {
+                    dot += v[i] * h[i * n + j];
+                }
+                dot *= beta;
+                for (int i = k + 1; i < n; i++) {
+                    h[i * n + j] -= dot * v[i];
+                }
+            }
+            ctx.localBarrier();
+            for (int i = tid; i < n; i += THREADS) {
+                float dot = 0.0f;
+                for (int j = k + 1; j < n; j++) {
+                    dot += h[i * n + j] * v[j];
+                }
+                dot *= beta;
+                for (int j = k + 1; j < n; j++) {
+                    h[i * n + j] -= dot * v[j];
+                }
+            }
+            ctx.localBarrier();
+        }
+
+        // Francis double-shift QR (hqr), 1-based indices: element (i, j) is h[o + i * n + j].
+        if (tid == 0) {
+            int o = -n - 1;
+            float anorm = 0.0f;
+            for (int i = 1; i <= n; i++) {
+                for (int j = i > 1 ? i - 1 : 1; j <= n; j++) {
+                    anorm += TornadoMath.abs(h[o + i * n + j]);
+                }
+            }
+            int nn = n;
+            float t = 0.0f;
+            while (nn >= 1) {
+                int its = 0;
+                int l;
+                do {
+                    for (l = nn; l >= 2; l--) {
+                        float s = TornadoMath.abs(h[o + (l - 1) * n + l - 1]) + TornadoMath.abs(h[o + l * n + l]);
+                        if (s == 0.0f) {
+                            s = anorm;
+                        }
+                        if (TornadoMath.abs(h[o + l * n + l - 1]) <= EPS * s) {
+                            h[o + l * n + l - 1] = 0.0f;
+                            break;
+                        }
+                    }
+                    float x = h[o + nn * n + nn];
+                    if (l == nn) {
+                        wr[nn - 1] = x + t;
+                        wi[nn - 1] = 0.0f;
+                        nn--;
+                    } else {
+                        float y = h[o + (nn - 1) * n + nn - 1];
+                        float w = h[o + nn * n + nn - 1] * h[o + (nn - 1) * n + nn];
+                        if (l == nn - 1) {
+                            float p = 0.5f * (y - x);
+                            float q = p * p + w;
+                            float z = TornadoMath.sqrt(TornadoMath.abs(q));
+                            x += t;
+                            if (q >= 0.0f) {
+                                z = p + (p >= 0.0f ? z : -z);
+                                wr[nn - 2] = x + z;
+                                wr[nn - 1] = z != 0.0f ? x - w / z : x + z;
+                                wi[nn - 2] = 0.0f;
+                                wi[nn - 1] = 0.0f;
+                            } else {
+                                wr[nn - 2] = x + p;
+                                wr[nn - 1] = x + p;
+                                wi[nn - 2] = -z;
+                                wi[nn - 1] = z;
+                            }
+                            nn -= 2;
+                        } else {
+                            if (its == MAX_QR_ITERATIONS) {
+                                // No convergence: report the block's diagonal and move on.
+                                for (int i = l; i <= nn; i++) {
+                                    wr[i - 1] = h[o + i * n + i] + t;
+                                    wi[i - 1] = 0.0f;
+                                }
+                                nn = l - 1;
+                                l = nn + 2;
+                            } else {
+                                if (its == 10 || its == 20 || its == 40) {
+                                    t += x;
+                                    for (int i = 1; i <= nn; i++) {
+                                        h[o + i * n + i] -= x;
+                                    }
+                                    float s = TornadoMath.abs(h[o + nn * n + nn - 1]) + TornadoMath.abs(h[o + (nn - 1) * n + nn - 2]);
+                                    x = 0.75f * s;
+                                    y = x;
+                                    w = -0.4375f * s * s;
+                                }
+                                its++;
+                                int m;
+                                float p = 0.0f;
+                                float q = 0.0f;
+                                float r = 0.0f;
+                                float z;
+                                for (m = nn - 2; m >= l; m--) {
+                                    z = h[o + m * n + m];
+                                    r = x - z;
+                                    float s = y - z;
+                                    p = (r * s - w) / h[o + (m + 1) * n + m] + h[o + m * n + m + 1];
+                                    q = h[o + (m + 1) * n + m + 1] - z - r - s;
+                                    r = h[o + (m + 2) * n + m + 1];
+                                    s = TornadoMath.abs(p) + TornadoMath.abs(q) + TornadoMath.abs(r);
+                                    p /= s;
+                                    q /= s;
+                                    r /= s;
+                                    if (m == l) {
+                                        break;
+                                    }
+                                    float u = TornadoMath.abs(h[o + m * n + m - 1]) * (TornadoMath.abs(q) + TornadoMath.abs(r));
+                                    float vv = TornadoMath.abs(p) * (TornadoMath.abs(h[o + (m - 1) * n + m - 1]) + TornadoMath.abs(z) + TornadoMath.abs(h[o + (m + 1) * n + m + 1]));
+                                    if (u <= EPS * vv) {
+                                        break;
+                                    }
+                                }
+                                for (int i = m + 2; i <= nn; i++) {
+                                    h[o + i * n + i - 2] = 0.0f;
+                                    if (i != m + 2) {
+                                        h[o + i * n + i - 3] = 0.0f;
+                                    }
+                                }
+                                for (int k = m; k <= nn - 1; k++) {
+                                    if (k != m) {
+                                        p = h[o + k * n + k - 1];
+                                        q = h[o + (k + 1) * n + k - 1];
+                                        r = 0.0f;
+                                        if (k != nn - 1) {
+                                            r = h[o + (k + 2) * n + k - 1];
+                                        }
+                                        x = TornadoMath.abs(p) + TornadoMath.abs(q) + TornadoMath.abs(r);
+                                        if (x != 0.0f) {
+                                            p /= x;
+                                            q /= x;
+                                            r /= x;
+                                        }
+                                    }
+                                    float s = TornadoMath.sqrt(p * p + q * q + r * r);
+                                    s = p >= 0.0f ? s : -s;
+                                    if (s != 0.0f) {
+                                        if (k == m) {
+                                            if (l != m) {
+                                                h[o + k * n + k - 1] = -h[o + k * n + k - 1];
+                                            }
+                                        } else {
+                                            h[o + k * n + k - 1] = -s * x;
+                                        }
+                                        p += s;
+                                        x = p / s;
+                                        y = q / s;
+                                        z = r / s;
+                                        q /= p;
+                                        r /= p;
+                                        for (int j = k; j <= nn; j++) {
+                                            p = h[o + k * n + j] + q * h[o + (k + 1) * n + j];
+                                            if (k != nn - 1) {
+                                                p += r * h[o + (k + 2) * n + j];
+                                                h[o + (k + 2) * n + j] -= p * z;
+                                            }
+                                            h[o + (k + 1) * n + j] -= p * y;
+                                            h[o + k * n + j] -= p * x;
+                                        }
+                                        int mmin = nn < k + 3 ? nn : k + 3;
+                                        for (int i = l; i <= mmin; i++) {
+                                            p = x * h[o + i * n + k] + y * h[o + i * n + k + 1];
+                                            if (k != nn - 1) {
+                                                p += z * h[o + i * n + k + 2];
+                                                h[o + i * n + k + 2] -= p * r;
+                                            }
+                                            h[o + i * n + k + 1] -= p * q;
+                                            h[o + i * n + k] -= p;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } while (l < nn - 1);
+            }
+        }
+        ctx.localBarrier();
+        int vbase = ctx.groupIdx * n;
+        for (int k = tid; k < n; k += THREADS) {
+            values.set(2 * (vbase + k), wr[k]);
+            values.set(2 * (vbase + k) + 1, wi[k]);
+        }
+        if (writeVectors != 0) {
+            // Inverse iteration on the original matrix; h now holds the real part and mi the
+            // imaginary part of the augmented system [A - mu I | b], row stride n + 1.
+            int w1 = n + 1;
+            for (int k = 0; k < n; k++) {
+                float scale = TornadoMath.abs(wr[k]) + TornadoMath.abs(wi[k]) + 1.0f;
+                float muR = wr[k] + 1.0e-4f * scale;
+                float muI = wi[k];
+                for (int i = tid; i < n; i += THREADS) {
+                    h[i * w1 + n] = 1.0f;
+                    mi[i * w1 + n] = 0.0f;
+                }
+                for (int step = 0; step < 2; step++) {
+                    for (int e = tid; e < n * n; e += THREADS) {
+                        int i = e / n;
+                        int j = e % n;
+                        h[i * w1 + j] = a0[e] - (i == j ? muR : 0.0f);
+                        mi[i * w1 + j] = i == j ? -muI : 0.0f;
+                    }
+                    ctx.localBarrier();
+                    for (int col = 0; col < n; col++) {
+                        if (tid == 0) {
+                            int p = col;
+                            float best = h[col * w1 + col] * h[col * w1 + col] + mi[col * w1 + col] * mi[col * w1 + col];
+                            for (int r = col + 1; r < n; r++) {
+                                float mag = h[r * w1 + col] * h[r * w1 + col] + mi[r * w1 + col] * mi[r * w1 + col];
+                                if (mag > best) {
+                                    best = mag;
+                                    p = r;
+                                }
+                            }
+                            pivot[0] = p;
+                        }
+                        ctx.localBarrier();
+                        int p = pivot[0];
+                        if (p != col) {
+                            for (int c = tid; c < w1; c += THREADS) {
+                                float tr = h[col * w1 + c];
+                                float ti = mi[col * w1 + c];
+                                h[col * w1 + c] = h[p * w1 + c];
+                                mi[col * w1 + c] = mi[p * w1 + c];
+                                h[p * w1 + c] = tr;
+                                mi[p * w1 + c] = ti;
+                            }
+                        }
+                        ctx.localBarrier();
+                        float dr = h[col * w1 + col];
+                        float di = mi[col * w1 + col];
+                        float dd = dr * dr + di * di;
+                        float ir = dd > 0.0f ? dr / dd : 0.0f;
+                        float ii = dd > 0.0f ? -di / dd : 0.0f;
+                        ctx.localBarrier();
+                        for (int c = tid; c < w1; c += THREADS) {
+                            float xr = h[col * w1 + c];
+                            float xi = mi[col * w1 + c];
+                            h[col * w1 + c] = xr * ir - xi * ii;
+                            mi[col * w1 + c] = xr * ii + xi * ir;
+                        }
+                        ctx.localBarrier();
+                        for (int e = tid; e < n * w1; e += THREADS) {
+                            int r = e / w1;
+                            int c = e % w1;
+                            if (r != col && c != col) {
+                                float fr = h[r * w1 + col];
+                                float fi = mi[r * w1 + col];
+                                float pr = h[col * w1 + c];
+                                float pi = mi[col * w1 + c];
+                                h[e] -= fr * pr - fi * pi;
+                                mi[e] -= fr * pi + fi * pr;
+                            }
+                        }
+                        ctx.localBarrier();
+                    }
+                    // Normalise x (the last column): unit norm, largest component real and positive.
+                    if (tid == 0) {
+                        int big = 0;
+                        float bestMag = -1.0f;
+                        float norm = 0.0f;
+                        for (int i = 0; i < n; i++) {
+                            float mag = h[i * w1 + n] * h[i * w1 + n] + mi[i * w1 + n] * mi[i * w1 + n];
+                            norm += mag;
+                            if (mag > bestMag) {
+                                bestMag = mag;
+                                big = i;
+                            }
+                        }
+                        float br = h[big * w1 + n];
+                        float bi = mi[big * w1 + n];
+                        float bm = TornadoMath.sqrt(bestMag);
+                        float inv = 1.0f / (TornadoMath.sqrt(norm) * bm);
+                        // Multiply by conj(x_big) / (|x_big| * |x|).
+                        scal[0] = br * inv;
+                        scal[1] = -bi * inv;
+                    }
+                    ctx.localBarrier();
+                    float sr = scal[0];
+                    float si = scal[1];
+                    for (int i = tid; i < n; i += THREADS) {
+                        float xr = h[i * w1 + n];
+                        float xi = mi[i * w1 + n];
+                        mi[i * w1 + n] = xr * si + xi * sr;
+                        h[i * w1 + n] = xr * sr - xi * si;
+                    }
+                    ctx.localBarrier();
+                }
+                for (int i = tid; i < n; i += THREADS) {
+                    int at = 2 * (base + i * n + k);
+                    vectors.set(at, h[i * w1 + n]);
+                    vectors.set(at + 1, mi[i * w1 + n]);
+                }
+                ctx.localBarrier();
+            }
+        }
+    }
 }

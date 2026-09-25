@@ -5,11 +5,11 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 163,
-    "tested": 163,
+    "bound": 165,
+    "tested": 165,
     "benchmarked": 33,
-    "jitBaselines": 163,
-    "remaining": 129,
+    "jitBaselines": 165,
+    "remaining": 127,
     "byTier": {
       "1": {
         "inScope": 32,
@@ -17,7 +17,7 @@
       },
       "2": {
         "inScope": 148,
-        "bound": 130
+        "bound": 132
       },
       "3": {
         "inScope": 112,
@@ -5219,9 +5219,24 @@
       "header": "linalg.h",
       "tier": 2,
       "device": "cpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.eig"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
     },
     {
       "name": "mlx_linalg_eigh",
@@ -5252,9 +5267,24 @@
       "header": "linalg.h",
       "tier": 2,
       "device": "cpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.eig"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
     },
     {
       "name": "mlx_linalg_eigvalsh",

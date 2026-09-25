@@ -212,4 +212,20 @@ public final class MlxLinalg {
     public static LibraryTaskDescriptor pinv(FloatArray a, FloatArray out, int batch, int n) {
         return Mlx.task("linalg_pinv", 1, a, out, batch, n);
     }
+
+    /**
+     * Eigenvalues and right eigenvectors of each real {@code a[b]} ({@code [batch, n, n]}), as
+     * complex numbers stored in (real, imaginary) pairs: {@code values[batch, n, 2]},
+     * {@code vectors[batch, n, n, 2]} with eigenvector {@code k} in column {@code k}.
+     */
+    @MlxOp("mlx_linalg_eig")
+    public static LibraryTaskDescriptor eig(FloatArray a, FloatArray values, FloatArray vectors, int batch, int n) {
+        return Mlx.task("linalg_eig", new int[] { 1, 2 }, a, values, vectors, batch, n);
+    }
+
+    /** Eigenvalues of each real {@code a[b]} as (real, imaginary) pairs, {@code values[batch, n, 2]}. */
+    @MlxOp("mlx_linalg_eigvals")
+    public static LibraryTaskDescriptor eigvals(FloatArray a, FloatArray values, int batch, int n) {
+        return Mlx.task("linalg_eigvals", 1, a, values, batch, n);
+    }
 }

@@ -265,6 +265,8 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("linalg_svd", c -> svd(c, true)), //
             entry("linalg_svd_values", c -> svd(c, false)), //
             entry("linalg_pinv", MlxLibraryProvider::pinv), //
+            entry("linalg_eig", MlxLibraryProvider::eig), //
+            entry("linalg_eigvals", MlxLibraryProvider::eigvals), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -526,6 +528,27 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         } else {
             c.store(usv[0], 1);
         }
+    }
+
+    // complex64 viewed as interleaved float32 (real, imaginary) pairs
+    private static MemorySegment complexAsFloats(MlxCall c, MemorySegment z) {
+        return c.op("mlx_view", res -> MlxC.mlx_view(res, z, MlxNativeLib.MLX_FLOAT32, c.stream()));
+    }
+
+    // linalg_eig(a, values, vectors, batch, n): complex outputs as (re, im) pairs
+    private static void eig(MlxCall c) {
+        int n = c.intArg(4);
+        MemorySegment a = c.input(0, c.intArg(3), n, n);
+        MemorySegment[] wv = c.pair("mlx_linalg_eig", (r0, r1) -> MlxC.mlx_linalg_eig(r0, r1, a, c.stream()));
+        c.store(complexAsFloats(c, wv[0]), 1);
+        c.store(complexAsFloats(c, wv[1]), 2);
+    }
+
+    // linalg_eigvals(a, values, batch, n)
+    private static void eigvals(MlxCall c) {
+        int n = c.intArg(3);
+        MemorySegment a = c.input(0, c.intArg(2), n, n);
+        c.store(complexAsFloats(c, c.op("mlx_linalg_eigvals", res -> MlxC.mlx_linalg_eigvals(res, a, c.stream()))), 1);
     }
 
     // linalg_pinv(a, out, batch, n)
