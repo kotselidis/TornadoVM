@@ -63,7 +63,8 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     private static final AtomicLong COPY_FALLBACKS = new AtomicLong();
 
     /** Operations MLX only implements on the CPU stream. */
-    private static final Set<String> CPU_ONLY = Set.of();
+    private static final Set<String> CPU_ONLY = Set.of("linalg_cholesky", "linalg_cholesky_inv", "linalg_tri_inv", "linalg_inv", "linalg_solve", "linalg_solve_triangular",
+            "linalg_lu", "linalg_lu_factor", "linalg_qr", "linalg_eigh", "linalg_eigvalsh", "linalg_svd", "linalg_pinv", "linalg_eig", "linalg_eigvals");
 
     private interface Unary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
@@ -100,6 +101,10 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     private interface SliceUpdate {
         int apply(MemorySegment res, MemorySegment src, MemorySegment update, MemorySegment start, long startNum, MemorySegment stop, long stopNum, MemorySegment strides,
                 long stridesNum, MemorySegment stream);
+    }
+
+    private interface MatrixUpper {
+        int apply(MemorySegment res, MemorySegment a, boolean upper, MemorySegment stream);
     }
 
     private interface Binary {
@@ -241,6 +246,17 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("conv_transpose2d", MlxLibraryProvider::convTranspose2d), //
             entry("conv_transpose3d", MlxLibraryProvider::convTranspose3d), //
             entry("conv_general", MlxLibraryProvider::convGeneral), //
+            // Linear algebra (MlxLinalg).
+            entry("linalg_cross", MlxLibraryProvider::cross), //
+            entry("linalg_norm", MlxLibraryProvider::norm), //
+            entry("linalg_norm_l2", MlxLibraryProvider::l2Norm), //
+            entry("linalg_norm_matrix", MlxLibraryProvider::frobeniusNorm), //
+            entry("linalg_cholesky", c -> matrixUpper(c, "mlx_linalg_cholesky", MlxC::mlx_linalg_cholesky)), //
+            entry("linalg_cholesky_inv", c -> matrixUpper(c, "mlx_linalg_cholesky_inv", MlxC::mlx_linalg_cholesky_inv)), //
+            entry("linalg_tri_inv", c -> matrixUpper(c, "mlx_linalg_tri_inv", MlxC::mlx_linalg_tri_inv)), //
+            entry("linalg_inv", MlxLibraryProvider::inv), //
+            entry("linalg_solve", MlxLibraryProvider::solve), //
+            entry("linalg_solve_triangular", MlxLibraryProvider::solveTriangular), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -407,6 +423,67 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // linalg_cross(a, b, out, count): 3-vectors along the last axis
+    private static void cross(MlxCall c) {
+        int count = c.intArg(3);
+        MemorySegment a = c.input(0, count, 3);
+        MemorySegment b = c.input(1, count, 3);
+        c.store(c.op("mlx_linalg_cross", res -> MlxC.mlx_linalg_cross(res, a, b, -1, c.stream())), 2);
+    }
+
+    // linalg_norm(x, out, rows, cols, ord): per row
+    private static void norm(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3));
+        double ord = c.floatArg(4);
+        c.store(c.op("mlx_linalg_norm", res -> MlxC.mlx_linalg_norm(res, x, ord, c.ints(-1), 1, false, c.stream())), 1);
+    }
+
+    // linalg_norm_l2(x, out, rows, cols): per row
+    private static void l2Norm(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3));
+        c.store(c.op("mlx_linalg_norm_l2", res -> MlxC.mlx_linalg_norm_l2(res, x, c.ints(-1), 1, false, c.stream())), 1);
+    }
+
+    // linalg_norm_matrix(x, out, batch, rows, cols): Frobenius norm per matrix
+    private static void frobeniusNorm(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4));
+        c.store(c.op("mlx_linalg_norm_matrix", res -> MlxC.mlx_linalg_norm_matrix(res, x, c.cString("fro"), c.ints(1, 2), 2, false, c.stream())), 1);
+    }
+
+    // cholesky / cholesky_inv / tri_inv(a, out, batch, n, upper)
+    private static void matrixUpper(MlxCall c, String name, MatrixUpper op) {
+        int n = c.intArg(3);
+        MemorySegment a = c.input(0, c.intArg(2), n, n);
+        boolean upper = c.boolArg(4);
+        c.store(c.op(name, res -> op.apply(res, a, upper, c.stream())), 1);
+    }
+
+    // linalg_inv(a, out, batch, n)
+    private static void inv(MlxCall c) {
+        int n = c.intArg(3);
+        MemorySegment a = c.input(0, c.intArg(2), n, n);
+        c.store(c.op("mlx_linalg_inv", res -> MlxC.mlx_linalg_inv(res, a, c.stream())), 1);
+    }
+
+    // linalg_solve(a, rhs, x, batch, n, nrhs)
+    private static void solve(MlxCall c) {
+        int batch = c.intArg(3);
+        int n = c.intArg(4);
+        MemorySegment a = c.input(0, batch, n, n);
+        MemorySegment b = c.input(1, batch, n, c.intArg(5));
+        c.store(c.op("mlx_linalg_solve", res -> MlxC.mlx_linalg_solve(res, a, b, c.stream())), 2);
+    }
+
+    // linalg_solve_triangular(a, rhs, x, batch, n, nrhs, upper)
+    private static void solveTriangular(MlxCall c) {
+        int batch = c.intArg(3);
+        int n = c.intArg(4);
+        MemorySegment a = c.input(0, batch, n, n);
+        MemorySegment b = c.input(1, batch, n, c.intArg(5));
+        boolean upper = c.boolArg(6);
+        c.store(c.op("mlx_linalg_solve_triangular", res -> MlxC.mlx_linalg_solve_triangular(res, a, b, upper, c.stream())), 2);
+    }
 
     // conv1d(x, w, out, n, len, cin, cout, k, stride, padding, dilation, groups)
     private static void conv1d(MlxCall c) {
