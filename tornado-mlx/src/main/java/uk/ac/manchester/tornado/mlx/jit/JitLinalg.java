@@ -20,6 +20,7 @@ package uk.ac.manchester.tornado.mlx.jit;
 import uk.ac.manchester.tornado.api.KernelContext;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
+import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 
 /**
  * JIT counterparts of the MLX linear-algebra operations ({@link uk.ac.manchester.tornado.mlx.MlxLinalg}),
@@ -403,6 +404,161 @@ public final class JitLinalg {
                     out.set(bBase + i * nrhs + c, s / t[i * n + i]);
                 }
             }
+        }
+    }
+
+    // ---------------------------------------------------------------- LU and QR
+
+    /**
+     * LU factorisation with partial pivoting of each a[m] ([batch, n, n]): {@code lu} holds L (unit
+     * lower, below the diagonal) and U; pivots[k] is the row swapped with row k at step k (LAPACK
+     * getrf, 0-based); perm[i] is the row of L U that row i of a becomes. Either output may be a
+     * one-element dummy when {@code writePerm} or {@code writePivots} is 0.
+     */
+    @JitBaseline({ "mlx_linalg_lu", "mlx_linalg_lu_factor" })
+    public static void lu(KernelContext ctx, FloatArray a, FloatArray lu, IntArray pivots, IntArray perm, int n, int writePivots, int writePerm) {
+        float[] m = ctx.allocateFloatLocalArray(MAX_NN);
+        int[] rows = ctx.allocateIntLocalArray(MAX_N);
+        int[] piv = ctx.allocateIntLocalArray(MAX_N);
+        int tid = ctx.localIdx;
+        int base = ctx.groupIdx * n * n;
+        for (int e = tid; e < n * n; e += THREADS) {
+            m[e] = a.get(base + e);
+        }
+        for (int i = tid; i < n; i += THREADS) {
+            rows[i] = i;
+        }
+        ctx.localBarrier();
+        for (int k = 0; k < n; k++) {
+            if (tid == 0) {
+                int p = k;
+                float best = TornadoMath.abs(m[k * n + k]);
+                for (int r = k + 1; r < n; r++) {
+                    float v = TornadoMath.abs(m[r * n + k]);
+                    if (v > best) {
+                        best = v;
+                        p = r;
+                    }
+                }
+                piv[k] = p;
+                int t = rows[k];
+                rows[k] = rows[p];
+                rows[p] = t;
+            }
+            ctx.localBarrier();
+            int p = piv[k];
+            if (p != k) {
+                for (int c = tid; c < n; c += THREADS) {
+                    float tmp = m[k * n + c];
+                    m[k * n + c] = m[p * n + c];
+                    m[p * n + c] = tmp;
+                }
+            }
+            ctx.localBarrier();
+            float d = m[k * n + k];
+            for (int r = k + 1 + tid; r < n; r += THREADS) {
+                m[r * n + k] /= d;
+            }
+            ctx.localBarrier();
+            int rest = n - k - 1;
+            for (int e = tid; e < rest * rest; e += THREADS) {
+                int r = k + 1 + e / rest;
+                int c = k + 1 + e % rest;
+                m[r * n + c] -= m[r * n + k] * m[k * n + c];
+            }
+            ctx.localBarrier();
+        }
+        for (int e = tid; e < n * n; e += THREADS) {
+            lu.set(base + e, m[e]);
+        }
+        for (int i = tid; i < n; i += THREADS) {
+            if (writePivots != 0) {
+                pivots.set(ctx.groupIdx * n + i, piv[i]);
+            }
+            if (writePerm != 0) {
+                // MLX's convention: row i of a is row perm[i] of l u.
+                perm.set(ctx.groupIdx * n + rows[i], i);
+            }
+        }
+    }
+
+    /** Splits packed LU factors into a unit lower L and an upper U. */
+    @JitBaseline("mlx_linalg_lu")
+    public static void splitLu(KernelContext ctx, FloatArray lu, FloatArray l, FloatArray u, int total, int n) {
+        int e = ctx.globalIdx;
+        if (e < total) {
+            int i = (e / n) % n;
+            int j = e % n;
+            float v = lu.get(e);
+            l.set(e, i > j ? v : (i == j ? 1.0f : 0.0f));
+            u.set(e, i <= j ? v : 0.0f);
+        }
+    }
+
+    /**
+     * Householder QR of each a[m] ([batch, n, n]): q orthogonal, r upper triangular, a = q r. The
+     * reflector for column k zeroes it below the diagonal; each thread updates one column of R and
+     * one row of Q.
+     */
+    @JitBaseline("mlx_linalg_qr")
+    public static void qr(KernelContext ctx, FloatArray a, FloatArray q, FloatArray r, int n) {
+        float[] rm = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] qm = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] v = ctx.allocateFloatLocalArray(MAX_N);
+        float[] scal = ctx.allocateFloatLocalArray(1);
+        int tid = ctx.localIdx;
+        int base = ctx.groupIdx * n * n;
+        for (int e = tid; e < n * n; e += THREADS) {
+            rm[e] = a.get(base + e);
+            qm[e] = (e / n) == (e % n) ? 1.0f : 0.0f;
+        }
+        ctx.localBarrier();
+        for (int k = 0; k < n - 1; k++) {
+            if (tid == 0) {
+                float norm = 0.0f;
+                for (int i = k; i < n; i++) {
+                    norm += rm[i * n + k] * rm[i * n + k];
+                }
+                norm = TornadoMath.sqrt(norm);
+                float x0 = rm[k * n + k];
+                float alpha = x0 >= 0.0f ? -norm : norm;
+                float vv = 0.0f;
+                for (int i = k; i < n; i++) {
+                    float vi = rm[i * n + k] - (i == k ? alpha : 0.0f);
+                    v[i] = vi;
+                    vv += vi * vi;
+                }
+                scal[0] = vv > 0.0f ? 2.0f / vv : 0.0f;
+            }
+            ctx.localBarrier();
+            float beta = scal[0];
+            // R = H R, one column per thread.
+            for (int j = tid; j < n; j += THREADS) {
+                float dot = 0.0f;
+                for (int i = k; i < n; i++) {
+                    dot += v[i] * rm[i * n + j];
+                }
+                dot *= beta;
+                for (int i = k; i < n; i++) {
+                    rm[i * n + j] -= dot * v[i];
+                }
+            }
+            // Q = Q H, one row per thread.
+            for (int i = tid; i < n; i += THREADS) {
+                float dot = 0.0f;
+                for (int j = k; j < n; j++) {
+                    dot += qm[i * n + j] * v[j];
+                }
+                dot *= beta;
+                for (int j = k; j < n; j++) {
+                    qm[i * n + j] -= dot * v[j];
+                }
+            }
+            ctx.localBarrier();
+        }
+        for (int e = tid; e < n * n; e += THREADS) {
+            q.set(base + e, qm[e]);
+            r.set(base + e, (e / n) <= (e % n) ? rm[e] : 0.0f);
         }
     }
 }

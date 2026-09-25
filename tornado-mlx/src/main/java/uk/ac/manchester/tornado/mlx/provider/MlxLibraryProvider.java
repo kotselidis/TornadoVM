@@ -257,6 +257,9 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("linalg_inv", MlxLibraryProvider::inv), //
             entry("linalg_solve", MlxLibraryProvider::solve), //
             entry("linalg_solve_triangular", MlxLibraryProvider::solveTriangular), //
+            entry("linalg_lu", MlxLibraryProvider::lu), //
+            entry("linalg_lu_factor", MlxLibraryProvider::luFactor), //
+            entry("linalg_qr", MlxLibraryProvider::qr), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -457,6 +460,34 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         MemorySegment a = c.input(0, c.intArg(2), n, n);
         boolean upper = c.boolArg(4);
         c.store(c.op(name, res -> op.apply(res, a, upper, c.stream())), 1);
+    }
+
+    // linalg_lu(a, perm, l, u, batch, n)
+    private static void lu(MlxCall c) {
+        int n = c.intArg(5);
+        MemorySegment a = c.input(0, c.intArg(4), n, n);
+        MemorySegment[] plu = c.vectorOp("mlx_linalg_lu", 3, vec -> MlxC.mlx_linalg_lu(vec, a, c.stream()));
+        c.store(plu[0], 1);
+        c.store(plu[1], 2);
+        c.store(plu[2], 3);
+    }
+
+    // linalg_lu_factor(a, lu, pivots, batch, n)
+    private static void luFactor(MlxCall c) {
+        int n = c.intArg(4);
+        MemorySegment a = c.input(0, c.intArg(3), n, n);
+        MemorySegment[] factors = c.pair("mlx_linalg_lu_factor", (r0, r1) -> MlxC.mlx_linalg_lu_factor(r0, r1, a, c.stream()));
+        c.store(factors[0], 1);
+        c.store(factors[1], 2);
+    }
+
+    // linalg_qr(a, q, r, batch, n)
+    private static void qr(MlxCall c) {
+        int n = c.intArg(4);
+        MemorySegment a = c.input(0, c.intArg(3), n, n);
+        MemorySegment[] qr = c.pair("mlx_linalg_qr", (r0, r1) -> MlxC.mlx_linalg_qr(r0, r1, a, c.stream()));
+        c.store(qr[0], 1);
+        c.store(qr[1], 2);
     }
 
     // linalg_inv(a, out, batch, n)

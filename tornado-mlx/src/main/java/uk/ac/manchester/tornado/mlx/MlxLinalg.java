@@ -21,6 +21,7 @@ import uk.ac.manchester.tornado.api.common.LibraryTaskDescriptor;
 import uk.ac.manchester.tornado.api.types.arrays.BFloat16Array;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
+import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 
 /**
  * MLX linear algebra (Tier 2) as TornadoVM library tasks. Matrices are batched,
@@ -151,5 +152,31 @@ public final class MlxLinalg {
     @MlxOp("mlx_linalg_solve_triangular")
     public static LibraryTaskDescriptor solveTriangular(FloatArray a, FloatArray rhs, FloatArray x, int batch, int n, int nrhs, boolean upper) {
         return Mlx.task("linalg_solve_triangular", 2, a, rhs, x, batch, n, nrhs, upper);
+    }
+
+    /**
+     * LU factorisation with partial pivoting of each {@code a[b]} ({@code [batch, n, n]}):
+     * {@code l} unit lower triangular, {@code u} upper triangular, and {@code perm[b]} the row
+     * permutation, with {@code a[b][i, :] = (l u)[perm[i], :]}.
+     */
+    @MlxOp("mlx_linalg_lu")
+    public static LibraryTaskDescriptor lu(FloatArray a, IntArray perm, FloatArray l, FloatArray u, int batch, int n) {
+        return Mlx.task("linalg_lu", new int[] { 1, 2, 3 }, a, perm, l, u, batch, n);
+    }
+
+    /**
+     * Packed LU factorisation of each {@code a[b]}: {@code lu} holds L (unit lower, below the
+     * diagonal) and U, and {@code pivots[b][k]} is the row swapped with row {@code k} at step
+     * {@code k} (LAPACK getrf, 0-based).
+     */
+    @MlxOp("mlx_linalg_lu_factor")
+    public static LibraryTaskDescriptor luFactor(FloatArray a, FloatArray lu, IntArray pivots, int batch, int n) {
+        return Mlx.task("linalg_lu_factor", new int[] { 1, 2 }, a, lu, pivots, batch, n);
+    }
+
+    /** QR factorisation of each square {@code a[b]}: {@code q} orthogonal, {@code r} upper triangular. */
+    @MlxOp("mlx_linalg_qr")
+    public static LibraryTaskDescriptor qr(FloatArray a, FloatArray q, FloatArray r, int batch, int n) {
+        return Mlx.task("linalg_qr", new int[] { 1, 2 }, a, q, r, batch, n);
     }
 }

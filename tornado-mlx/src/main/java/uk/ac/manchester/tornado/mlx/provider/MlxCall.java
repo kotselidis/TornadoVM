@@ -162,6 +162,26 @@ final class MlxCall implements AutoCloseable {
         return result;
     }
 
+    /** An mlx-c operation with two {@code mlx_array*} results. */
+    interface PairOperation {
+        int apply(MemorySegment res0, MemorySegment res1);
+    }
+
+    /** Runs an operation that returns two arrays through separate pointers; both are freed when the call closes. */
+    MemorySegment[] pair(String name, PairOperation operation) {
+        MemorySegment slot0 = arena.allocate(C_POINTER);
+        MemorySegment slot1 = arena.allocate(C_POINTER);
+        slot0.set(C_POINTER, 0, MlxC.mlx_array_new());
+        slot1.set(C_POINTER, 0, MlxC.mlx_array_new());
+        int status = operation.apply(slot0, slot1);
+        MemorySegment r0 = slot0.get(C_POINTER, 0);
+        MemorySegment r1 = slot1.get(C_POINTER, 0);
+        temporaries.add(r0);
+        temporaries.add(r1);
+        MlxNativeLib.check(status, name);
+        return new MemorySegment[] { r0, r1 };
+    }
+
     /** An MLX float32 scalar, freed when the call closes. */
     MemorySegment scalar(float value) {
         MemorySegment s = MlxC.mlx_array_new_float32(value);

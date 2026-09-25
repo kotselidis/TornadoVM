@@ -17,6 +17,9 @@
  */
 package uk.ac.manchester.tornado.unittests.mlx;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Random;
 
 import org.junit.Test;
@@ -29,6 +32,7 @@ import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
+import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 import uk.ac.manchester.tornado.mlx.MlxLinalg;
 import uk.ac.manchester.tornado.mlx.jit.JitLinalg;
 
@@ -382,6 +386,141 @@ public class TestJitLinalg extends MlxTestBase {
             both("inv n=" + n, aInv, invMlx, invJit, 1e-3, 1e-4);
             both("solve n=" + n, matmul(aInv, rhs, BATCH, n, n, nrhs), solMlx, solJit, 1e-3, 1e-4);
             both("solveTriangular n=" + n, matmul(inverse(t, BATCH, n), rhs, BATCH, n, n, nrhs), triMlx, triJit, 1e-3, 1e-4);
+        }
+    }
+
+    @Test
+    public void testLuFactor() throws TornadoExecutionPlanException {
+        for (int n : ORDERS) {
+            double[] a = matrices(BATCH, n, 0, 301L + n);
+            FloatArray fa = FloatArray.fromArray(toFloat(a));
+            FloatArray luMlx = new FloatArray(a.length);
+            FloatArray luJit = new FloatArray(a.length);
+            IntArray pivMlx = new IntArray(BATCH * n);
+            IntArray pivJit = new IntArray(BATCH * n);
+            IntArray unused = new IntArray(1);
+            TaskGraph g = new TaskGraph("lf").transferToDevice(DataTransferMode.FIRST_EXECUTION, fa) //
+                    .libraryTask("m", MlxLinalg::luFactor, fa, luMlx, pivMlx, BATCH, n) //
+                    .task("j", JitLinalg::lu, new KernelContext(), fa, luJit, pivJit, unused, n, 1, 0) //
+                    .transferToHost(DataTransferMode.EVERY_EXECUTION, luMlx, luJit, pivMlx, pivJit);
+            execute(g, perMatrix("lf.j", BATCH));
+            for (int i = 0; i < BATCH * n; i++) {
+                assertEquals("luFactor pivots n=" + n + " " + i, pivMlx.get(i), pivJit.get(i));
+            }
+            double[] e = new double[a.length];
+            for (int i = 0; i < e.length; i++) {
+                e[i] = luMlx.get(i);
+            }
+            assertAllClose("luFactor n=" + n + " JIT vs MLX", e, luJit, 1e-3, 1e-4);
+        }
+    }
+
+    @Test
+    public void testLu() throws TornadoExecutionPlanException {
+        for (int n : ORDERS) {
+            double[] a = matrices(BATCH, n, 0, 311L + n);
+            FloatArray fa = FloatArray.fromArray(toFloat(a));
+            IntArray permMlx = new IntArray(BATCH * n);
+            IntArray permJit = new IntArray(BATCH * n);
+            IntArray unused = new IntArray(1);
+            FloatArray lMlx = new FloatArray(a.length);
+            FloatArray uMlx = new FloatArray(a.length);
+            FloatArray packed = new FloatArray(a.length);
+            FloatArray lJit = new FloatArray(a.length);
+            FloatArray uJit = new FloatArray(a.length);
+            TaskGraph g = new TaskGraph("lu").transferToDevice(DataTransferMode.FIRST_EXECUTION, fa) //
+                    .libraryTask("m", MlxLinalg::lu, fa, permMlx, lMlx, uMlx, BATCH, n) //
+                    .task("j", JitLinalg::lu, new KernelContext(), fa, packed, unused, permJit, n, 0, 1) //
+                    .task("s", JitLinalg::splitLu, new KernelContext(), packed, lJit, uJit, a.length, n) //
+                    .transferToHost(DataTransferMode.EVERY_EXECUTION, permMlx, lMlx, uMlx, permJit, lJit, uJit);
+            GridScheduler gs = new GridScheduler();
+            gs.addWorkerGrid("lu.j", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+            gs.addWorkerGrid("lu.s", TestJitElementwise.grid1D(a.length));
+            execute(g, gs);
+            for (String who : new String[] { "MLX", "JIT" }) {
+                IntArray perm = who.equals("MLX") ? permMlx : permJit;
+                FloatArray l = who.equals("MLX") ? lMlx : lJit;
+                FloatArray u = who.equals("MLX") ? uMlx : uJit;
+                double[] lv = new double[a.length];
+                double[] uv = new double[a.length];
+                for (int i = 0; i < a.length; i++) {
+                    lv[i] = l.get(i);
+                    uv[i] = u.get(i);
+                }
+                double[] prod = matmul(lv, uv, BATCH, n, n, n);
+                double[] permuted = new double[a.length];
+                for (int b = 0; b < BATCH; b++) {
+                    for (int i = 0; i < n; i++) {
+                        // a[i, :] = (l u)[perm[i], :]
+                        int dst = perm.get(b * n + i);
+                        for (int j = 0; j < n; j++) {
+                            permuted[(b * n + dst) * n + j] = a[(b * n + i) * n + j];
+                        }
+                        for (int j = 0; j < n; j++) {
+                            int e = (b * n + i) * n + j;
+                            assertTrue("lu " + who + " L not unit lower", j < i || (j == i ? Math.abs(lv[e] - 1) < 1e-6 : lv[e] == 0));
+                            assertTrue("lu " + who + " U not upper", j >= i || uv[e] == 0);
+                        }
+                    }
+                }
+                FloatArray pf = FloatArray.fromArray(toFloat(prod));
+                assertAllClose("lu n=" + n + " " + who + " a = (l u)[perm]", permuted, pf, 1e-3, 1e-4);
+            }
+        }
+    }
+
+    /** Flips signs so that diag(r) >= 0 (row k of r and column k of q together). */
+    private static void normaliseQr(double[] q, double[] r, int batch, int n) {
+        for (int b = 0; b < batch; b++) {
+            for (int k = 0; k < n; k++) {
+                if (r[(b * n + k) * n + k] < 0) {
+                    for (int j = 0; j < n; j++) {
+                        r[(b * n + k) * n + j] = -r[(b * n + k) * n + j];
+                        q[(b * n + j) * n + k] = -q[(b * n + j) * n + k];
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testQr() throws TornadoExecutionPlanException {
+        for (int n : ORDERS) {
+            double[] a = matrices(BATCH, n, 0, 321L + n);
+            FloatArray fa = FloatArray.fromArray(toFloat(a));
+            FloatArray qMlx = new FloatArray(a.length);
+            FloatArray rMlx = new FloatArray(a.length);
+            FloatArray qJit = new FloatArray(a.length);
+            FloatArray rJit = new FloatArray(a.length);
+            TaskGraph g = new TaskGraph("qr").transferToDevice(DataTransferMode.FIRST_EXECUTION, fa) //
+                    .libraryTask("m", MlxLinalg::qr, fa, qMlx, rMlx, BATCH, n) //
+                    .task("j", JitLinalg::qr, new KernelContext(), fa, qJit, rJit, n) //
+                    .transferToHost(DataTransferMode.EVERY_EXECUTION, qMlx, rMlx, qJit, rJit);
+            execute(g, perMatrix("qr.j", BATCH));
+            double[][] q = new double[2][a.length];
+            double[][] r = new double[2][a.length];
+            for (int i = 0; i < a.length; i++) {
+                q[0][i] = qMlx.get(i);
+                r[0][i] = rMlx.get(i);
+                q[1][i] = qJit.get(i);
+                r[1][i] = rJit.get(i);
+            }
+            for (int w = 0; w < 2; w++) {
+                String who = w == 0 ? "MLX" : "JIT";
+                FloatArray recon = FloatArray.fromArray(toFloat(matmul(q[w], r[w], BATCH, n, n, n)));
+                assertAllClose("qr n=" + n + " " + who + " q r = a", a, recon, 1e-3, 1e-4);
+                double[] identity = new double[a.length];
+                for (int b = 0; b < BATCH; b++) {
+                    for (int i = 0; i < n; i++) {
+                        identity[(b * n + i) * n + i] = 1;
+                    }
+                }
+                FloatArray qtq = FloatArray.fromArray(toFloat(matmul(transpose(q[w], BATCH, n), q[w], BATCH, n, n, n)));
+                assertAllClose("qr n=" + n + " " + who + " q^T q = I", identity, qtq, 1e-4, 1e-4);
+                normaliseQr(q[w], r[w], BATCH, n);
+            }
+            assertAllClose("qr n=" + n + " R JIT vs MLX", r[0], FloatArray.fromArray(toFloat(r[1])), 1e-3, 1e-4);
+            assertAllClose("qr n=" + n + " Q JIT vs MLX", q[0], FloatArray.fromArray(toFloat(q[1])), 1e-3, 1e-4);
         }
     }
 
