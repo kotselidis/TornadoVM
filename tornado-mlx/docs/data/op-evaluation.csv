@@ -1,0 +1,62 @@
+family,op,shape,regime,dtype,jit_kernel,mlx_execute_us,mlx_p10_us,mlx_p90_us,mlx_marginal_us,jit_execute_us,jit_p10_us,jit_p90_us,jit_marginal_us,bytes,flops
+floor,add,1,floor,f32,JitElementwise#add,445.3,389.7,560.8,217.1,439.6,379.4,590.8,257.5,12,1
+elementwise,add,4096,decode,f32,JitElementwise#add,286.1,256.0,323.6,216.2,294.0,265.0,346.0,258.9,49152,4096
+elementwise,add,16777216,large,f32,JitElementwise#add,3535.5,3374.3,3858.2,3443.9,1579.7,1461.2,1868.8,1438.0,201326592,16777216
+elementwise,subtract,4096,decode,f32,JitElementwise#subtract,258.5,236.6,319.4,201.7,237.4,212.1,276.7,231.6,49152,4096
+elementwise,subtract,16777216,large,f32,JitElementwise#subtract,3482.3,3314.9,3774.8,3407.3,1438.7,1396.8,1555.7,1449.0,201326592,16777216
+elementwise,multiply,4096,decode,f32,JitElementwise#multiply,255.2,233.7,343.4,199.4,252.1,221.2,329.4,234.6,49152,4096
+elementwise,multiply,16777216,large,f32,JitElementwise#multiply,3370.8,3293.7,3582.2,3315.5,1426.9,1390.0,1540.0,1472.9,201326592,16777216
+elementwise,divide,4096,decode,f32,JitElementwise#divide,286.3,233.3,381.8,220.7,243.2,212.7,298.3,252.8,49152,4096
+elementwise,divide,16777216,large,f32,JitElementwise#divide,3454.2,3302.3,3785.8,3355.1,1450.0,1389.2,1624.1,1780.5,201326592,16777216
+elementwise,maximum,4096,decode,f32,JitElementwise#maximum,394.3,324.5,490.4,195.6,240.0,204.7,315.6,248.4,49152,4096
+elementwise,maximum,16777216,large,f32,JitElementwise#maximum,3446.0,3307.1,3769.4,3365.3,1419.8,1382.6,1563.0,1796.8,201326592,16777216
+elementwise,minimum,4096,decode,f32,JitElementwise#minimum,374.0,305.3,465.5,200.1,240.9,211.5,283.8,258.1,49152,4096
+elementwise,minimum,16777216,large,f32,JitElementwise#minimum,3459.6,3299.4,3726.8,3389.4,1455.6,1401.6,1628.9,1818.2,201326592,16777216
+elementwise,negative,4096,decode,f32,JitElementwise#negative,298.5,274.0,354.1,209.7,237.8,211.0,302.9,229.0,32768,4096
+elementwise,negative,16777216,large,f32,JitElementwise#negative,3064.7,2933.7,3428.9,3033.3,1095.7,1030.7,1267.3,1325.5,134217728,16777216
+elementwise,exp,4096,decode,f32,JitElementwise#exp,385.7,321.3,474.9,199.3,240.7,209.0,299.0,234.0,32768,4096
+elementwise,exp,16777216,large,f32,JitElementwise#exp,3107.7,2930.4,3385.2,3023.3,1076.3,1032.8,1412.5,1347.2,134217728,16777216
+elementwise,tanh,4096,decode,f32,JitElementwise#tanh,400.5,340.3,500.5,202.6,275.1,245.5,322.9,255.9,32768,4096
+elementwise,tanh,16777216,large,f32,JitElementwise#tanh,3066.0,2938.5,3433.3,3048.2,1100.7,1017.3,1225.9,1337.8,134217728,16777216
+elementwise,erf,4096,decode,f32,JitElementwise#erf,376.8,311.9,448.6,198.7,232.8,198.0,321.6,241.8,32768,4096
+elementwise,erf,16777216,large,f32,JitElementwise#erf,3087.4,2937.9,3440.0,3026.3,1091.4,1030.8,1326.9,1471.9,134217728,16777216
+elementwise,sigmoid,4096,decode,f32,JitElementwise#sigmoid,404.0,325.4,472.6,196.7,236.5,208.9,284.2,226.4,32768,4096
+elementwise,sigmoid,16777216,large,f32,JitElementwise#sigmoid,3042.9,2928.0,3344.5,3058.1,1133.1,1045.7,1299.5,1349.1,134217728,16777216
+elementwise,sqrt,4096,decode,f32,JitElementwise#sqrt,281.2,262.8,340.3,198.6,226.7,199.0,299.9,226.5,32768,4096
+elementwise,sqrt,16777216,large,f32,JitElementwise#sqrt,3085.6,2918.0,3332.3,3021.0,1043.7,1010.6,1152.3,1027.1,134217728,16777216
+elementwise,rsqrt,4096,decode,f32,JitElementwise#rsqrt,328.3,286.3,380.7,203.0,240.1,199.3,301.5,245.9,32768,4096
+elementwise,rsqrt,16777216,large,f32,JitElementwise#rsqrt,3017.6,2916.9,3211.1,3047.9,1054.3,1012.0,1194.6,1237.3,134217728,16777216
+elementwise,square,4096,decode,f32,JitElementwise#square,363.7,304.2,440.1,189.0,219.8,199.4,280.8,220.6,32768,4096
+elementwise,square,16777216,large,f32,JitElementwise#square,3041.0,2911.6,3329.2,3019.3,1043.8,1007.8,1193.7,1036.6,134217728,16777216
+blas,matmul,128x4096x4096,prefill,f32,JitBlas#gemm,2102.0,2036.8,2207.7,2072.6,3337.4,3284.1,3450.0,3304.0,71303168,4294967296
+blas,matmul,512x4096x4096,prefill,f32,JitBlas#gemm,4911.2,4823.0,5082.3,4870.1,11548.5,11149.6,15661.4,12512.7,83886080,17179869184
+blas,matmulTransposed,1x4096x4096,decode,f32,JitBlas#gemv,685.1,641.6,820.1,631.4,1128.3,1001.0,1179.7,672.2,67141632,33554432
+blas,matmulTransposed,1x4096x14336,decode,f32,JitBlas#gemv,1635.2,1614.1,1665.9,1594.0,1590.4,1574.5,1610.4,1572.6,234954752,117440512
+blas,matmulTransposed,128x4096x4096,prefill,f32,JitBlas#gemmTransposed,2431.1,2335.5,2507.7,2399.9,4343.9,4279.9,4412.9,4325.4,71303168,4294967296
+blas,matmulTransposed,1x4096x4096,decode,f16,JitBlas#gemvF16,462.5,432.0,590.4,414.5,543.5,527.6,564.3,511.2,33570816,33554432
+blas,matmulTransposed,128x4096x4096,prefill,f16,JitBlas#gemmTransposedF16,1644.8,1622.3,1700.9,1965.1,4550.6,3861.6,5623.6,3949.9,35651584,4294967296
+blas,addmm,128x4096x4096,prefill,f32,JitBlas#addmm,2264.8,2150.9,2708.2,2839.1,3368.8,3311.6,3465.3,3327.0,73400320,4294967296
+fast,rmsNorm,1x4096,decode,f32,JitFast#rmsNorm,251.9,223.4,311.2,198.9,254.5,236.8,325.7,295.8,49152,16384
+fast,layerNorm,1x4096,decode,f32,JitFast#layerNorm,254.0,229.9,308.0,210.9,302.6,279.2,365.3,295.8,65536,32768
+fast,rmsNorm,512x4096,prefill,f32,JitFast#rmsNorm,729.5,647.8,815.3,632.8,487.4,392.1,528.8,416.2,16793600,8388608
+fast,layerNorm,512x4096,prefill,f32,JitFast#layerNorm,685.8,642.0,809.6,660.8,404.4,377.3,502.1,390.1,16809984,16777216
+fast,rope,32x1x128,decode,f32,JitFast#rope,262.1,227.6,321.9,207.2,260.3,234.2,318.4,239.5,32768,24576
+fast,ropeDynamic,32x1x128,decode,f32,JitFast#ropeDynamic,241.8,220.5,303.1,212.4,250.3,220.7,319.8,254.8,32768,24576
+fast,rope,32x512x128,prefill,f32,JitFast#rope,708.5,635.6,825.2,639.7,379.2,320.2,428.3,402.8,16777216,12582912
+fast,ropeDynamic,32x512x128,prefill,f32,JitFast#ropeDynamic,686.0,628.0,761.0,649.6,392.2,326.5,458.0,389.2,16777216,12582912
+fast,sdpa,32/8x1024x128,decode,f32,JitFast#attentionDecode,378.0,309.4,471.4,288.6,1635.0,1603.6,1761.8,1663.0,8388608,16777216
+fast,sdpa,32/8x4096x128,decode,f32,JitFast#attentionDecode,523.5,483.7,807.7,469.0,6440.0,6390.0,6534.9,6403.2,33554432,67108864
+reductions,softmax,151936,decode,f32,JitReductions#softmaxRows,317.7,285.2,380.3,280.6,501.0,480.8,588.8,442.6,1215488,607744
+reductions,softmaxRows,512x4096,prefill,f32,JitReductions#softmaxRows,686.3,623.2,807.8,636.9,438.5,392.0,719.8,383.3,16777216,8388608
+reductions,softmaxLastTwoAxes,32x8x512,prefill,f32,JitReductions#softmaxRows,363.3,324.3,431.4,310.3,291.1,259.7,326.3,281.4,1048576,524288
+reductions,argmax,151936,decode,f32,JitReductions#argmaxRows,304.8,270.2,366.0,272.6,366.3,315.8,422.9,305.1,607744,151936
+reductions,argmaxRows,64x32000,batch,f32,JitReductions#argmaxRows,377.0,316.1,531.0,276.7,355.0,298.9,448.5,306.9,8192000,2048000
+reductions,topk,151936 k50,decode,f32,JitReductions#topkRows,570.8,536.9,644.4,522.9,8420.6,8360.2,8512.1,8385.3,607744,151936
+reductions,topkRows,32x32000 k40,batch,f32,JitReductions#topkRows,1215.6,1168.1,1342.6,1191.9,3314.6,3286.1,3415.6,3304.9,4096000,1024000
+quantized,quantize,4096x4096 q4 g64,load,f32,JitQuantized#quantize,1754.3,1676.2,1904.2,3011.7,1381.0,1316.7,1589.7,870.0,77594624,50331648
+quantized,dequantize,4096x4096 q4 g64,load,f32,JitQuantized#dequantize,2827.7,2681.0,3112.9,2811.7,674.3,654.5,813.1,683.5,77594624,33554432
+quantized,quantizedMatmul,1x4096x4096 q4,decode,f32,JitQuantized#quantizedMatmul,411.5,353.8,494.9,376.6,720.1,573.9,840.2,409.9,10518528,33554432
+quantized,quantizedMatmul,1x4096x14336 q4,decode,f32,JitQuantized#quantizedMatmul,499.8,462.9,850.5,523.2,800.5,672.4,1265.4,636.0,36773888,117440512
+quantized,quantizedMatmul,1x4096x4096 q8,decode,f32,JitQuantized#quantizedMatmul,354.9,319.7,544.1,309.7,462.6,426.2,555.4,446.0,18907136,33554432
+quantized,quantizedMatmul,16x4096x4096 q4,prefill,f32,JitQuantized#quantizedMatmul,674.1,645.0,756.1,625.6,2984.9,2937.9,3079.9,2933.4,11010048,536870912
+quantized,gatherQmm,8of16x4096x1536 q4,decode,f32,JitQuantized#gatherQmm,467.9,437.6,760.7,622.1,1158.7,858.1,1694.8,776.2,31457280,100663296

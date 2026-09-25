@@ -118,7 +118,7 @@ public final class MlxBenchmarks {
 
     // ---------------------------------------------------------------- measurement
 
-    private static Timing timeExecute(TaskGraph graph, GridScheduler grid) {
+    static Timing timeExecute(TaskGraph graph, GridScheduler grid) {
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(graph.snapshot())) {
             if (grid != null) {
                 plan.withGridScheduler(grid);
@@ -139,7 +139,7 @@ public final class MlxBenchmarks {
         }
     }
 
-    private static Timing graphOf(String name, int tasks, Object[] inputs, Object[] outputs, TaskAdder adder, boolean usesGrid) {
+    static Timing graphOf(String name, int tasks, Object[] inputs, Object[] outputs, TaskAdder adder, boolean usesGrid) {
         TaskGraph graph = new TaskGraph(name).transferToDevice(DataTransferMode.FIRST_EXECUTION, inputs);
         GridScheduler grid = new GridScheduler();
         for (int i = 0; i < tasks; i++) {
