@@ -55,12 +55,26 @@ public final class Mlx {
         return accesses;
     }
 
-    private static LibraryTaskDescriptor task(String function, int outputIndex, Object... parameters) {
+    /** A task of this library whose arguments are all read-only except {@code outputIndex}. */
+    static LibraryTaskDescriptor task(String function, int outputIndex, Object... parameters) {
         return new LibraryTaskDescriptor() //
                 .withLibrary(LIBRARY_NAME) //
                 .withFunction(function) //
                 .withParameters(parameters) //
                 .withAccess(readOnlyExcept(parameters.length, outputIndex));
+    }
+
+    /** A task of this library whose arguments are all read-only except those in {@code outputs}. */
+    static LibraryTaskDescriptor task(String function, int[] outputs, Object... parameters) {
+        Access[] accesses = readOnlyExcept(parameters.length, outputs[0]);
+        for (int output : outputs) {
+            accesses[output] = Access.WRITE_ONLY;
+        }
+        return new LibraryTaskDescriptor() //
+                .withLibrary(LIBRARY_NAME) //
+                .withFunction(function) //
+                .withParameters(parameters) //
+                .withAccess(accesses);
     }
 
     // ---------------------------------------------------------------- element-wise binary: (a, b, c), same length

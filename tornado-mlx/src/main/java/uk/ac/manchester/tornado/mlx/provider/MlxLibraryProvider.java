@@ -90,6 +90,40 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("sqrt", c -> unary(c, "mlx_sqrt", MlxC::mlx_sqrt)), //
             entry("rsqrt", c -> unary(c, "mlx_rsqrt", MlxC::mlx_rsqrt)), //
             entry("square", c -> unary(c, "mlx_square", MlxC::mlx_square)), //
+            // Element-wise math (MlxMath).
+            entry("abs", c -> unary(c, "mlx_abs", MlxC::mlx_abs)), //
+            entry("arccos", c -> unary(c, "mlx_arccos", MlxC::mlx_arccos)), //
+            entry("arccosh", c -> unary(c, "mlx_arccosh", MlxC::mlx_arccosh)), //
+            entry("arcsin", c -> unary(c, "mlx_arcsin", MlxC::mlx_arcsin)), //
+            entry("arcsinh", c -> unary(c, "mlx_arcsinh", MlxC::mlx_arcsinh)), //
+            entry("arctan", c -> unary(c, "mlx_arctan", MlxC::mlx_arctan)), //
+            entry("arctanh", c -> unary(c, "mlx_arctanh", MlxC::mlx_arctanh)), //
+            entry("ceil", c -> unary(c, "mlx_ceil", MlxC::mlx_ceil)), //
+            entry("cos", c -> unary(c, "mlx_cos", MlxC::mlx_cos)), //
+            entry("cosh", c -> unary(c, "mlx_cosh", MlxC::mlx_cosh)), //
+            entry("degrees", c -> unary(c, "mlx_degrees", MlxC::mlx_degrees)), //
+            entry("erfinv", c -> unary(c, "mlx_erfinv", MlxC::mlx_erfinv)), //
+            entry("expm1", c -> unary(c, "mlx_expm1", MlxC::mlx_expm1)), //
+            entry("floor", c -> unary(c, "mlx_floor", MlxC::mlx_floor)), //
+            entry("log", c -> unary(c, "mlx_log", MlxC::mlx_log)), //
+            entry("log10", c -> unary(c, "mlx_log10", MlxC::mlx_log10)), //
+            entry("log1p", c -> unary(c, "mlx_log1p", MlxC::mlx_log1p)), //
+            entry("log2", c -> unary(c, "mlx_log2", MlxC::mlx_log2)), //
+            entry("radians", c -> unary(c, "mlx_radians", MlxC::mlx_radians)), //
+            entry("reciprocal", c -> unary(c, "mlx_reciprocal", MlxC::mlx_reciprocal)), //
+            entry("sign", c -> unary(c, "mlx_sign", MlxC::mlx_sign)), //
+            entry("sin", c -> unary(c, "mlx_sin", MlxC::mlx_sin)), //
+            entry("sinh", c -> unary(c, "mlx_sinh", MlxC::mlx_sinh)), //
+            entry("tan", c -> unary(c, "mlx_tan", MlxC::mlx_tan)), //
+            entry("arctan2", c -> binary(c, "mlx_arctan2", MlxC::mlx_arctan2)), //
+            entry("floor_divide", c -> binary(c, "mlx_floor_divide", MlxC::mlx_floor_divide)), //
+            entry("logaddexp", c -> binary(c, "mlx_logaddexp", MlxC::mlx_logaddexp)), //
+            entry("power", c -> binary(c, "mlx_power", MlxC::mlx_power)), //
+            entry("remainder", c -> binary(c, "mlx_remainder", MlxC::mlx_remainder)), //
+            entry("round", MlxLibraryProvider::round), //
+            entry("divmod", MlxLibraryProvider::divmod), //
+            entry("clip", MlxLibraryProvider::clip), //
+            entry("where", MlxLibraryProvider::where), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -256,6 +290,49 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // round(a, out, decimals)
+    private static void round(MlxCall c) {
+        int n = c.length(1);
+        MemorySegment a = c.input(0, n);
+        int decimals = c.intArg(2);
+        c.store(c.op("mlx_round", res -> MlxC.mlx_round(res, a, decimals, c.stream())), 1);
+    }
+
+    // divmod(a, b, quotient, remainder)
+    private static void divmod(MlxCall c) {
+        int n = c.length(2);
+        MemorySegment a = c.input(0, n);
+        MemorySegment b = c.input(1, n);
+        MemorySegment[] qr = c.vectorOp("mlx_divmod", 2, vec -> MlxC.mlx_divmod(vec, a, b, c.stream()));
+        c.store(qr[0], 2);
+        c.store(qr[1], 3);
+    }
+
+    // clip(a, out, lo, hi): integer bounds for integer arrays, float bounds otherwise
+    private static void clip(MlxCall c) {
+        int n = c.length(1);
+        MemorySegment a = c.input(0, n);
+        MemorySegment lo;
+        MemorySegment hi;
+        if (c.dtype(0) == MlxNativeLib.MLX_INT32) {
+            lo = c.scalar(c.intArg(2));
+            hi = c.scalar(c.intArg(3));
+        } else {
+            lo = c.scalar(c.floatArg(2));
+            hi = c.scalar(c.floatArg(3));
+        }
+        c.store(c.op("mlx_clip", res -> MlxC.mlx_clip(res, a, lo, hi, c.stream())), 1);
+    }
+
+    // where(condition, x, y, out): condition is a byte mask, non-zero selects x
+    private static void where(MlxCall c) {
+        int n = c.length(3);
+        MemorySegment condition = c.input(0, n);
+        MemorySegment x = c.input(1, n);
+        MemorySegment y = c.input(2, n);
+        c.store(c.op("mlx_where", res -> MlxC.mlx_where(res, condition, x, y, c.stream())), 3);
+    }
 
     private static void binary(MlxCall c, String name, Binary op) {
         int n = c.length(2);

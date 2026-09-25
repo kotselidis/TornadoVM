@@ -135,11 +135,11 @@ def scan_jit_references(roots, kernels):
 
 
 def scan_references(roots, methods):
-    """Ops whose factories are referenced (Mlx::name or Mlx.name() in the given sources."""
+    """Ops whose factories are referenced (MlxX::name or MlxX.name(), for any factory class MlxX) in the given sources."""
     used = set()
     for path in java_files(roots):
         text = open(path).read()
-        for name in re.findall(r"\bMlx\s*(?:::|\.)\s*(\w+)", text):
+        for name in re.findall(r"\bMlx\w*\s*(?:::|\.)\s*(\w+)", text):
             used.update(methods.get(name, ()))
     return used
 

@@ -168,6 +168,13 @@ final class MlxCall implements AutoCloseable {
         return s;
     }
 
+    /** An MLX int32 scalar, freed when the call closes. */
+    MemorySegment scalar(int value) {
+        MemorySegment s = MlxC.mlx_array_new_int(value);
+        temporaries.add(s);
+        return s;
+    }
+
     /** Scratch memory that lives until the call closes. */
     Arena arena() {
         return arena;
