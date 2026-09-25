@@ -85,6 +85,23 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         int apply(MemorySegment res, MemorySegment a, MemorySegment axes, long axesNum, boolean keepdims, MemorySegment stream);
     }
 
+    private interface AlongAxisUpdate {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment indices, MemorySegment values, int axis, MemorySegment stream);
+    }
+
+    private interface Scatter {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment indices, MemorySegment updates, MemorySegment axes, long axesNum, MemorySegment stream);
+    }
+
+    private interface ScatterSingle {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment indices, MemorySegment updates, int axis, MemorySegment stream);
+    }
+
+    private interface SliceUpdate {
+        int apply(MemorySegment res, MemorySegment src, MemorySegment update, MemorySegment start, long startNum, MemorySegment stop, long stopNum, MemorySegment strides,
+                long stridesNum, MemorySegment stream);
+    }
+
     private interface Binary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment b, MemorySegment stream);
     }
@@ -188,6 +205,34 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("argsort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argsort_axis(r, a, 1, s), "mlx_argsort_axis")), //
             entry("partition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_partition_axis(r, a, c.intArg(5), 1, s), "mlx_partition_axis")), //
             entry("argpartition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argpartition_axis(r, a, c.intArg(5), 1, s), "mlx_argpartition_axis")), //
+            // Indexing (MlxIndex).
+            entry("take", MlxLibraryProvider::take), //
+            entry("take_axis", MlxLibraryProvider::takeAxis), //
+            entry("take_along_axis", MlxLibraryProvider::takeAlongAxis), //
+            entry("put_along_axis", c -> alongAxisUpdate(c, "mlx_put_along_axis", MlxC::mlx_put_along_axis)), //
+            entry("scatter_add_axis", c -> alongAxisUpdate(c, "mlx_scatter_add_axis", MlxC::mlx_scatter_add_axis)), //
+            entry("gather", MlxLibraryProvider::gather), //
+            entry("gather_single", MlxLibraryProvider::gatherRows), //
+            entry("scatter", c -> scatterPoints(c, "mlx_scatter", MlxC::mlx_scatter)), //
+            entry("scatter_add", c -> scatterPoints(c, "mlx_scatter_add", MlxC::mlx_scatter_add)), //
+            entry("scatter_max", c -> scatterPoints(c, "mlx_scatter_max", MlxC::mlx_scatter_max)), //
+            entry("scatter_min", c -> scatterPoints(c, "mlx_scatter_min", MlxC::mlx_scatter_min)), //
+            entry("scatter_prod", c -> scatterPoints(c, "mlx_scatter_prod", MlxC::mlx_scatter_prod)), //
+            entry("scatter_single", c -> scatterRows(c, "mlx_scatter_single", MlxC::mlx_scatter_single)), //
+            entry("scatter_add_single", c -> scatterRows(c, "mlx_scatter_add_single", MlxC::mlx_scatter_add_single)), //
+            entry("scatter_max_single", c -> scatterRows(c, "mlx_scatter_max_single", MlxC::mlx_scatter_max_single)), //
+            entry("scatter_min_single", c -> scatterRows(c, "mlx_scatter_min_single", MlxC::mlx_scatter_min_single)), //
+            entry("scatter_prod_single", c -> scatterRows(c, "mlx_scatter_prod_single", MlxC::mlx_scatter_prod_single)), //
+            entry("slice", MlxLibraryProvider::slice), //
+            entry("slice_dynamic", MlxLibraryProvider::sliceDynamic), //
+            entry("slice_update", c -> sliceUpdate(c, "mlx_slice_update", MlxC::mlx_slice_update)), //
+            entry("slice_update_add", c -> sliceUpdate(c, "mlx_slice_update_add", MlxC::mlx_slice_update_add)), //
+            entry("slice_update_max", c -> sliceUpdate(c, "mlx_slice_update_max", MlxC::mlx_slice_update_max)), //
+            entry("slice_update_min", c -> sliceUpdate(c, "mlx_slice_update_min", MlxC::mlx_slice_update_min)), //
+            entry("slice_update_prod", c -> sliceUpdate(c, "mlx_slice_update_prod", MlxC::mlx_slice_update_prod)), //
+            entry("slice_update_dynamic", MlxLibraryProvider::sliceUpdateDynamic), //
+            entry("masked_scatter", MlxLibraryProvider::maskedScatter), //
+            entry("gather_mm", MlxLibraryProvider::gatherMm), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -354,6 +399,138 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // take(x, indices, out): out[i] = x[indices[i]], x flat
+    private static void take(MlxCall c) {
+        MemorySegment x = c.input(0, c.length(0));
+        MemorySegment indices = c.input(1, c.length(1));
+        c.store(c.op("mlx_take", res -> MlxC.mlx_take(res, x, indices, c.stream())), 2);
+    }
+
+    // take_axis(x, indices, out, outer, len, inner): along axis 1 of [outer, len, inner]
+    private static void takeAxis(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), c.intArg(5));
+        MemorySegment indices = c.input(1, c.length(1));
+        c.store(c.op("mlx_take_axis", res -> MlxC.mlx_take_axis(res, x, indices, 1, c.stream())), 2);
+    }
+
+    // take_along_axis(x, indices, out, outer, len, m, inner)
+    private static void takeAlongAxis(MlxCall c) {
+        int outer = c.intArg(3);
+        int inner = c.intArg(6);
+        MemorySegment x = c.input(0, outer, c.intArg(4), inner);
+        MemorySegment indices = c.input(1, outer, c.intArg(5), inner);
+        c.store(c.op("mlx_take_along_axis", res -> MlxC.mlx_take_along_axis(res, x, indices, 1, c.stream())), 2);
+    }
+
+    // put_along_axis / scatter_add_axis(x, indices, values, out, outer, len, m, inner)
+    private static void alongAxisUpdate(MlxCall c, String name, AlongAxisUpdate op) {
+        int outer = c.intArg(4);
+        int m = c.intArg(6);
+        int inner = c.intArg(7);
+        MemorySegment x = c.input(0, outer, c.intArg(5), inner);
+        MemorySegment indices = c.input(1, outer, m, inner);
+        MemorySegment values = c.input(2, outer, m, inner);
+        c.store(c.op(name, res -> op.apply(res, x, indices, values, 1, c.stream())), 3);
+    }
+
+    // gather(x, rows, cols, out, rowCount, colCount): out[i] = x[rows[i], cols[i]]
+    private static void gather(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(4), c.intArg(5));
+        MemorySegment indices = c.vector(c.input(1, c.length(1)), c.input(2, c.length(2)));
+        c.store(c.op("mlx_gather", res -> MlxC.mlx_gather(res, x, indices, c.ints(0, 1), 2, c.ints(1, 1), 2, c.stream())), 3);
+    }
+
+    // gather_single(x, indices, out, rows, cols, sliceRows): out[i, r, :] = x[indices[i] + r, :]
+    private static void gatherRows(MlxCall c) {
+        int cols = c.intArg(4);
+        MemorySegment x = c.input(0, c.intArg(3), cols);
+        MemorySegment indices = c.input(1, c.length(1));
+        int sliceRows = c.intArg(5);
+        c.store(c.op("mlx_gather_single", res -> MlxC.mlx_gather_single(res, x, indices, 0, c.ints(sliceRows, cols), 2, c.stream())), 2);
+    }
+
+    // scatter*(x, rows, cols, updates, out, rowCount, colCount): point updates at (rows[i], cols[i])
+    private static void scatterPoints(MlxCall c, String name, Scatter op) {
+        MemorySegment x = c.input(0, c.intArg(5), c.intArg(6));
+        int count = c.length(1);
+        MemorySegment indices = c.vector(c.input(1, count), c.input(2, count));
+        MemorySegment updates = c.input(3, count, 1, 1);
+        c.store(c.op(name, res -> op.apply(res, x, indices, updates, c.ints(0, 1), 2, c.stream())), 4);
+    }
+
+    // scatter*_single(x, indices, updates, out, rows, cols): row updates at indices[i]
+    private static void scatterRows(MlxCall c, String name, ScatterSingle op) {
+        int cols = c.intArg(5);
+        MemorySegment x = c.input(0, c.intArg(4), cols);
+        int count = c.length(1);
+        MemorySegment indices = c.input(1, count);
+        MemorySegment updates = c.input(2, count, 1, cols);
+        c.store(c.op(name, res -> op.apply(res, x, indices, updates, 0, c.stream())), 3);
+    }
+
+    // slice(x, out, rows, cols, r0, r1, rowStep, c0, c1, colStep)
+    private static void slice(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3));
+        MemorySegment start = c.ints(c.intArg(4), c.intArg(7));
+        MemorySegment stop = c.ints(c.intArg(5), c.intArg(8));
+        MemorySegment strides = c.ints(c.intArg(6), c.intArg(9));
+        c.store(c.op("mlx_slice", res -> MlxC.mlx_slice(res, x, start, 2, stop, 2, strides, 2, c.stream())), 1);
+    }
+
+    // slice_dynamic(x, start, out, rows, cols, sliceRows): rows start[0] .. start[0] + sliceRows
+    private static void sliceDynamic(MlxCall c) {
+        int cols = c.intArg(4);
+        MemorySegment x = c.input(0, c.intArg(3), cols);
+        MemorySegment start = c.input(1, 1);
+        int sliceRows = c.intArg(5);
+        c.store(c.op("mlx_slice_dynamic", res -> MlxC.mlx_slice_dynamic(res, x, start, c.ints(0), 1, c.ints(sliceRows, cols), 2, c.stream())), 2);
+    }
+
+    // slice_update*(x, update, out, rows, cols, r0, c0, updateRows, updateCols)
+    private static void sliceUpdate(MlxCall c, String name, SliceUpdate op) {
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4));
+        int r0 = c.intArg(5);
+        int c0 = c.intArg(6);
+        int updateRows = c.intArg(7);
+        int updateCols = c.intArg(8);
+        MemorySegment update = c.input(1, updateRows, updateCols);
+        MemorySegment start = c.ints(r0, c0);
+        MemorySegment stop = c.ints(r0 + updateRows, c0 + updateCols);
+        MemorySegment strides = c.ints(1, 1);
+        c.store(c.op(name, res -> op.apply(res, x, update, start, 2, stop, 2, strides, 2, c.stream())), 2);
+    }
+
+    // slice_update_dynamic(x, update, start, out, rows, cols, updateRows): rows start[0] .. replaced
+    private static void sliceUpdateDynamic(MlxCall c) {
+        int cols = c.intArg(5);
+        MemorySegment x = c.input(0, c.intArg(4), cols);
+        MemorySegment update = c.input(1, c.intArg(6), cols);
+        MemorySegment start = c.input(2, 1);
+        c.store(c.op("mlx_slice_update_dynamic", res -> MlxC.mlx_slice_update_dynamic(res, x, update, start, c.ints(0), 1, c.stream())), 3);
+    }
+
+    // masked_scatter(x, mask, src, out): mask is a byte array, non-zero positions take src in order
+    private static void maskedScatter(MlxCall c) {
+        int n = c.length(0);
+        MemorySegment x = c.input(0, n);
+        MemorySegment maskBytes = c.input(1, n);
+        MemorySegment mask = c.op("mlx_astype", res -> MlxC.mlx_astype(res, maskBytes, MlxNativeLib.MLX_BOOL, c.stream()));
+        MemorySegment src = c.input(2, c.length(2));
+        c.store(c.op("mlx_masked_scatter", res -> MlxC.mlx_masked_scatter(res, x, mask, src, c.stream())), 3);
+    }
+
+    // gather_mm(a, b, lhs, rhs, out, batchesA, batchesB, m, k, n)
+    private static void gatherMm(MlxCall c) {
+        int m = c.intArg(7);
+        int k = c.intArg(8);
+        int n = c.intArg(9);
+        MemorySegment a = c.input(0, c.intArg(5), m, k);
+        MemorySegment b = c.input(1, c.intArg(6), k, n);
+        MemorySegment lhs = c.input(2, c.length(2));
+        MemorySegment rhs = c.input(3, c.length(3));
+        c.store(c.op("mlx_gather_mm", res -> MlxC.mlx_gather_mm(res, a, b, lhs, rhs, false, c.stream())), 4);
+    }
 
     // whole(x, out, ...): a unary operation on x as a flat array
     private static void whole(MlxCall c, Unary op, String name) {

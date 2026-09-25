@@ -59,6 +59,7 @@ final class MlxCall implements AutoCloseable {
     private final MemorySegment stream;
     private final Arena arena = Arena.ofConfined();
     private final List<MemorySegment> temporaries = new ArrayList<>();
+    private final List<MemorySegment> vectors = new ArrayList<>();
 
     MlxCall(MlxLibraryProvider.MlxContext context, LibraryInvocation invocation, MemorySegment stream) {
         this.context = context;
@@ -166,6 +167,16 @@ final class MlxCall implements AutoCloseable {
         MemorySegment s = MlxC.mlx_array_new_float32(value);
         temporaries.add(s);
         return s;
+    }
+
+    /** An {@code mlx_vector_array} of the given arrays, freed when the call closes. */
+    MemorySegment vector(MemorySegment... arrays) {
+        MemorySegment vec = MlxC.mlx_vector_array_new();
+        vectors.add(vec);
+        for (MemorySegment a : arrays) {
+            MlxNativeLib.check(MlxC.mlx_vector_array_append_value(vec, a), "mlx_vector_array_append_value");
+        }
+        return vec;
     }
 
     /** An MLX int32 scalar, freed when the call closes. */
@@ -329,6 +340,8 @@ final class MlxCall implements AutoCloseable {
             MlxNativeLib.free(t);
         }
         temporaries.clear();
+        vectors.forEach(MlxC::mlx_vector_array_free);
+        vectors.clear();
         arena.close();
     }
 }
