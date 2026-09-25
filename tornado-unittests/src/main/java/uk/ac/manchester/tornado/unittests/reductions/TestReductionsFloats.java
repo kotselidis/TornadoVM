@@ -359,6 +359,14 @@ public class TestReductionsFloats extends TornadoTestBase {
         assertEquals(sequential.get(0), result.get(0), 0.01f);
     }
 
+    /**
+     * The loop runs from 1, so the reduction has 32767 iterations: not a power of two, so the GPU
+     * reduces the first 16384 and a host thread reduces the rest. The host part re-runs this method
+     * with the GPU's share of {@code input} set to the neutral element, which only removes terms
+     * that come from {@code input}. Here every term is computed from {@code i}, so the host also
+     * adds the GPU's terms and the result is about twice pi/4. That is why testComputePi is on
+     * tornado-test's known-failures list.
+     */
     private static void computePi(FloatArray input, @Reduce FloatArray result) {
         result.set(0, 0.0f);
         for (@Parallel int i = 1; i < input.getSize(); i++) {

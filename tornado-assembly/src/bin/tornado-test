@@ -201,6 +201,7 @@ __TEST_THE_WORLD__ = [
     TestEntry("uk.ac.manchester.tornado.unittests.loops.TestParallelDimensions"),
     TestEntry("uk.ac.manchester.tornado.unittests.reductions.TestReductionsIntegers"),
     TestEntry("uk.ac.manchester.tornado.unittests.reductions.TestReductionsFloats"),
+    TestEntry("uk.ac.manchester.tornado.unittests.reductions.TestReductionsLoopStart"),
     TestEntry("uk.ac.manchester.tornado.unittests.reductions.TestReductionsDoubles"),
     TestEntry("uk.ac.manchester.tornado.unittests.reductions.TestReductionsLong"),
     TestEntry("uk.ac.manchester.tornado.unittests.reductions.InstanceReduction"),
@@ -396,6 +397,7 @@ __TORNADO_TESTS_WHITE_LIST__ = [
     "uk.ac.manchester.tornado.unittests.compute.ComputeTests#testNBodyBigNoWorker",
     "uk.ac.manchester.tornado.unittests.compute.ComputeTests#testEuler",
     "uk.ac.manchester.tornado.unittests.codegen.CodeGenTest#test02",
+    ## Hybrid host+GPU reduction re-adds index-computed terms (see TestReductionsFloats#computePi)
     "uk.ac.manchester.tornado.unittests.reductions.TestReductionsFloats#testComputePi",
     "uk.ac.manchester.tornado.unittests.kernelcontext.matrices.TestMatrixMultiplicationKernelContext#mxm1DKernelContext",
     "uk.ac.manchester.tornado.unittests.kernelcontext.matrices.TestMatrixMultiplicationKernelContext#mxm2DKernelContext01",

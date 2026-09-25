@@ -97,7 +97,17 @@ public class TornadoShapeAnalysis extends BasePhase<TornadoHighTierContext> {
             final int index = range.index();
             if (index != lastIndex && getIntegerValue(range.offset().value()) != Integer.MIN_VALUE && getIntegerValue(range.stride().value()) != Integer.MIN_VALUE && getIntegerValue(range
                     .value()) != Integer.MIN_VALUE) {
-                domainTree.set(index, new IntDomain(getIntegerValue(range.offset().value()), getIntegerValue(range.stride().value()), getIntegerValue(range.value())));
+                final int offset = getIntegerValue(range.offset().value());
+                final int stride = getIntegerValue(range.stride().value());
+                int length = getIntegerValue(range.value());
+                // Reductions need one thread per iteration: a thread with no iteration would leave
+                // its slot of the work-group reduction unwritten. For a reduction loop starting at
+                // s > 0 the domain therefore covers the iterations only, not 0..bound.
+                final int reductionStart = context.getMeta().getReductionLoopStart();
+                if (reductionStart > 0 && offset == reductionStart && stride == 1 && length > offset) {
+                    length -= offset;
+                }
+                domainTree.set(index, new IntDomain(offset, stride, length));
             } else {
                 valid = false;
                 logger.info("unsupported multiple parallel loops");

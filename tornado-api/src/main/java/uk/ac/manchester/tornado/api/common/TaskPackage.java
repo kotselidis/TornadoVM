@@ -51,6 +51,7 @@ public class TaskPackage {
     private final int taskType;
     private final Object[] taskParameters;
     private long numThreadsToRun;
+    private int reductionLoopStart;
 
     private boolean isPrebuiltTask;
 
@@ -371,6 +372,18 @@ public class TaskPackage {
 
     public void setNumThreadsToRun(long numThreads) {
         this.numThreadsToRun = numThreads;
+    }
+
+    /**
+     * First index of this task's parallel reduction loop when it is not 0. Reductions launch one
+     * thread per iteration, so the runtime needs it to size the grid and the loop bound.
+     */
+    public int getReductionLoopStart() {
+        return reductionLoopStart;
+    }
+
+    public void setReductionLoopStart(int reductionLoopStart) {
+        this.reductionLoopStart = reductionLoopStart;
     }
 
     /**

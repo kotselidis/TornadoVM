@@ -387,6 +387,7 @@ class ReduceTaskGraph {
                 listOfReduceIndexParameters = metaReduceTasks.getListOfReduceParameters(taskNumber);
 
                 int inputSize = 0;
+                int loopStart = 0;
                 for (Integer paramIndex : listOfReduceIndexParameters) {
 
                     Object originalReduceArray = taskPackage.getTaskParameters()[paramIndex + 1];
@@ -397,7 +398,15 @@ class ReduceTaskGraph {
                         continue;
                     }
 
-                    inputSize = metaReduceTasks.getInputSize(taskNumber);
+                    // The loop runs from loopStart up to (not including) its upper bound. The GPU
+                    // reduction needs exactly one thread per iteration, so size it by the number of
+                    // iterations: a thread with no iteration would leave its slot of the
+                    // work-group reduction unwritten.
+                    loopStart = metaReduceTasks.getLoopStart(taskNumber);
+                    inputSize = metaReduceTasks.getInputSize(taskNumber) - loopStart;
+                    if (loopStart > 0) {
+                        taskPackage.setReductionLoopStart(loopStart);
+                    }
 
                     // Analyse Input Size - if not power of 2 -> split host and device executions
                     boolean isInputPowerOfTwo = isPowerOfTwo(inputSize);
@@ -444,8 +453,9 @@ class ReduceTaskGraph {
                     // The host reduction is a fast reflective invoke; it must not run before
                     // setNeutralElement() or its result is wiped by the neutral refill. The host thread is
                     // therefore created and started only at the post-setNeutralElement site (leaving
-                    // hybridInitialized false here). inputSize is the power-of-two size reduced on the GPU.
-                    hybridThreadMetas.add(new HybridThreadMeta(taskPackage, inputSize));
+                    // hybridInitialized false here). inputSize is the power-of-two number of iterations
+                    // reduced on the GPU, starting at loopStart; the host reduces the rest.
+                    hybridThreadMetas.add(new HybridThreadMeta(taskPackage, loopStart + inputSize));
                 }
             }
         }

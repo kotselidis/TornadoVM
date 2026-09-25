@@ -37,13 +37,16 @@ public class MetaReduceTasks {
 
     private HashMap<Integer, ArrayList<Integer>> reduceList;
     private HashMap<Integer, Integer> reduceSize;
+    private HashMap<Integer, Integer> loopStart;
     private StructuredGraph graph;
 
-    MetaReduceTasks(int taskIndex, StructuredGraph graph, ArrayList<Integer> reduceIndexes, int inputSize) {
+    MetaReduceTasks(int taskIndex, StructuredGraph graph, ArrayList<Integer> reduceIndexes, int inputSize, int loopStart) {
         reduceList = new HashMap<>();
         reduceSize = new HashMap<>();
+        this.loopStart = new HashMap<>();
         reduceList.put(taskIndex, reduceIndexes);
         reduceSize.put(taskIndex, inputSize);
+        this.loopStart.put(taskIndex, loopStart);
         this.graph = graph;
     }
 
@@ -51,8 +54,18 @@ public class MetaReduceTasks {
         return reduceList.get(taskID);
     }
 
+    /**
+     * Upper bound of the reduction loop (the loop runs up to, not including, this index).
+     */
     public int getInputSize(int taskIndex) {
         return reduceSize.get(taskIndex);
+    }
+
+    /**
+     * First index of the reduction loop; 0 unless it is a known positive constant.
+     */
+    public int getLoopStart(int taskIndex) {
+        return loopStart.get(taskIndex);
     }
 
     public StructuredGraph getGraph() {

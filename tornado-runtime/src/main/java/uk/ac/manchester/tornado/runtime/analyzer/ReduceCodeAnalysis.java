@@ -257,7 +257,7 @@ public class ReduceCodeAnalysis {
         return graph.getNodes().filter(ParameterNode.class).count();
     }
 
-    private static void obtainLoopBoundForPanamaRegions(Node aux, ArrayList<ValueNode> loopBound) {
+    private static LoopBeginNode obtainLoopBoundForPanamaRegions(Node aux, ArrayList<ValueNode> loopBound) {
         LoopBeginNode loopBegin = null;
         ValueNode loopBoundNode = null;
 
@@ -292,9 +292,10 @@ public class ReduceCodeAnalysis {
         if (loopBegin != null) {
             loopBound.add(Objects.requireNonNull(loopBoundNode));
         }
+        return loopBegin;
     }
 
-    private static void obtainLoopBoundForOnHeapArrays(Node aux, ArrayList<ValueNode> loopBound) {
+    private static LoopBeginNode obtainLoopBoundForOnHeapArrays(Node aux, ArrayList<ValueNode> loopBound) {
         LoopBeginNode loopBegin = null;
         ValueNode loopBoundNode = null;
 
@@ -333,9 +334,10 @@ public class ReduceCodeAnalysis {
                 loopBound.add(Objects.requireNonNull(loopBoundNode));
             }
         }
+        return loopBegin;
     }
 
-    private static void getInputRageForReductionNode(ParameterNode parameterNode, ArrayList<ValueNode> loopBound) {
+    private static void getInputRageForReductionNode(ParameterNode parameterNode, ArrayList<ValueNode> loopBound, ArrayList<LoopBeginNode> loops) {
         // Get Input-Range for the reduction loop
         for (Node node : parameterNode.usages()) {
             if (node instanceof MethodCallTargetNode methodCallTargetNode) {
@@ -348,11 +350,43 @@ public class ReduceCodeAnalysis {
                 if (!panamaStoreNode.getTargetMethod().getName().equals("set")) {
                     continue;
                 }
-                obtainLoopBoundForPanamaRegions((Node) panamaStoreNode, loopBound);
+                addIfPresent(loops, obtainLoopBoundForPanamaRegions((Node) panamaStoreNode, loopBound));
             } else if (node instanceof StoreIndexedNode) {
-                obtainLoopBoundForOnHeapArrays(node, loopBound);
+                addIfPresent(loops, obtainLoopBoundForOnHeapArrays(node, loopBound));
             }
         }
+    }
+
+    private static void addIfPresent(ArrayList<LoopBeginNode> loops, LoopBeginNode loop) {
+        if (loop != null && !loops.contains(loop)) {
+            loops.add(loop);
+        }
+    }
+
+    /**
+     * First index of a reduction loop {@code for (int i = start; i < bound; i++)}: the entry value
+     * of the induction variable, i.e. the phi that is compared against the bound and advanced by
+     * one on the back edge. Returns 0 when the start is not a non-negative constant or the step is
+     * not +1, which keeps the reduction sized from the upper bound alone, as before.
+     */
+    static int findLoopStart(LoopBeginNode loopBegin) {
+        for (PhiNode phi : loopBegin.phis()) {
+            if (phi.valueCount() != 2 || !(phi.valueAt(0) instanceof ConstantNode init) || !init.getStackKind().isNumericInteger()) {
+                continue;
+            }
+            boolean comparedWithBound = phi.usages().filter(IntegerLessThanNode.class).filter(n -> ((IntegerLessThanNode) n).getX() == phi).isNotEmpty();
+            if (!comparedWithBound) {
+                continue;
+            }
+            boolean stepOne = phi.valueAt(1) instanceof AddNode add && ((add.getX() == phi && isConstantOne(add.getY())) || (add.getY() == phi && isConstantOne(add.getX())));
+            int start = init.asJavaConstant().asInt();
+            return (stepOne && start > 0) ? start : 0;
+        }
+        return 0;
+    }
+
+    private static boolean isConstantOne(ValueNode node) {
+        return node instanceof ConstantNode constant && constant.getStackKind().isNumericInteger() && constant.asJavaConstant().asLong() == 1;
     }
 
     /**
@@ -365,7 +399,7 @@ public class ReduceCodeAnalysis {
      *     List of reduce indexes within the method parameter list
      * @return ArrayList<ValueNode>
      */
-    private static ArrayList<ValueNode> findLoopUpperBoundNode(StructuredGraph graph, ArrayList<Integer> reduceIndexes) {
+    private static ArrayList<ValueNode> findLoopUpperBoundNode(StructuredGraph graph, ArrayList<Integer> reduceIndexes, ArrayList<LoopBeginNode> loops) {
         ArrayList<ValueNode> loopBoundNodes = new ArrayList<>();
         for (Integer paramIndex : reduceIndexes) {
             if (!graph.method().isStatic()) {
@@ -375,7 +409,7 @@ public class ReduceCodeAnalysis {
                 continue;
             }
             ParameterNode parameterNode = graph.getParameter(paramIndex);
-            getInputRageForReductionNode(parameterNode, loopBoundNodes);
+            getInputRageForReductionNode(parameterNode, loopBoundNodes, loops);
         }
         return loopBoundNodes;
     }
@@ -424,7 +458,11 @@ public class ReduceCodeAnalysis {
             }
 
             // Perform Partial Evaluation (PE) to obtain the value of the upper-bound loop
-            ArrayList<ValueNode> loopBound = findLoopUpperBoundNode(graph, reduceIndices);
+            ArrayList<LoopBeginNode> reductionLoops = new ArrayList<>();
+            ArrayList<ValueNode> loopBound = findLoopUpperBoundNode(graph, reduceIndices, reductionLoops);
+            // A reduction loop that does not start at 0 has fewer iterations than its bound. All
+            // reductions of one task share the loop, so one start value per task is enough.
+            int loopStart = reductionLoops.size() == 1 ? findLoopStart(reductionLoops.get(0)) : 0;
             for (int i = 0; i < graph.method().getParameters().length; i++) {
                 for (ValueNode valueNode : loopBound) {
                     int position = !graph.method().isStatic() ? i + 1 : i;
@@ -442,7 +480,7 @@ public class ReduceCodeAnalysis {
                     }
                 }
             }
-            MetaReduceTasks reduceTasks = new MetaReduceTasks(taskIndex, graph, reduceIndices, inputSize);
+            MetaReduceTasks reduceTasks = new MetaReduceTasks(taskIndex, graph, reduceIndices, inputSize, loopStart);
             tableMetaDataReduce.put(taskIndex, reduceTasks);
             taskIndex++;
         }

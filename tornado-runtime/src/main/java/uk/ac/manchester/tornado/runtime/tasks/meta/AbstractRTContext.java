@@ -76,6 +76,7 @@ public abstract class AbstractRTContext implements TaskContextInterface {
     private final int openclGpuBlock2DY;
 
     private long numThreads;
+    private int reductionLoopStart;
 
     private final boolean isMetalThreadgroupSizeDefined;
     private final int metalThreadsPerThreadgroupX;
@@ -312,6 +313,19 @@ public abstract class AbstractRTContext implements TaskContextInterface {
     @Override
     public void setNumThreads(long threads) {
         this.numThreads = threads;
+    }
+
+    /**
+     * First index of the task's parallel reduction loop, 0 unless it is a known positive constant.
+     * When set, the kernel is launched with one thread per iteration: the loop bound is
+     * specialised to {@code start + numThreads} and the domain covers only the iterations.
+     */
+    public int getReductionLoopStart() {
+        return reductionLoopStart;
+    }
+
+    public void setReductionLoopStart(int start) {
+        this.reductionLoopStart = start;
     }
 
     public void attachProfiler(TornadoProfiler profiler) {

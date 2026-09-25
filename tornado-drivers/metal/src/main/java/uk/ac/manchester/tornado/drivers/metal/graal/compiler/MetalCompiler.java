@@ -366,7 +366,9 @@ public class MetalCompiler {
 
         final TaskDataContext taskMeta = task.meta();
         final Object[] args = task.getArguments();
-        final long batchThreads = (taskMeta.getNumThreads() > 0) ? taskMeta.getNumThreads() : task.getBatchThreads();
+        // A forced thread count (reductions) is one thread per loop iteration; when the reduction
+        // loop starts at s > 0 its bound is s + threads.
+        final long batchThreads = (taskMeta.getNumThreads() > 0) ? taskMeta.getNumThreads() + taskMeta.getReductionLoopStart() : task.getBatchThreads();
         final int batchNumber = task.getBatchNumber();
         final long batchSize = task.getBatchSize();
         BatchCompilationConfig batchCompilationConfig = new BatchCompilationConfig(batchThreads, batchNumber, batchSize);
