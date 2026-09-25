@@ -233,6 +233,14 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("slice_update_dynamic", MlxLibraryProvider::sliceUpdateDynamic), //
             entry("masked_scatter", MlxLibraryProvider::maskedScatter), //
             entry("gather_mm", MlxLibraryProvider::gatherMm), //
+            // Convolutions (MlxConv).
+            entry("conv1d", MlxLibraryProvider::conv1d), //
+            entry("conv2d", MlxLibraryProvider::conv2d), //
+            entry("conv3d", MlxLibraryProvider::conv3d), //
+            entry("conv_transpose1d", MlxLibraryProvider::convTranspose1d), //
+            entry("conv_transpose2d", MlxLibraryProvider::convTranspose2d), //
+            entry("conv_transpose3d", MlxLibraryProvider::convTranspose3d), //
+            entry("conv_general", MlxLibraryProvider::convGeneral), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -399,6 +407,90 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // conv1d(x, w, out, n, len, cin, cout, k, stride, padding, dilation, groups)
+    private static void conv1d(MlxCall c) {
+        int cin = c.intArg(5);
+        int groups = c.intArg(11);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), cin);
+        MemorySegment w = c.input(1, c.intArg(6), c.intArg(7), cin / groups);
+        c.store(c.op("mlx_conv1d", res -> MlxC.mlx_conv1d(res, x, w, c.intArg(8), c.intArg(9), c.intArg(10), groups, c.stream())), 2);
+    }
+
+    // conv2d(x, w, out, n, h, w, cin, cout, kh, kw, stride, padding, dilation, groups)
+    private static void conv2d(MlxCall c) {
+        int cin = c.intArg(6);
+        int groups = c.intArg(13);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), c.intArg(5), cin);
+        MemorySegment w = c.input(1, c.intArg(7), c.intArg(8), c.intArg(9), cin / groups);
+        int s = c.intArg(10);
+        int p = c.intArg(11);
+        int d = c.intArg(12);
+        c.store(c.op("mlx_conv2d", res -> MlxC.mlx_conv2d(res, x, w, s, s, p, p, d, d, groups, c.stream())), 2);
+    }
+
+    // conv3d(x, w, out, n, d, h, w, cin, cout, kd, kh, kw, stride, padding, dilation, groups)
+    private static void conv3d(MlxCall c) {
+        int cin = c.intArg(7);
+        int groups = c.intArg(15);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), c.intArg(5), c.intArg(6), cin);
+        MemorySegment w = c.input(1, c.intArg(8), c.intArg(9), c.intArg(10), c.intArg(11), cin / groups);
+        int s = c.intArg(12);
+        int p = c.intArg(13);
+        int d = c.intArg(14);
+        c.store(c.op("mlx_conv3d", res -> MlxC.mlx_conv3d(res, x, w, s, s, s, p, p, p, d, d, d, groups, c.stream())), 2);
+    }
+
+    // conv_transpose1d(x, w, out, n, len, cin, cout, k, stride, padding, dilation, outputPadding, groups)
+    private static void convTranspose1d(MlxCall c) {
+        int cin = c.intArg(5);
+        int groups = c.intArg(12);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), cin);
+        MemorySegment w = c.input(1, c.intArg(6), c.intArg(7), cin / groups);
+        c.store(c.op("mlx_conv_transpose1d", res -> MlxC.mlx_conv_transpose1d(res, x, w, c.intArg(8), c.intArg(9), c.intArg(10), c.intArg(11), groups, c.stream())), 2);
+    }
+
+    // conv_transpose2d(x, w, out, n, h, w, cin, cout, kh, kw, stride, padding, dilation, outputPadding, groups)
+    private static void convTranspose2d(MlxCall c) {
+        int cin = c.intArg(6);
+        int groups = c.intArg(14);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), c.intArg(5), cin);
+        MemorySegment w = c.input(1, c.intArg(7), c.intArg(8), c.intArg(9), cin / groups);
+        int s = c.intArg(10);
+        int p = c.intArg(11);
+        int d = c.intArg(12);
+        int o = c.intArg(13);
+        c.store(c.op("mlx_conv_transpose2d", res -> MlxC.mlx_conv_transpose2d(res, x, w, s, s, p, p, d, d, o, o, groups, c.stream())), 2);
+    }
+
+    // conv_transpose3d(x, w, out, n, d, h, w, cin, cout, kd, kh, kw, stride, padding, dilation, outputPadding, groups)
+    private static void convTranspose3d(MlxCall c) {
+        int cin = c.intArg(7);
+        int groups = c.intArg(16);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), c.intArg(5), c.intArg(6), cin);
+        MemorySegment w = c.input(1, c.intArg(8), c.intArg(9), c.intArg(10), c.intArg(11), cin / groups);
+        int s = c.intArg(12);
+        int p = c.intArg(13);
+        int d = c.intArg(14);
+        int o = c.intArg(15);
+        c.store(c.op("mlx_conv_transpose3d", res -> MlxC.mlx_conv_transpose3d(res, x, w, s, s, s, p, p, p, d, d, d, o, o, o, groups, c.stream())), 2);
+    }
+
+    // conv_general(x, w, out, n, h, w, cin, cout, kh, kw, stride, padLo, padHi, kernelDilation, inputDilation, groups, flip): 2D
+    private static void convGeneral(MlxCall c) {
+        int cin = c.intArg(6);
+        int groups = c.intArg(15);
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4), c.intArg(5), cin);
+        MemorySegment w = c.input(1, c.intArg(7), c.intArg(8), c.intArg(9), cin / groups);
+        int s = c.intArg(10);
+        int lo = c.intArg(11);
+        int hi = c.intArg(12);
+        int kd = c.intArg(13);
+        int id = c.intArg(14);
+        boolean flip = c.boolArg(16);
+        c.store(c.op("mlx_conv_general", res -> MlxC.mlx_conv_general(res, x, w, c.ints(s, s), 2, c.ints(lo, lo), 2, c.ints(hi, hi), 2, c.ints(kd, kd), 2, c.ints(id, id), 2, groups, flip,
+                c.stream())), 2);
+    }
 
     // take(x, indices, out): out[i] = x[indices[i]], x flat
     private static void take(MlxCall c) {
