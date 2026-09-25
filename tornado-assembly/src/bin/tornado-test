@@ -197,6 +197,7 @@ __TEST_THE_WORLD__ = [
     TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitElementwise"),
     TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitBlas"),
     TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitFast"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitReductions"),
     TestEntry("uk.ac.manchester.tornado.unittests.virtualization.TestsVirtualLayer"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestSingleTaskSingleDevice"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestMultipleTasksSingleDevice"),

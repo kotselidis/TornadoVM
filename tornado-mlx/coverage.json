@@ -8,7 +8,7 @@
     "bound": 33,
     "tested": 33,
     "benchmarked": 10,
-    "jitBaselines": 22,
+    "jitBaselines": 29,
     "remaining": 259,
     "byTier": {
       "1": {
@@ -231,6 +231,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.argmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -249,6 +258,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.argmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2026,6 +2044,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.softmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2043,6 +2070,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.softmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2060,6 +2096,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.softmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2409,6 +2454,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.topkRows"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2426,6 +2480,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.topkRows"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
