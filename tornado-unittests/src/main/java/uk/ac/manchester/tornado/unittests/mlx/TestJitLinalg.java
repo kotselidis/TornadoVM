@@ -524,6 +524,222 @@ public class TestJitLinalg extends MlxTestBase {
         }
     }
 
+    /** Symmetric: (M + M^T) / 2. */
+    static double[] symmetric(int batch, int n, long seed) {
+        double[] m = matrices(batch, n, 0, seed);
+        double[] a = new double[m.length];
+        for (int b = 0; b < batch; b++) {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    a[(b * n + i) * n + j] = 0.5 * (m[(b * n + i) * n + j] + m[(b * n + j) * n + i]);
+                }
+            }
+        }
+        return a;
+    }
+
+    /** Eigenvalues (ascending) of each symmetric matrix by cyclic Jacobi in double precision. */
+    static double[] eigenvalues(double[] a, int batch, int n) {
+        double[] out = new double[batch * n];
+        for (int b = 0; b < batch; b++) {
+            double[][] m = new double[n][n];
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    m[i][j] = a[(b * n + i) * n + j];
+                }
+            }
+            for (int sweep = 0; sweep < 100; sweep++) {
+                double off = 0;
+                for (int p = 0; p < n; p++) {
+                    for (int q = p + 1; q < n; q++) {
+                        off += m[p][q] * m[p][q];
+                    }
+                }
+                if (off < 1e-30) {
+                    break;
+                }
+                for (int p = 0; p < n; p++) {
+                    for (int q = p + 1; q < n; q++) {
+                        if (m[p][q] == 0) {
+                            continue;
+                        }
+                        double theta = (m[q][q] - m[p][p]) / (2 * m[p][q]);
+                        double t = Math.signum(theta == 0 ? 1 : theta) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+                        double c = 1 / Math.sqrt(t * t + 1);
+                        double sn = t * c;
+                        for (int i = 0; i < n; i++) {
+                            double mip = m[i][p];
+                            double miq = m[i][q];
+                            m[i][p] = c * mip - sn * miq;
+                            m[i][q] = sn * mip + c * miq;
+                        }
+                        for (int j = 0; j < n; j++) {
+                            double mpj = m[p][j];
+                            double mqj = m[q][j];
+                            m[p][j] = c * mpj - sn * mqj;
+                            m[q][j] = sn * mpj + c * mqj;
+                        }
+                    }
+                }
+            }
+            double[] d = new double[n];
+            for (int i = 0; i < n; i++) {
+                d[i] = m[i][i];
+            }
+            java.util.Arrays.sort(d);
+            System.arraycopy(d, 0, out, b * n, n);
+        }
+        return out;
+    }
+
+    /** Flips each column k of {@code cols} (and row k of {@code rows}, if given) so that its largest-magnitude entry is positive. */
+    static void normaliseColumns(double[] cols, double[] rows, int batch, int n) {
+        for (int b = 0; b < batch; b++) {
+            for (int k = 0; k < n; k++) {
+                int best = 0;
+                for (int i = 1; i < n; i++) {
+                    if (Math.abs(cols[(b * n + i) * n + k]) > Math.abs(cols[(b * n + best) * n + k])) {
+                        best = i;
+                    }
+                }
+                if (cols[(b * n + best) * n + k] < 0) {
+                    for (int i = 0; i < n; i++) {
+                        cols[(b * n + i) * n + k] = -cols[(b * n + i) * n + k];
+                        if (rows != null) {
+                            rows[(b * n + k) * n + i] = -rows[(b * n + k) * n + i];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    static double[] doubles(FloatArray f) {
+        double[] d = new double[f.getSize()];
+        for (int i = 0; i < d.length; i++) {
+            d[i] = f.get(i);
+        }
+        return d;
+    }
+
+    @Test
+    public void testEigh() throws TornadoExecutionPlanException {
+        for (int n : ORDERS) {
+            for (boolean upper : new boolean[] { false, true }) {
+                double[] a = symmetric(BATCH, n, 331L + n);
+                FloatArray fa = FloatArray.fromArray(toFloat(a));
+                FloatArray wMlx = new FloatArray(BATCH * n);
+                FloatArray wJit = new FloatArray(BATCH * n);
+                FloatArray vMlx = new FloatArray(a.length);
+                FloatArray vJit = new FloatArray(a.length);
+                FloatArray w2Mlx = new FloatArray(BATCH * n);
+                FloatArray w2Jit = new FloatArray(BATCH * n);
+                FloatArray unused = new FloatArray(1);
+                int u = upper ? 1 : 0;
+                TaskGraph g = new TaskGraph("eh").transferToDevice(DataTransferMode.FIRST_EXECUTION, fa) //
+                        .libraryTask("m1", MlxLinalg::eigh, fa, wMlx, vMlx, BATCH, n, upper) //
+                        .libraryTask("m2", MlxLinalg::eigvalsh, fa, w2Mlx, BATCH, n, upper) //
+                        .task("j1", JitLinalg::eigh, new KernelContext(), fa, wJit, vJit, n, u, 1) //
+                        .task("j2", JitLinalg::eigh, new KernelContext(), fa, w2Jit, unused, n, u, 0) //
+                        .transferToHost(DataTransferMode.EVERY_EXECUTION, wMlx, wJit, vMlx, vJit, w2Mlx, w2Jit);
+                GridScheduler gs = new GridScheduler();
+                gs.addWorkerGrid("eh.j1", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+                gs.addWorkerGrid("eh.j2", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+                execute(g, gs);
+                double[] w = eigenvalues(a, BATCH, n);
+                String what = "n=" + n + " upper=" + upper;
+                both("eigh values " + what, w, wMlx, wJit, 1e-4, 2e-4);
+                both("eigvalsh " + what, w, w2Mlx, w2Jit, 1e-4, 2e-4);
+                double[] vm = doubles(vMlx);
+                double[] vj = doubles(vJit);
+                // A v = lambda v for every column.
+                for (double[] vec : new double[][] { vm, vj }) {
+                    double[] av = matmul(a, vec, BATCH, n, n, n);
+                    double[] lv = new double[a.length];
+                    for (int b = 0; b < BATCH; b++) {
+                        for (int i = 0; i < n; i++) {
+                            for (int k = 0; k < n; k++) {
+                                lv[(b * n + i) * n + k] = w[b * n + k] * vec[(b * n + i) * n + k];
+                            }
+                        }
+                    }
+                    assertAllClose("eigh A v = w v " + what + (vec == vm ? " MLX" : " JIT"), lv, FloatArray.fromArray(toFloat(av)), 1e-3, 1e-3);
+                }
+                normaliseColumns(vm, null, BATCH, n);
+                normaliseColumns(vj, null, BATCH, n);
+                assertAllClose("eigh vectors JIT vs MLX " + what, vm, FloatArray.fromArray(toFloat(vj)), 1e-2, 2e-3);
+            }
+        }
+    }
+
+    @Test
+    public void testSvdAndPinv() throws TornadoExecutionPlanException {
+        for (int n : ORDERS) {
+            double[] a = matrices(BATCH, n, 0, 341L + n);
+            FloatArray fa = FloatArray.fromArray(toFloat(a));
+            FloatArray uMlx = new FloatArray(a.length);
+            FloatArray sMlx = new FloatArray(BATCH * n);
+            FloatArray vtMlx = new FloatArray(a.length);
+            FloatArray uJit = new FloatArray(a.length);
+            FloatArray sJit = new FloatArray(BATCH * n);
+            FloatArray vtJit = new FloatArray(a.length);
+            FloatArray s2Mlx = new FloatArray(BATCH * n);
+            FloatArray s2Jit = new FloatArray(BATCH * n);
+            FloatArray pMlx = new FloatArray(a.length);
+            FloatArray pJit = new FloatArray(a.length);
+            // Distinct dummies: the same array passed twice as an output hangs the TornadoVM graph scheduler.
+            FloatArray unusedU = new FloatArray(1);
+            FloatArray unusedVt = new FloatArray(1);
+            TaskGraph g = new TaskGraph("sv").transferToDevice(DataTransferMode.FIRST_EXECUTION, fa) //
+                    .libraryTask("m1", MlxLinalg::svd, fa, uMlx, sMlx, vtMlx, BATCH, n) //
+                    .libraryTask("m2", MlxLinalg::singularValues, fa, s2Mlx, BATCH, n) //
+                    .libraryTask("m3", MlxLinalg::pinv, fa, pMlx, BATCH, n) //
+                    .task("j1", JitLinalg::svd, new KernelContext(), fa, uJit, sJit, vtJit, n, 1) //
+                    .task("j2", JitLinalg::svd, new KernelContext(), fa, unusedU, s2Jit, unusedVt, n, 0) //
+                    .task("j3", JitLinalg::pinvFromSvd, new KernelContext(), uJit, sJit, vtJit, pJit, a.length, n, 1e-6f) //
+                    .transferToHost(DataTransferMode.EVERY_EXECUTION, uMlx, sMlx, vtMlx, uJit, sJit, vtJit, s2Mlx, s2Jit, pMlx, pJit);
+            GridScheduler gs = new GridScheduler();
+            gs.addWorkerGrid("sv.j1", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+            gs.addWorkerGrid("sv.j2", TestJitReduce.groups(BATCH, JitLinalg.THREADS));
+            gs.addWorkerGrid("sv.j3", TestJitElementwise.grid1D(a.length));
+            execute(g, gs);
+            // Singular values: square roots of the eigenvalues of A^T A, descending.
+            double[] ev = eigenvalues(matmul(transpose(a, BATCH, n), a, BATCH, n, n, n), BATCH, n);
+            double[] sv = new double[BATCH * n];
+            for (int b = 0; b < BATCH; b++) {
+                for (int k = 0; k < n; k++) {
+                    sv[b * n + k] = Math.sqrt(Math.max(ev[b * n + n - 1 - k], 0));
+                }
+            }
+            String what = "n=" + n;
+            both("svd s " + what, sv, sMlx, sJit, 1e-3, 1e-4);
+            both("singularValues " + what, sv, s2Mlx, s2Jit, 1e-3, 1e-4);
+            both("pinv " + what, inverse(a, BATCH, n), pMlx, pJit, 5e-3, 5e-4);
+            for (int w = 0; w < 2; w++) {
+                double[] u = doubles(w == 0 ? uMlx : uJit);
+                double[] s2 = doubles(w == 0 ? sMlx : sJit);
+                double[] vt = doubles(w == 0 ? vtMlx : vtJit);
+                double[] us = new double[a.length];
+                for (int b = 0; b < BATCH; b++) {
+                    for (int i = 0; i < n; i++) {
+                        for (int k = 0; k < n; k++) {
+                            us[(b * n + i) * n + k] = u[(b * n + i) * n + k] * s2[b * n + k];
+                        }
+                    }
+                }
+                assertAllClose("svd u s vt = a " + what + (w == 0 ? " MLX" : " JIT"), a, FloatArray.fromArray(toFloat(matmul(us, vt, BATCH, n, n, n))), 1e-3, 1e-4);
+            }
+            double[] um = doubles(uMlx);
+            double[] vtm = doubles(vtMlx);
+            double[] uj = doubles(uJit);
+            double[] vtj = doubles(vtJit);
+            normaliseColumns(um, vtm, BATCH, n);
+            normaliseColumns(uj, vtj, BATCH, n);
+            assertAllClose("svd u JIT vs MLX " + what, um, FloatArray.fromArray(toFloat(uj)), 1e-2, 2e-3);
+            assertAllClose("svd vt JIT vs MLX " + what, vtm, FloatArray.fromArray(toFloat(vtj)), 1e-2, 2e-3);
+        }
+    }
+
     @Test
     public void testHalfCrossAndNorm() throws TornadoExecutionPlanException {
         final int count = 100;

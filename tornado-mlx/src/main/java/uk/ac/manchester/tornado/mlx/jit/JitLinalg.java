@@ -561,4 +561,292 @@ public final class JitLinalg {
             r.set(base + e, (e / n) <= (e % n) ? rm[e] : 0.0f);
         }
     }
+
+    // ---------------------------------------------------------------- symmetric eigenproblem, SVD, pseudo-inverse
+
+    /** Jacobi sweeps before the eigen and singular value kernels stop regardless of convergence. */
+    public static final int MAX_SWEEPS = 20;
+
+    /**
+     * Player at round-robin position {@code i} in round {@code r} of a tournament of {@code m}
+     * players (m even): position 0 is fixed, the others rotate. Pairs are positions (i, m - 1 - i).
+     */
+    private static int player(int i, int r, int m) {
+        return i == 0 ? 0 : ((i - 1 + r) % (m - 1)) + 1;
+    }
+
+    /**
+     * Eigenvalues (ascending) and, if {@code writeVectors != 0}, eigenvectors (columns) of each
+     * symmetric a[m] ([batch, n, n], read from its lower or upper triangle) by the parallel cyclic
+     * Jacobi method: each round applies n / 2 disjoint rotations (Brent-Luk ordering), one per
+     * thread for the angles and in parallel for the row, column and vector updates.
+     */
+    @JitBaseline({ "mlx_linalg_eigh", "mlx_linalg_eigvalsh" })
+    public static void eigh(KernelContext ctx, FloatArray a, FloatArray values, FloatArray vectors, int n, int upper, int writeVectors) {
+        float[] m = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] v = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] cs = ctx.allocateFloatLocalArray(MAX_N);
+        float[] sn = ctx.allocateFloatLocalArray(MAX_N);
+        int[] pp = ctx.allocateIntLocalArray(MAX_N);
+        int[] qq = ctx.allocateIntLocalArray(MAX_N);
+        float[] off = ctx.allocateFloatLocalArray(1);
+        int tid = ctx.localIdx;
+        int base = ctx.groupIdx * n * n;
+        for (int e = tid; e < n * n; e += THREADS) {
+            int i = e / n;
+            int j = e % n;
+            boolean stored = upper != 0 ? i <= j : i >= j;
+            m[e] = stored ? a.get(base + e) : a.get(base + j * n + i);
+            v[e] = i == j ? 1.0f : 0.0f;
+        }
+        ctx.localBarrier();
+        int players = (n & 1) == 0 ? n : n + 1;
+        int pairs = players / 2;
+        for (int sweep = 0; sweep < MAX_SWEEPS; sweep++) {
+            if (tid == 0) {
+                float o = 0.0f;
+                float d = 0.0f;
+                for (int e = 0; e < n * n; e++) {
+                    if (e / n != e % n) {
+                        o += m[e] * m[e];
+                    } else {
+                        d += m[e] * m[e];
+                    }
+                }
+                off[0] = o <= 1.0e-14f * d ? 1.0f : 0.0f;
+            }
+            ctx.localBarrier();
+            float converged = off[0];
+            ctx.localBarrier();
+            if (converged != 0.0f) {
+                break;
+            }
+            for (int r = 0; r < players - 1; r++) {
+                for (int k = tid; k < pairs; k += THREADS) {
+                    int p = player(k, r, players);
+                    int q = player(players - 1 - k, r, players);
+                    if (p > q) {
+                        int t = p;
+                        p = q;
+                        q = t;
+                    }
+                    float c = 1.0f;
+                    float s = 0.0f;
+                    if (q < n) {
+                        float apq = m[p * n + q];
+                        if (apq != 0.0f) {
+                            float theta = (m[q * n + q] - m[p * n + p]) / (2.0f * apq);
+                            float t = (theta >= 0.0f ? 1.0f : -1.0f) / (TornadoMath.abs(theta) + TornadoMath.sqrt(theta * theta + 1.0f));
+                            c = 1.0f / TornadoMath.sqrt(t * t + 1.0f);
+                            s = t * c;
+                        }
+                    }
+                    pp[k] = p;
+                    qq[k] = q;
+                    cs[k] = c;
+                    sn[k] = s;
+                }
+                ctx.localBarrier();
+                // Columns p and q of m and of v.
+                for (int e = tid; e < pairs * n; e += THREADS) {
+                    int k = e / n;
+                    int i = e % n;
+                    int q = qq[k];
+                    if (q < n) {
+                        int p = pp[k];
+                        float c = cs[k];
+                        float s = sn[k];
+                        float mip = m[i * n + p];
+                        float miq = m[i * n + q];
+                        m[i * n + p] = c * mip - s * miq;
+                        m[i * n + q] = s * mip + c * miq;
+                        float vip = v[i * n + p];
+                        float viq = v[i * n + q];
+                        v[i * n + p] = c * vip - s * viq;
+                        v[i * n + q] = s * vip + c * viq;
+                    }
+                }
+                ctx.localBarrier();
+                // Rows p and q of m.
+                for (int e = tid; e < pairs * n; e += THREADS) {
+                    int k = e / n;
+                    int j = e % n;
+                    int q = qq[k];
+                    if (q < n) {
+                        int p = pp[k];
+                        float c = cs[k];
+                        float s = sn[k];
+                        float mpj = m[p * n + j];
+                        float mqj = m[q * n + j];
+                        m[p * n + j] = c * mpj - s * mqj;
+                        m[q * n + j] = s * mpj + c * mqj;
+                    }
+                }
+                ctx.localBarrier();
+            }
+        }
+        // Ascending order: each eigenvalue's rank among the diagonal.
+        int vbase = ctx.groupIdx * n;
+        for (int i = tid; i < n; i += THREADS) {
+            float di = m[i * n + i];
+            int rank = 0;
+            for (int j = 0; j < n; j++) {
+                float dj = m[j * n + j];
+                if (dj < di || (dj == di && j < i)) {
+                    rank++;
+                }
+            }
+            values.set(vbase + rank, di);
+            if (writeVectors != 0) {
+                for (int row = 0; row < n; row++) {
+                    vectors.set(base + row * n + rank, v[row * n + i]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Singular value decomposition a = u diag(s) vt of each square a[m] ([batch, n, n]) by one-sided
+     * (Hestenes) Jacobi: column pairs of a working copy are rotated until orthogonal, accumulating
+     * the rotations in v; s are the column norms (descending), u the normalised columns. With
+     * {@code writeVectors == 0} only s is written.
+     */
+    @JitBaseline({ "mlx_linalg_svd", "mlx_linalg_pinv" })
+    public static void svd(KernelContext ctx, FloatArray a, FloatArray u, FloatArray sv, FloatArray vt, int n, int writeVectors) {
+        float[] w = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] v = ctx.allocateFloatLocalArray(MAX_NN);
+        float[] cs = ctx.allocateFloatLocalArray(MAX_N);
+        float[] sn = ctx.allocateFloatLocalArray(MAX_N);
+        int[] pp = ctx.allocateIntLocalArray(MAX_N);
+        int[] qq = ctx.allocateIntLocalArray(MAX_N);
+        float[] norms = ctx.allocateFloatLocalArray(MAX_N);
+        int[] rotated = ctx.allocateIntLocalArray(1);
+        int tid = ctx.localIdx;
+        int base = ctx.groupIdx * n * n;
+        for (int e = tid; e < n * n; e += THREADS) {
+            w[e] = a.get(base + e);
+            v[e] = (e / n) == (e % n) ? 1.0f : 0.0f;
+        }
+        ctx.localBarrier();
+        int players = (n & 1) == 0 ? n : n + 1;
+        int pairs = players / 2;
+        for (int sweep = 0; sweep < MAX_SWEEPS; sweep++) {
+            if (tid == 0) {
+                rotated[0] = 0;
+            }
+            ctx.localBarrier();
+            for (int r = 0; r < players - 1; r++) {
+                for (int k = tid; k < pairs; k += THREADS) {
+                    int p = player(k, r, players);
+                    int q = player(players - 1 - k, r, players);
+                    if (p > q) {
+                        int t = p;
+                        p = q;
+                        q = t;
+                    }
+                    float c = 1.0f;
+                    float s = 0.0f;
+                    if (q < n) {
+                        float alpha = 0.0f;
+                        float beta = 0.0f;
+                        float gamma = 0.0f;
+                        for (int i = 0; i < n; i++) {
+                            float wp = w[i * n + p];
+                            float wq = w[i * n + q];
+                            alpha += wp * wp;
+                            beta += wq * wq;
+                            gamma += wp * wq;
+                        }
+                        if (TornadoMath.abs(gamma) > 1.0e-7f * TornadoMath.sqrt(alpha * beta)) {
+                            float zeta = (beta - alpha) / (2.0f * gamma);
+                            float t = (zeta >= 0.0f ? 1.0f : -1.0f) / (TornadoMath.abs(zeta) + TornadoMath.sqrt(1.0f + zeta * zeta));
+                            c = 1.0f / TornadoMath.sqrt(1.0f + t * t);
+                            s = c * t;
+                            rotated[0] = 1;
+                        }
+                    }
+                    pp[k] = p;
+                    qq[k] = q;
+                    cs[k] = c;
+                    sn[k] = s;
+                }
+                ctx.localBarrier();
+                for (int e = tid; e < pairs * n; e += THREADS) {
+                    int k = e / n;
+                    int i = e % n;
+                    int q = qq[k];
+                    if (q < n) {
+                        int p = pp[k];
+                        float c = cs[k];
+                        float s = sn[k];
+                        float wp = w[i * n + p];
+                        float wq = w[i * n + q];
+                        w[i * n + p] = c * wp - s * wq;
+                        w[i * n + q] = s * wp + c * wq;
+                        float vp = v[i * n + p];
+                        float vq = v[i * n + q];
+                        v[i * n + p] = c * vp - s * vq;
+                        v[i * n + q] = s * vp + c * vq;
+                    }
+                }
+                ctx.localBarrier();
+            }
+            // Every thread reads the flag before thread 0 may clear it for the next sweep.
+            int again = rotated[0];
+            ctx.localBarrier();
+            if (again == 0) {
+                break;
+            }
+        }
+        for (int j = tid; j < n; j += THREADS) {
+            float s2 = 0.0f;
+            for (int i = 0; i < n; i++) {
+                s2 += w[i * n + j] * w[i * n + j];
+            }
+            norms[j] = TornadoMath.sqrt(s2);
+        }
+        ctx.localBarrier();
+        int sbase = ctx.groupIdx * n;
+        for (int j = tid; j < n; j += THREADS) {
+            float sj = norms[j];
+            int rank = 0;
+            for (int k = 0; k < n; k++) {
+                if (norms[k] > sj || (norms[k] == sj && k < j)) {
+                    rank++;
+                }
+            }
+            sv.set(sbase + rank, sj);
+            if (writeVectors != 0) {
+                float inv = sj > 0.0f ? 1.0f / sj : 0.0f;
+                for (int i = 0; i < n; i++) {
+                    u.set(base + i * n + rank, w[i * n + j] * inv);
+                    vt.set(base + rank * n + i, v[i * n + j]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Pseudo-inverse from an SVD ({@link #svd}): out = vt^T diag(1/s) u^T, with singular values
+     * below {@code rcond * s_max} treated as zero; one thread per output element.
+     */
+    @JitBaseline("mlx_linalg_pinv")
+    public static void pinvFromSvd(KernelContext ctx, FloatArray u, FloatArray sv, FloatArray vt, FloatArray out, int total, int n, float rcond) {
+        int e = ctx.globalIdx;
+        if (e < total) {
+            int b = e / (n * n);
+            int i = (e / n) % n;
+            int j = e % n;
+            int base = b * n * n;
+            float cutoff = rcond * sv.get(b * n);
+            float acc = 0.0f;
+            for (int k = 0; k < n; k++) {
+                float s = sv.get(b * n + k);
+                if (s > cutoff) {
+                    acc += vt.get(base + k * n + i) * u.get(base + j * n + k) / s;
+                }
+            }
+            out.set(e, acc);
+        }
+    }
 }

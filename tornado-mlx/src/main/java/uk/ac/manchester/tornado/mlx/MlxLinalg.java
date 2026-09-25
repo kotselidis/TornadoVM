@@ -179,4 +179,37 @@ public final class MlxLinalg {
     public static LibraryTaskDescriptor qr(FloatArray a, FloatArray q, FloatArray r, int batch, int n) {
         return Mlx.task("linalg_qr", new int[] { 1, 2 }, a, q, r, batch, n);
     }
+
+    /**
+     * Eigenvalues (ascending) and eigenvectors (the columns of {@code vectors}) of each symmetric
+     * {@code a[b]} ({@code [batch, n, n]}), read from its lower (or upper) triangle.
+     */
+    @MlxOp("mlx_linalg_eigh")
+    public static LibraryTaskDescriptor eigh(FloatArray a, FloatArray values, FloatArray vectors, int batch, int n, boolean upper) {
+        return Mlx.task("linalg_eigh", new int[] { 1, 2 }, a, values, vectors, batch, n, upper);
+    }
+
+    /** Eigenvalues (ascending) of each symmetric {@code a[b]}, read from its lower (or upper) triangle. */
+    @MlxOp("mlx_linalg_eigvalsh")
+    public static LibraryTaskDescriptor eigvalsh(FloatArray a, FloatArray values, int batch, int n, boolean upper) {
+        return Mlx.task("linalg_eigvalsh", 1, a, values, batch, n, upper);
+    }
+
+    /** Singular value decomposition {@code a[b] = u diag(s) vt} of each square {@code a[b]}; {@code s} descending. */
+    @MlxOp("mlx_linalg_svd")
+    public static LibraryTaskDescriptor svd(FloatArray a, FloatArray u, FloatArray s, FloatArray vt, int batch, int n) {
+        return Mlx.task("linalg_svd", new int[] { 1, 2, 3 }, a, u, s, vt, batch, n);
+    }
+
+    /** Singular values (descending) of each square {@code a[b]}. */
+    @MlxOp("mlx_linalg_svd")
+    public static LibraryTaskDescriptor singularValues(FloatArray a, FloatArray s, int batch, int n) {
+        return Mlx.task("linalg_svd_values", 1, a, s, batch, n);
+    }
+
+    /** Moore-Penrose pseudo-inverse of each square {@code a[b]}. */
+    @MlxOp("mlx_linalg_pinv")
+    public static LibraryTaskDescriptor pinv(FloatArray a, FloatArray out, int batch, int n) {
+        return Mlx.task("linalg_pinv", 1, a, out, batch, n);
+    }
 }

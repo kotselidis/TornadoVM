@@ -64,7 +64,7 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
 
     /** Operations MLX only implements on the CPU stream. */
     private static final Set<String> CPU_ONLY = Set.of("linalg_cholesky", "linalg_cholesky_inv", "linalg_tri_inv", "linalg_inv", "linalg_solve", "linalg_solve_triangular",
-            "linalg_lu", "linalg_lu_factor", "linalg_qr", "linalg_eigh", "linalg_eigvalsh", "linalg_svd", "linalg_pinv", "linalg_eig", "linalg_eigvals");
+            "linalg_lu", "linalg_lu_factor", "linalg_qr", "linalg_eigh", "linalg_eigvalsh", "linalg_svd", "linalg_svd_values", "linalg_pinv", "linalg_eig", "linalg_eigvals");
 
     private interface Unary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
@@ -260,6 +260,11 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("linalg_lu", MlxLibraryProvider::lu), //
             entry("linalg_lu_factor", MlxLibraryProvider::luFactor), //
             entry("linalg_qr", MlxLibraryProvider::qr), //
+            entry("linalg_eigh", MlxLibraryProvider::eigh), //
+            entry("linalg_eigvalsh", MlxLibraryProvider::eigvalsh), //
+            entry("linalg_svd", c -> svd(c, true)), //
+            entry("linalg_svd_values", c -> svd(c, false)), //
+            entry("linalg_pinv", MlxLibraryProvider::pinv), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -488,6 +493,46 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         MemorySegment[] qr = c.pair("mlx_linalg_qr", (r0, r1) -> MlxC.mlx_linalg_qr(r0, r1, a, c.stream()));
         c.store(qr[0], 1);
         c.store(qr[1], 2);
+    }
+
+    // linalg_eigh(a, values, vectors, batch, n, upper)
+    private static void eigh(MlxCall c) {
+        int n = c.intArg(4);
+        MemorySegment a = c.input(0, c.intArg(3), n, n);
+        MemorySegment uplo = c.cString(c.boolArg(5) ? "U" : "L");
+        MemorySegment[] wv = c.pair("mlx_linalg_eigh", (r0, r1) -> MlxC.mlx_linalg_eigh(r0, r1, a, uplo, c.stream()));
+        c.store(wv[0], 1);
+        c.store(wv[1], 2);
+    }
+
+    // linalg_eigvalsh(a, values, batch, n, upper)
+    private static void eigvalsh(MlxCall c) {
+        int n = c.intArg(3);
+        MemorySegment a = c.input(0, c.intArg(2), n, n);
+        MemorySegment uplo = c.cString(c.boolArg(4) ? "U" : "L");
+        c.store(c.op("mlx_linalg_eigvalsh", res -> MlxC.mlx_linalg_eigvalsh(res, a, uplo, c.stream())), 1);
+    }
+
+    // linalg_svd(a, u, s, vt, batch, n) or linalg_svd_values(a, s, batch, n)
+    private static void svd(MlxCall c, boolean vectors) {
+        int batchArg = vectors ? 4 : 2;
+        int n = c.intArg(batchArg + 1);
+        MemorySegment a = c.input(0, c.intArg(batchArg), n, n);
+        MemorySegment[] usv = c.vectorOp("mlx_linalg_svd", vectors ? 3 : 1, vec -> MlxC.mlx_linalg_svd(vec, a, vectors, c.stream()));
+        if (vectors) {
+            c.store(usv[0], 1);
+            c.store(usv[1], 2);
+            c.store(usv[2], 3);
+        } else {
+            c.store(usv[0], 1);
+        }
+    }
+
+    // linalg_pinv(a, out, batch, n)
+    private static void pinv(MlxCall c) {
+        int n = c.intArg(3);
+        MemorySegment a = c.input(0, c.intArg(2), n, n);
+        c.store(c.op("mlx_linalg_pinv", res -> MlxC.mlx_linalg_pinv(res, a, c.stream())), 1);
     }
 
     // linalg_inv(a, out, batch, n)
