@@ -17,10 +17,12 @@
  */
 package uk.ac.manchester.tornado.mlx.provider;
 
+import static uk.ac.manchester.tornado.runtime.ffm.FFMSupport.C_INT;
 import static uk.ac.manchester.tornado.runtime.ffm.FFMSupport.C_POINTER;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToIntFunction;
@@ -166,16 +168,89 @@ final class MlxCall implements AutoCloseable {
         return arena;
     }
 
+    /** An {@code mlx_optional_int} holding {@code value}. */
+    MemorySegment optionalInt(int value) {
+        MemorySegment opt = arena.allocate(MlxC.OPT_INT);
+        opt.set(C_INT, 0, value);
+        opt.set(ValueLayout.JAVA_BOOLEAN, 4, true);
+        return opt;
+    }
+
+    /** An {@code mlx_optional_float} holding {@code value}. */
+    MemorySegment optionalFloat(float value) {
+        MemorySegment opt = arena.allocate(MlxC.OPT_FLOAT);
+        opt.set(ValueLayout.JAVA_FLOAT, 0, value);
+        opt.set(ValueLayout.JAVA_BOOLEAN, 4, true);
+        return opt;
+    }
+
+    /** An empty {@code mlx_optional_dtype}. */
+    MemorySegment noDtype() {
+        return arena.allocate(MlxC.OPT_DTYPE);
+    }
+
+    /** A NUL-terminated C string. */
+    MemorySegment cString(String value) {
+        return FFMSupport.allocateCString(arena, value);
+    }
+
+    /** A C {@code int[]}. */
+    MemorySegment ints(int... values) {
+        MemorySegment segment = FFMSupport.allocateArray(arena, C_INT, Math.max(values.length, 1));
+        MemorySegment.copy(values, 0, segment, C_INT, 0, values.length);
+        return segment;
+    }
+
+    /** The null {@code mlx_array}, for optional array arguments. */
+    static MemorySegment none() {
+        return MemorySegment.NULL;
+    }
+
+    /** {@code a} viewed with a new shape (no copy); freed when the call closes. */
+    MemorySegment reshape(MemorySegment a, int... shape) {
+        return op("mlx_reshape", res -> MlxC.mlx_reshape(res, a, ints(shape), shape.length, stream));
+    }
+
+    /**
+     * Runs an mlx-c operation that returns several arrays through an {@code mlx_vector_array*} and
+     * returns them; they are freed when the call closes.
+     */
+    MemorySegment[] vectorOp(String name, int count, ToIntFunction<MemorySegment> operation) {
+        MemorySegment slot = arena.allocate(C_POINTER);
+        slot.set(C_POINTER, 0, MlxC.mlx_vector_array_new());
+        int status = operation.applyAsInt(slot);
+        MemorySegment vector = slot.get(C_POINTER, 0);
+        try {
+            MlxNativeLib.check(status, name);
+            if (MlxC.mlx_vector_array_size(vector) != count) {
+                throw new TornadoRuntimeException("[ERROR] " + name + " returned " + MlxC.mlx_vector_array_size(vector) + " arrays, expected " + count);
+            }
+            MemorySegment[] results = new MemorySegment[count];
+            for (int i = 0; i < count; i++) {
+                MemorySegment item = arena.allocate(C_POINTER);
+                item.set(C_POINTER, 0, MlxC.mlx_array_new());
+                int itemStatus = MlxC.mlx_vector_array_get(item, vector, i);
+                results[i] = item.get(C_POINTER, 0);
+                temporaries.add(results[i]);
+                MlxNativeLib.check(itemStatus, "mlx_vector_array_get");
+            }
+            return results;
+        } finally {
+            MlxC.mlx_vector_array_free(vector);
+        }
+    }
+
     /**
      * Evaluates {@code result} and copies it into array argument {@code index}, converting to the
      * output's dtype first if MLX produced another one.
      */
     void store(MemorySegment result, int index) {
         int outDtype = dtype(index);
-        MemorySegment value = result;
+        MemorySegment converted = result;
         if (MlxC.mlx_array_dtype(result) != outDtype) {
-            value = op("mlx_astype", slot -> MlxC.mlx_astype(slot, result, outDtype, stream));
+            converted = op("mlx_astype", slot -> MlxC.mlx_astype(slot, result, outDtype, stream));
         }
+        MemorySegment value = contiguous(converted);
         MlxNativeLib.eval(value);
         long bytes = MlxC.mlx_array_nbytes(value);
         TornadoNativeArray out = array(index);
@@ -184,6 +259,31 @@ final class MlxCall implements AutoCloseable {
             throw new TornadoRuntimeException("[ERROR] MLX result is " + bytes + " bytes, output argument " + index + " holds " + expected);
         }
         FFMSupport.asSegment(invocation.getDevicePointer(index), bytes).copyFrom(FFMSupport.asSegment(MlxNativeLib.dataAddress(value), bytes));
+    }
+
+    /**
+     * {@code a} laid out row-major and dense. Some operations return strided views (top-k slices
+     * a partition, for example), whose bytes cannot be copied out as they are; for an array that
+     * is already dense this is a no-op.
+     */
+    private MemorySegment contiguous(MemorySegment a) {
+        return op("mlx_contiguous", slot -> MlxC.mlx_contiguous(slot, a, false, stream));
+    }
+
+    /**
+     * Evaluates {@code result} and copies its bytes unchanged into array argument {@code index},
+     * for data whose bit pattern matters more than its dtype (packed quantized weights).
+     */
+    void storeRaw(MemorySegment packed, int index) {
+        MemorySegment result = contiguous(packed);
+        MlxNativeLib.eval(result);
+        long bytes = MlxC.mlx_array_nbytes(result);
+        TornadoNativeArray out = array(index);
+        long expected = (long) out.getSize() * out.getElementSize();
+        if (bytes != expected) {
+            throw new TornadoRuntimeException("[ERROR] MLX result is " + bytes + " bytes, output argument " + index + " holds " + expected);
+        }
+        FFMSupport.asSegment(invocation.getDevicePointer(index), bytes).copyFrom(FFMSupport.asSegment(MlxNativeLib.dataAddress(result), bytes));
     }
 
     @Override

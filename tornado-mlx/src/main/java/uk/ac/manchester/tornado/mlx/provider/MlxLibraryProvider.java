@@ -87,7 +87,33 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("sigmoid", c -> unary(c, "mlx_sigmoid", MlxC::mlx_sigmoid)), //
             entry("sqrt", c -> unary(c, "mlx_sqrt", MlxC::mlx_sqrt)), //
             entry("rsqrt", c -> unary(c, "mlx_rsqrt", MlxC::mlx_rsqrt)), //
-            entry("square", c -> unary(c, "mlx_square", MlxC::mlx_square)));
+            entry("square", c -> unary(c, "mlx_square", MlxC::mlx_square)), //
+            // Linear algebra.
+            entry("matmul", MlxLibraryProvider::matmul), //
+            entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
+            entry("addmm", MlxLibraryProvider::addmm), //
+            // Affine group quantization.
+            entry("quantized_matmul", MlxLibraryProvider::quantizedMatmul), //
+            entry("gather_qmm", MlxLibraryProvider::gatherQmm), //
+            entry("quantize", MlxLibraryProvider::quantize), //
+            entry("dequantize", MlxLibraryProvider::dequantize), //
+            // mlx.fast
+            entry("fast_rms_norm", MlxLibraryProvider::rmsNorm), //
+            entry("fast_layer_norm", MlxLibraryProvider::layerNorm), //
+            entry("fast_rope", MlxLibraryProvider::rope), //
+            entry("fast_rope_dynamic", MlxLibraryProvider::ropeDynamic), //
+            entry("fast_scaled_dot_product_attention", MlxLibraryProvider::sdpa), //
+            // Softmax, argmax, top-k.
+            entry("softmax", MlxLibraryProvider::softmax), //
+            entry("softmax_axis", MlxLibraryProvider::softmaxRows), //
+            entry("softmax_axes", MlxLibraryProvider::softmaxLastTwoAxes), //
+            entry("argmax", MlxLibraryProvider::argmax), //
+            entry("argmax_axis", MlxLibraryProvider::argmaxRows), //
+            entry("topk", MlxLibraryProvider::topk), //
+            entry("topk_axis", MlxLibraryProvider::topkRows));
+
+    /** Affine group quantization mode (scales and biases per group), as used by MLX-LM. */
+    private static final String AFFINE = "affine";
 
     /** Whether libmlxc can be loaded on this host. */
     public static boolean isAvailable() {
@@ -224,6 +250,215 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         MemorySegment a = c.input(0, n);
         MemorySegment b = c.input(1, n);
         c.store(c.op(name, res -> op.apply(res, a, b, c.stream())), 2);
+    }
+
+    // matmul(a, b, c, m, k, n): c[m, n] = a[m, k] @ b[k, n]
+    private static void matmul(MlxCall c) {
+        int m = c.intArg(3);
+        int k = c.intArg(4);
+        int n = c.intArg(5);
+        MemorySegment a = c.input(0, m, k);
+        MemorySegment b = c.input(1, k, n);
+        c.store(c.op("mlx_matmul", res -> MlxC.mlx_matmul(res, a, b, c.stream())), 2);
+    }
+
+    // matmul_transposed(a, w, c, m, k, n): c[m, n] = a[m, k] @ w[n, k]^T (weights stored row per output)
+    private static void matmulTransposed(MlxCall c) {
+        int m = c.intArg(3);
+        int k = c.intArg(4);
+        int n = c.intArg(5);
+        MemorySegment a = c.input(0, m, k);
+        MemorySegment w = c.input(1, n, k);
+        MemorySegment wt = c.op("mlx_transpose", res -> MlxC.mlx_transpose(res, w, c.stream()));
+        c.store(c.op("mlx_matmul", res -> MlxC.mlx_matmul(res, a, wt, c.stream())), 2);
+    }
+
+    // addmm(cIn, a, b, out, m, k, n, alpha, beta): out = alpha * a @ b + beta * cIn
+    private static void addmm(MlxCall c) {
+        int m = c.intArg(4);
+        int k = c.intArg(5);
+        int n = c.intArg(6);
+        float alpha = c.floatArg(7);
+        float beta = c.floatArg(8);
+        MemorySegment cIn = c.input(0, m, n);
+        MemorySegment a = c.input(1, m, k);
+        MemorySegment b = c.input(2, k, n);
+        c.store(c.op("mlx_addmm", res -> MlxC.mlx_addmm(res, cIn, a, b, alpha, beta, c.stream())), 3);
+    }
+
+    // quantized_matmul(x, wq, scales, biases, y, m, k, n, groupSize, bits): y[m, n] = x[m, k] @ dequant(w[n, k])^T
+    private static void quantizedMatmul(MlxCall c) {
+        int m = c.intArg(5);
+        int k = c.intArg(6);
+        int n = c.intArg(7);
+        int groupSize = c.intArg(8);
+        int bits = c.intArg(9);
+        MemorySegment x = c.input(0, m, k);
+        MemorySegment wq = c.inputAs(1, MlxNativeLib.MLX_UINT32, n, k * bits / 32);
+        MemorySegment scales = c.input(2, n, k / groupSize);
+        MemorySegment biases = c.input(3, n, k / groupSize);
+        c.store(c.op("mlx_quantized_matmul", res -> MlxC.mlx_quantized_matmul(res, x, wq, scales, biases, true, c.optionalInt(groupSize), c.optionalInt(bits), c.cString(AFFINE),
+                c.stream())), 4);
+    }
+
+    // gather_qmm(x, wq, scales, biases, lhsIndices, rhsIndices, y, batches, experts, m, k, n, groupSize, bits):
+    // y[b] = x[lhsIndices[b]] @ dequant(w[rhsIndices[b]])^T, with x [batches, m, k] and w [experts, n, k]
+    private static void gatherQmm(MlxCall c) {
+        int batches = c.intArg(7);
+        int experts = c.intArg(8);
+        int m = c.intArg(9);
+        int k = c.intArg(10);
+        int n = c.intArg(11);
+        int groupSize = c.intArg(12);
+        int bits = c.intArg(13);
+        MemorySegment x = c.input(0, batches, m, k);
+        MemorySegment wq = c.inputAs(1, MlxNativeLib.MLX_UINT32, experts, n, k * bits / 32);
+        MemorySegment scales = c.input(2, experts, n, k / groupSize);
+        MemorySegment biases = c.input(3, experts, n, k / groupSize);
+        MemorySegment lhs = c.inputAs(4, MlxNativeLib.MLX_UINT32, batches);
+        MemorySegment rhs = c.inputAs(5, MlxNativeLib.MLX_UINT32, batches);
+        c.store(c.op("mlx_gather_qmm", res -> MlxC.mlx_gather_qmm(res, x, wq, scales, biases, lhs, rhs, true, c.optionalInt(groupSize), c.optionalInt(bits), c.cString(AFFINE), false,
+                c.stream())), 6);
+    }
+
+    // quantize(w, wq, scales, biases, rows, cols, groupSize, bits): w[rows, cols] -> packed wq, scales, biases
+    private static void quantize(MlxCall c) {
+        int rows = c.intArg(4);
+        int cols = c.intArg(5);
+        int groupSize = c.intArg(6);
+        int bits = c.intArg(7);
+        MemorySegment w = c.input(0, rows, cols);
+        MemorySegment[] q = c.vectorOp("mlx_quantize", 3, vec -> MlxC.mlx_quantize(vec, w, c.optionalInt(groupSize), c.optionalInt(bits), c.cString(AFFINE), MlxCall.none(), c.stream()));
+        c.storeRaw(q[0], 1);
+        c.store(q[1], 2);
+        c.store(q[2], 3);
+    }
+
+    // dequantize(wq, scales, biases, w, rows, cols, groupSize, bits): packed wq, scales, biases -> w[rows, cols]
+    private static void dequantize(MlxCall c) {
+        int rows = c.intArg(4);
+        int cols = c.intArg(5);
+        int groupSize = c.intArg(6);
+        int bits = c.intArg(7);
+        MemorySegment wq = c.inputAs(0, MlxNativeLib.MLX_UINT32, rows, cols * bits / 32);
+        MemorySegment scales = c.input(1, rows, cols / groupSize);
+        MemorySegment biases = c.input(2, rows, cols / groupSize);
+        c.store(c.op("mlx_dequantize", res -> MlxC.mlx_dequantize(res, wq, scales, biases, c.optionalInt(groupSize), c.optionalInt(bits), c.cString(AFFINE), MlxCall.none(), c.noDtype(),
+                c.stream())), 3);
+    }
+
+    // fast_rms_norm(x, weight, out, rows, dim, eps)
+    private static void rmsNorm(MlxCall c) {
+        int rows = c.intArg(3);
+        int dim = c.intArg(4);
+        float eps = c.floatArg(5);
+        MemorySegment x = c.input(0, rows, dim);
+        MemorySegment w = c.input(1, dim);
+        c.store(c.op("mlx_fast_rms_norm", res -> MlxC.mlx_fast_rms_norm(res, x, w, eps, c.stream())), 2);
+    }
+
+    // fast_layer_norm(x, weight, bias, out, rows, dim, eps)
+    private static void layerNorm(MlxCall c) {
+        int rows = c.intArg(4);
+        int dim = c.intArg(5);
+        float eps = c.floatArg(6);
+        MemorySegment x = c.input(0, rows, dim);
+        MemorySegment w = c.input(1, dim);
+        MemorySegment b = c.input(2, dim);
+        c.store(c.op("mlx_fast_layer_norm", res -> MlxC.mlx_fast_layer_norm(res, x, w, b, eps, c.stream())), 3);
+    }
+
+    // fast_rope(x, out, batch, heads, seqLen, headDim, dims, traditional, base, scale, offset): x [batch, heads, seqLen, headDim]
+    private static void rope(MlxCall c) {
+        int batch = c.intArg(2);
+        int heads = c.intArg(3);
+        int seqLen = c.intArg(4);
+        int headDim = c.intArg(5);
+        int dims = c.intArg(6);
+        boolean traditional = c.boolArg(7);
+        float base = c.floatArg(8);
+        float scale = c.floatArg(9);
+        int offset = c.intArg(10);
+        MemorySegment x = c.input(0, batch, heads, seqLen, headDim);
+        c.store(c.op("mlx_fast_rope", res -> MlxC.mlx_fast_rope(res, x, dims, traditional, c.optionalFloat(base), scale, offset, MlxCall.none(), c.stream())), 1);
+    }
+
+    // fast_rope_dynamic(x, offset, out, batch, heads, seqLen, headDim, dims, traditional, base, scale): offset is a one-element IntArray
+    private static void ropeDynamic(MlxCall c) {
+        int batch = c.intArg(3);
+        int heads = c.intArg(4);
+        int seqLen = c.intArg(5);
+        int headDim = c.intArg(6);
+        int dims = c.intArg(7);
+        boolean traditional = c.boolArg(8);
+        float base = c.floatArg(9);
+        float scale = c.floatArg(10);
+        MemorySegment x = c.input(0, batch, heads, seqLen, headDim);
+        MemorySegment offset = c.input(1);
+        c.store(c.op("mlx_fast_rope_dynamic", res -> MlxC.mlx_fast_rope_dynamic(res, x, dims, traditional, c.optionalFloat(base), scale, offset, MlxCall.none(), c.stream())), 2);
+    }
+
+    // fast_scaled_dot_product_attention(q, k, v, out, batch, qHeads, kvHeads, qLen, kvLen, headDim, scale, causal)
+    private static void sdpa(MlxCall c) {
+        int batch = c.intArg(4);
+        int qHeads = c.intArg(5);
+        int kvHeads = c.intArg(6);
+        int qLen = c.intArg(7);
+        int kvLen = c.intArg(8);
+        int headDim = c.intArg(9);
+        float scale = c.floatArg(10);
+        boolean causal = c.boolArg(11);
+        MemorySegment q = c.input(0, batch, qHeads, qLen, headDim);
+        MemorySegment k = c.input(1, batch, kvHeads, kvLen, headDim);
+        MemorySegment v = c.input(2, batch, kvHeads, kvLen, headDim);
+        c.store(c.op("mlx_fast_scaled_dot_product_attention", res -> MlxC.mlx_fast_scaled_dot_product_attention(res, q, k, v, scale, c.cString(causal ? "causal" : ""), MlxCall.none(),
+                MlxCall.none(), c.stream())), 3);
+    }
+
+    // softmax(x, out): over the whole array. Low-precision inputs are accumulated in float32.
+    private static void softmax(MlxCall c) {
+        MemorySegment x = c.input(0, c.length(0));
+        c.store(c.op("mlx_softmax", res -> MlxC.mlx_softmax(res, x, true, c.stream())), 1);
+    }
+
+    // softmax_axis(x, out, rows, cols): per row
+    private static void softmaxRows(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3));
+        c.store(c.op("mlx_softmax_axis", res -> MlxC.mlx_softmax_axis(res, x, -1, true, c.stream())), 1);
+    }
+
+    // softmax_axes(x, out, d0, d1, d2): over the last two axes of a [d0, d1, d2] tensor
+    private static void softmaxLastTwoAxes(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4));
+        c.store(c.op("mlx_softmax_axes", res -> MlxC.mlx_softmax_axes(res, x, c.ints(1, 2), 2, true, c.stream())), 1);
+    }
+
+    // argmax(x, out): index of the largest element of the whole array, into a one-element IntArray
+    private static void argmax(MlxCall c) {
+        MemorySegment x = c.input(0, c.length(0));
+        c.store(c.op("mlx_argmax", res -> MlxC.mlx_argmax(res, x, false, c.stream())), 1);
+    }
+
+    // argmax_axis(x, out, rows, cols): per row, into an IntArray of length rows
+    private static void argmaxRows(MlxCall c) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3));
+        c.store(c.op("mlx_argmax_axis", res -> MlxC.mlx_argmax_axis(res, x, -1, false, c.stream())), 1);
+    }
+
+    // topk(x, out, k): the k largest elements of the whole array, in no particular order
+    private static void topk(MlxCall c) {
+        int k = c.intArg(2);
+        MemorySegment x = c.input(0, c.length(0));
+        c.store(c.op("mlx_topk", res -> MlxC.mlx_topk(res, x, k, c.stream())), 1);
+    }
+
+    // topk_axis(x, out, rows, cols, k): the k largest elements of each row, in no particular order
+    private static void topkRows(MlxCall c) {
+        int rows = c.intArg(2);
+        int cols = c.intArg(3);
+        int k = c.intArg(4);
+        MemorySegment x = c.input(0, rows, cols);
+        c.store(c.op("mlx_topk_axis", res -> MlxC.mlx_topk_axis(res, x, k, -1, c.stream())), 1);
     }
 
     private static void unary(MlxCall c, String name, Unary op) {

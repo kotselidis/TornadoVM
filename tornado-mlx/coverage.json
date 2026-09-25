@@ -5,14 +5,14 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 14,
-    "tested": 14,
+    "bound": 33,
+    "tested": 33,
     "benchmarked": 0,
-    "remaining": 278,
+    "remaining": 259,
     "byTier": {
       "1": {
         "inScope": 32,
-        "bound": 14
+        "bound": 32
       },
       "2": {
         "inScope": 148,
@@ -20,7 +20,7 @@
       },
       "3": {
         "inScope": 112,
-        "bound": 0
+        "bound": 1
       }
     }
   },
@@ -57,9 +57,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_all_axes",
@@ -201,18 +209,36 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_argmax",
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_argmin_axis",
@@ -607,9 +633,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_diag",
@@ -839,9 +874,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_greater",
@@ -1136,9 +1180,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_max_axes",
@@ -1469,18 +1521,36 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_quantized_matmul",
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_radians",
@@ -1836,27 +1906,51 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_softmax_axis",
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_softmax",
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_sort_axis",
@@ -2159,18 +2253,34 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_topk",
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_trace",
@@ -2195,9 +2305,17 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_tri",
@@ -2433,9 +2551,17 @@
       "header": "fast.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_fast_metal_kernel_config_new",
@@ -2572,36 +2698,69 @@
       "header": "fast.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_fast_rope",
       "header": "fast.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_fast_rope_dynamic",
       "header": "fast.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_fast_scaled_dot_product_attention",
       "header": "fast.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_linalg_cholesky",
