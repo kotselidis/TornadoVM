@@ -5,14 +5,14 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 1,
-    "tested": 1,
+    "bound": 14,
+    "tested": 14,
     "benchmarked": 0,
-    "remaining": 291,
+    "remaining": 278,
     "byTier": {
       "1": {
         "inScope": 32,
-        "bound": 1
+        "bound": 14
       },
       "2": {
         "inScope": 148,
@@ -43,6 +43,7 @@
       "tested": true,
       "benchmarked": false,
       "dtypes": [
+        "bfloat16",
         "float16",
         "float32",
         "int32"
@@ -633,9 +634,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_divmod",
@@ -669,9 +679,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_erfinv",
@@ -687,9 +705,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_expand_dims_axes",
@@ -1146,9 +1172,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_mean_axes",
@@ -1227,9 +1262,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_moveaxis",
@@ -1245,9 +1289,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_nan_to_num",
@@ -1263,9 +1316,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_not_equal",
@@ -1533,9 +1595,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_scatter",
@@ -1650,9 +1720,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_sign",
@@ -1821,18 +1899,35 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_square",
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_squeeze_axes",
@@ -1921,9 +2016,18 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_sum_axes",
@@ -2002,9 +2106,17 @@
       "header": "ops.h",
       "tier": 1,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
     },
     {
       "name": "mlx_tensordot",

@@ -17,20 +17,22 @@
  */
 package uk.ac.manchester.tornado.mlx.provider;
 
+import static java.util.Map.entry;
+
 import java.lang.foreign.MemorySegment;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import uk.ac.manchester.tornado.api.enums.TornadoVMBackendType;
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
-import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
-import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
-import uk.ac.manchester.tornado.api.types.arrays.IntArray;
-import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 import uk.ac.manchester.tornado.mlx.Mlx;
+import uk.ac.manchester.tornado.mlx.MlxOptions;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
-import uk.ac.manchester.tornado.runtime.ffm.FFMSupport;
 import uk.ac.manchester.tornado.runtime.library.spi.LibraryContext;
 import uk.ac.manchester.tornado.runtime.library.spi.LibraryInvocation;
 import uk.ac.manchester.tornado.runtime.library.spi.TornadoLibraryProvider;
@@ -58,6 +60,35 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
 
     private static final AtomicLong COPY_FALLBACKS = new AtomicLong();
 
+    /** Operations MLX only implements on the CPU stream. */
+    private static final Set<String> CPU_ONLY = Set.of();
+
+    private interface Unary {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
+    }
+
+    private interface Binary {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment b, MemorySegment stream);
+    }
+
+    private static final Map<String, Consumer<MlxCall>> OPERATIONS = Map.ofEntries(
+            // Element-wise binary: (a, b, out), all the same length.
+            entry("add", c -> binary(c, "mlx_add", MlxC::mlx_add)), //
+            entry("subtract", c -> binary(c, "mlx_subtract", MlxC::mlx_subtract)), //
+            entry("multiply", c -> binary(c, "mlx_multiply", MlxC::mlx_multiply)), //
+            entry("divide", c -> binary(c, "mlx_divide", MlxC::mlx_divide)), //
+            entry("maximum", c -> binary(c, "mlx_maximum", MlxC::mlx_maximum)), //
+            entry("minimum", c -> binary(c, "mlx_minimum", MlxC::mlx_minimum)), //
+            // Element-wise unary: (a, out).
+            entry("negative", c -> unary(c, "mlx_negative", MlxC::mlx_negative)), //
+            entry("exp", c -> unary(c, "mlx_exp", MlxC::mlx_exp)), //
+            entry("tanh", c -> unary(c, "mlx_tanh", MlxC::mlx_tanh)), //
+            entry("erf", c -> unary(c, "mlx_erf", MlxC::mlx_erf)), //
+            entry("sigmoid", c -> unary(c, "mlx_sigmoid", MlxC::mlx_sigmoid)), //
+            entry("sqrt", c -> unary(c, "mlx_sqrt", MlxC::mlx_sqrt)), //
+            entry("rsqrt", c -> unary(c, "mlx_rsqrt", MlxC::mlx_rsqrt)), //
+            entry("square", c -> unary(c, "mlx_square", MlxC::mlx_square)));
+
     /** Whether libmlxc can be loaded on this host. */
     public static boolean isAvailable() {
         try {
@@ -82,13 +113,65 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         return COPY_FALLBACKS.get();
     }
 
-    private record WrapKey(long address, int elements, int dtype) {
+    /** Names of the operations this provider dispatches, e.g. "add". */
+    public static Set<String> operations() {
+        return OPERATIONS.keySet();
     }
 
-    private static final class MlxContext implements LibraryContext {
-        final MemorySegment stream = MlxNativeLib.gpuStream();
-        final Map<WrapKey, MemorySegment> wrappers = new HashMap<>();
-        final Map<Long, Integer> retainedBuffers = new HashMap<>();
+    private record WrapKey(long address, List<Integer> shape, int dtype) {
+    }
+
+    /** Per execution plan: MLX streams and the wrappers of TornadoVM buffers. */
+    static final class MlxContext implements LibraryContext {
+        private final MemorySegment gpuStream = MlxC.mlx_default_gpu_stream_new();
+        private MemorySegment cpuStream;
+        private final Map<WrapKey, MemorySegment> wrappers = new HashMap<>();
+        private final Map<Long, Integer> retainedBuffers = new HashMap<>();
+
+        MemorySegment stream(MlxOptions.Device device) {
+            if (device == MlxOptions.Device.GPU) {
+                return gpuStream;
+            }
+            if (cpuStream == null) {
+                cpuStream = MlxC.mlx_default_cpu_stream_new();
+            }
+            return cpuStream;
+        }
+
+        /** The MLX array over a TornadoVM buffer, wrapped once per plan and shape. */
+        MemorySegment wrapper(long address, long nativeBuffer, int[] shape, int dtype) {
+            WrapKey key = new WrapKey(address, Arrays.stream(shape).boxed().toList(), dtype);
+            MemorySegment wrapper = wrappers.get(key);
+            if (wrapper != null) {
+                return wrapper;
+            }
+            MlxNativeLib.retain(nativeBuffer);
+            retainedBuffers.merge(nativeBuffer, 1, Integer::sum);
+
+            long releasesBefore = MlxNativeLib.releases();
+            wrapper = MlxNativeLib.wrap(address, shape, dtype);
+            MlxNativeLib.eval(wrapper);
+            if (MlxNativeLib.releases() != releasesBefore || MlxNativeLib.dataAddress(wrapper) != address) {
+                COPY_FALLBACKS.incrementAndGet();
+            }
+            wrappers.put(key, wrapper);
+            return wrapper;
+        }
+
+        void destroy() {
+            wrappers.values().forEach(MlxNativeLib::free);
+            wrappers.clear();
+            retainedBuffers.forEach((buffer, count) -> {
+                for (int i = 0; i < count; i++) {
+                    MlxNativeLib.release(buffer);
+                }
+            });
+            retainedBuffers.clear();
+            MlxC.mlx_stream_free(gpuStream);
+            if (cpuStream != null) {
+                MlxC.mlx_stream_free(cpuStream);
+            }
+        }
     }
 
     @Override
@@ -111,95 +194,44 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     public void destroyContext(LibraryContext context) {
         MlxContext ctx = (MlxContext) context;
         synchronized (ctx) {
-            ctx.wrappers.values().forEach(MlxNativeLib::free);
-            ctx.wrappers.clear();
-            ctx.retainedBuffers.forEach((buffer, count) -> {
-                for (int i = 0; i < count; i++) {
-                    MlxNativeLib.release(buffer);
-                }
-            });
-            ctx.retainedBuffers.clear();
-            MlxNativeLib.freeStream(ctx.stream);
+            ctx.destroy();
         }
     }
 
     @Override
     public void dispatch(String functionName, LibraryInvocation invocation) {
+        Consumer<MlxCall> operation = OPERATIONS.get(functionName);
+        if (operation == null) {
+            throw new TornadoRuntimeException("[ERROR] Unknown MLX function: " + functionName);
+        }
         MlxContext ctx = (MlxContext) invocation.getContext();
+        MlxOptions.Device device = CPU_ONLY.contains(functionName) ? MlxOptions.Device.CPU
+                : (invocation.getTuning() instanceof MlxOptions options) ? options.getDevice() : MlxOptions.Device.GPU;
         synchronized (ctx) {
-            switch (functionName) {
-                case "add" -> binary(ctx, invocation, MlxNativeLib::add);
-                default -> throw new TornadoRuntimeException("[ERROR] Unknown MLX function: " + functionName);
+            try (MlxCall call = new MlxCall(ctx, invocation, ctx.stream(device))) {
+                operation.accept(call);
             }
         }
     }
 
-    private interface BinaryOp {
-        MemorySegment apply(MemorySegment a, MemorySegment b, MemorySegment stream);
-    }
+    // ---------------------------------------------------------------- operation families
 
-    private static void binary(MlxContext ctx, LibraryInvocation invocation, BinaryOp op) {
-        int n = elements(invocation, 2);
-        if (elements(invocation, 0) != n || elements(invocation, 1) != n) {
+    private static void binary(MlxCall c, String name, Binary op) {
+        int n = c.length(2);
+        if (c.length(0) != n || c.length(1) != n) {
             throw new TornadoRuntimeException("[ERROR] MLX element-wise operands must have the same length");
         }
-        int dtype = dtype(invocation, 2);
-        MemorySegment a = input(ctx, invocation, 0, n, dtype);
-        MemorySegment b = input(ctx, invocation, 1, n, dtype);
-        MemorySegment c = op.apply(a, b, ctx.stream);
-        try {
-            MlxNativeLib.eval(c);
-            copyOut(c, invocation, 2);
-        } finally {
-            MlxNativeLib.free(c);
-        }
+        MemorySegment a = c.input(0, n);
+        MemorySegment b = c.input(1, n);
+        c.store(c.op(name, res -> op.apply(res, a, b, c.stream())), 2);
     }
 
-    private static int elements(LibraryInvocation invocation, int index) {
-        return ((TornadoNativeArray) invocation.getArg(index)).getSize();
-    }
-
-    private static int dtype(LibraryInvocation invocation, int index) {
-        Object array = invocation.getArg(index);
-        if (array instanceof FloatArray) {
-            return MlxNativeLib.MLX_FLOAT32;
-        } else if (array instanceof HalfFloatArray) {
-            return MlxNativeLib.MLX_FLOAT16;
-        } else if (array instanceof IntArray) {
-            return MlxNativeLib.MLX_INT32;
+    private static void unary(MlxCall c, String name, Unary op) {
+        int n = c.length(1);
+        if (c.length(0) != n) {
+            throw new TornadoRuntimeException("[ERROR] MLX element-wise input and output must have the same length");
         }
-        throw new TornadoRuntimeException("[ERROR] MLX does not support arguments of type " + array.getClass().getSimpleName());
-    }
-
-    /** The MLX array over argument {@code index}'s TornadoVM buffer, wrapped once per plan. */
-    private static MemorySegment input(MlxContext ctx, LibraryInvocation invocation, int index, int elements, int dtype) {
-        long address = invocation.getDevicePointer(index);
-        WrapKey key = new WrapKey(address, elements, dtype);
-        MemorySegment wrapper = ctx.wrappers.get(key);
-        if (wrapper != null) {
-            return wrapper;
-        }
-        long nativeBuffer = invocation.getNativeBuffer(index);
-        MlxNativeLib.retain(nativeBuffer);
-        ctx.retainedBuffers.merge(nativeBuffer, 1, Integer::sum);
-
-        long releasesBefore = MlxNativeLib.releases();
-        wrapper = MlxNativeLib.wrap(address, new int[] { elements }, dtype);
-        MlxNativeLib.eval(wrapper);
-        if (MlxNativeLib.releases() != releasesBefore || MlxNativeLib.dataAddress(wrapper) != address) {
-            COPY_FALLBACKS.incrementAndGet();
-        }
-        ctx.wrappers.put(key, wrapper);
-        return wrapper;
-    }
-
-    private static void copyOut(MemorySegment result, LibraryInvocation invocation, int index) {
-        long bytes = MlxNativeLib.nbytes(result);
-        long expected = (long) elements(invocation, index) * ((TornadoNativeArray) invocation.getArg(index)).getElementSize();
-        if (bytes != expected) {
-            throw new TornadoRuntimeException("[ERROR] MLX result is " + bytes + " bytes, the output array holds " + expected);
-        }
-        MemorySegment source = FFMSupport.asSegment(MlxNativeLib.dataAddress(result), bytes);
-        FFMSupport.asSegment(invocation.getDevicePointer(index), bytes).copyFrom(source);
+        MemorySegment a = c.input(0, n);
+        c.store(c.op(name, res -> op.apply(res, a, c.stream())), 1);
     }
 }
