@@ -54,16 +54,19 @@ public final class Mlx {
     }
 
     /** Element-wise {@code c = a + b}; all three arrays have the same length. */
+    @MlxOp("mlx_add")
     public static LibraryTaskDescriptor add(FloatArray a, FloatArray b, FloatArray c) {
         return binary("add", a, b, c);
     }
 
     /** Element-wise {@code c = a + b} in float16. */
+    @MlxOp("mlx_add")
     public static LibraryTaskDescriptor add(HalfFloatArray a, HalfFloatArray b, HalfFloatArray c) {
         return binary("add", a, b, c);
     }
 
     /** Element-wise {@code c = a + b} in int32. */
+    @MlxOp("mlx_add")
     public static LibraryTaskDescriptor add(IntArray a, IntArray b, IntArray c) {
         return binary("add", a, b, c);
     }
