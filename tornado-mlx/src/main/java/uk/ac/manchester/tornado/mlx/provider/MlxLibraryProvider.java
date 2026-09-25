@@ -179,6 +179,15 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("cummin", c -> scan(c, "mlx_cummin", MlxC::mlx_cummin)), //
             entry("logcumsumexp", c -> scan(c, "mlx_logcumsumexp", MlxC::mlx_logcumsumexp)), //
             entry("median", c -> reduceAxes(c, "mlx_median", (r, a, axes, n, k, s) -> MlxC.mlx_median(r, a, axes, n, k, s), true)), //
+            // Sorting and partitioning (MlxSort).
+            entry("sort", c -> whole(c, (r, a, s) -> MlxC.mlx_sort(r, a, s), "mlx_sort")), //
+            entry("argsort", c -> whole(c, (r, a, s) -> MlxC.mlx_argsort(r, a, s), "mlx_argsort")), //
+            entry("partition", c -> whole(c, (r, a, s) -> MlxC.mlx_partition(r, a, c.intArg(2), s), "mlx_partition")), //
+            entry("argpartition", c -> whole(c, (r, a, s) -> MlxC.mlx_argpartition(r, a, c.intArg(2), s), "mlx_argpartition")), //
+            entry("sort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_sort_axis(r, a, 1, s), "mlx_sort_axis")), //
+            entry("argsort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argsort_axis(r, a, 1, s), "mlx_argsort_axis")), //
+            entry("partition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_partition_axis(r, a, c.intArg(5), 1, s), "mlx_partition_axis")), //
+            entry("argpartition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argpartition_axis(r, a, c.intArg(5), 1, s), "mlx_argpartition_axis")), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -345,6 +354,18 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // whole(x, out, ...): a unary operation on x as a flat array
+    private static void whole(MlxCall c, Unary op, String name) {
+        MemorySegment x = c.input(0, c.length(0));
+        c.store(c.op(name, res -> op.apply(res, x, c.stream())), 1);
+    }
+
+    // along_axis(x, out, outer, len, inner, ...): an operation along axis 1 of x viewed as [outer, len, inner]
+    private static void alongAxis(MlxCall c, Unary op, String name) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4));
+        c.store(c.op(name, res -> op.apply(res, x, c.stream())), 1);
+    }
 
     // scan(x, out, outer, len, inner, reverse, inclusive): along axis 1 of x viewed as [outer, len, inner]
     private static void scan(MlxCall c, String name, Scan op) {

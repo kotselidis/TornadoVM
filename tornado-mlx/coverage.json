@@ -5,11 +5,11 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 104,
-    "tested": 104,
+    "bound": 112,
+    "tested": 112,
     "benchmarked": 33,
-    "jitBaselines": 104,
-    "remaining": 188,
+    "jitBaselines": 112,
+    "remaining": 180,
     "byTier": {
       "1": {
         "inScope": 32,
@@ -17,7 +17,7 @@
       },
       "2": {
         "inScope": 148,
-        "bound": 71
+        "bound": 79
       },
       "3": {
         "inScope": 112,
@@ -589,36 +589,120 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_argpartition",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_argsort_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_argsort",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_array_equal",
@@ -2463,18 +2547,60 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_partition",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_power",
@@ -3229,18 +3355,60 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_sort",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
     },
     {
       "name": "mlx_split",
