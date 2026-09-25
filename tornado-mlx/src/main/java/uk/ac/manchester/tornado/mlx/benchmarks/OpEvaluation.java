@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 
 import uk.ac.manchester.tornado.api.KernelContext;
 import uk.ac.manchester.tornado.api.WorkerGrid;
+import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.api.WorkerGrid1D;
 import uk.ac.manchester.tornado.api.common.TornadoFunctions.LibraryTask2;
 import uk.ac.manchester.tornado.api.common.TornadoFunctions.LibraryTask3;
@@ -78,57 +79,81 @@ public final class OpEvaluation {
     }
 
     private static final List<Result> RESULTS = new ArrayList<>();
+    private static final List<String> FAILURES = new ArrayList<>();
     private static int graphCounter;
     private static String only;
 
     // ---------------------------------------------------------------- measurement
 
-    private static double[] time(Object[] inputs, Object[] outputs, TaskAdder adder, boolean usesGrid) {
+    private static double[] time(Object[] inputs, Object[] outputs, TaskAdder adder, boolean usesGrid, int chainLength) {
         String base = "ev" + (graphCounter++);
         Timing one = MlxBenchmarks.graphOf(base + "a", 1, inputs, outputs, adder, usesGrid);
-        Timing chain = MlxBenchmarks.graphOf(base + "b", MlxBenchmarks.CHAIN, inputs, outputs, adder, usesGrid);
-        double marginal = Math.max((chain.medianUs() - one.medianUs()) / (MlxBenchmarks.CHAIN - 1), 0.0);
+        Timing chain = MlxBenchmarks.graphOf(base + "b", chainLength, inputs, outputs, adder, usesGrid);
+        double marginal = Math.max((chain.medianUs() - one.medianUs()) / (chainLength - 1), 0.0);
         return new double[] { one.medianUs(), one.p10Us(), one.p90Us(), marginal };
     }
 
-    private static void compare(String family, String op, String shape, String regime, String dtype, String jitKernel, Object[] inputs, Object[] outputs, TaskAdder mlx, TaskAdder jit,
+    static void compare(String family, String op, String shape, String regime, String dtype, String jitKernel, Object[] inputs, Object[] outputs, TaskAdder mlx, TaskAdder jit,
             double bytes, double flops) {
-        if (only != null && !only.equalsIgnoreCase(family) && !"floor".equals(family)) {
+        compare(family, op, shape, regime, dtype, jitKernel, inputs, outputs, mlx, jit, bytes, flops, MlxBenchmarks.CHAIN);
+    }
+
+    /**
+     * {@link #compare} with a shorter chain, for JIT baselines of many tasks: a TornadoVM task graph
+     * holds at most 1024 nodes, which a chain of 8 multi-kernel operations can exceed.
+     */
+    static void compare(String family, String op, String shape, String regime, String dtype, String jitKernel, Object[] inputs, Object[] outputs, TaskAdder mlx, TaskAdder jit,
+            double bytes, double flops, int chainLength) {
+        if (!wants(family)) {
             return;
         }
-        double[] m = time(inputs, outputs, mlx, false);
-        double[] j = time(inputs, outputs, jit, true);
+        double[] m;
+        double[] j;
+        try {
+            m = time(inputs, outputs, mlx, false, chainLength);
+            j = time(inputs, outputs, jit, true, chainLength);
+        } catch (RuntimeException | TornadoInternalError e) {
+            // One broken case must not end a long run: report it and carry on.
+            FAILURES.add(family + " " + op + " " + shape + ": " + e);
+            System.out.printf(Locale.ROOT, "  %-12s %-20s %-18s FAILED %s%n", family, op, shape, e);
+            return;
+        }
         Result r = new Result(family, op, shape, regime, dtype, jitKernel, new Timing(m[0], m[1], m[2]), m[3], new Timing(j[0], j[1], j[2]), j[3], bytes, flops);
         RESULTS.add(r);
         System.out.printf(Locale.ROOT, "  %-12s %-20s %-18s %-7s  mlx %9.1f us (+%8.1f)   jit %9.1f us (+%8.1f)   jit/mlx %5.2fx%n", family, op, shape, regime, m[0], m[3], j[0], j[3],
                 r.ratio());
     }
 
+    /** Whether a family is selected by {@code --only} (the fixed-cost probe always runs). */
+    static boolean wants(String family) {
+        return only == null || only.equalsIgnoreCase(family) || "floor".equals(family);
+    }
+
     /** A JIT task with its worker grid. */
-    private static TaskAdder jit(Supplier<WorkerGrid> grid, TaskAdder task) {
+    static TaskAdder jit(Supplier<WorkerGrid> grid, TaskAdder task) {
         return (g, gs, gn, t) -> {
             gs.addWorkerGrid(gn + "." + t, grid.get());
             task.add(g, gs, gn, t);
         };
     }
 
-    private static WorkerGrid1D grid1D(int threads) {
+    static WorkerGrid1D grid1D(int threads) {
         WorkerGrid1D grid = new WorkerGrid1D((threads + LOCAL - 1) / LOCAL * LOCAL);
         grid.setLocalWork(LOCAL, 1, 1);
         return grid;
     }
 
-    private static WorkerGrid1D groups(int groups, int threadsPerGroup) {
+    static WorkerGrid1D groups(int groups, int threadsPerGroup) {
         WorkerGrid1D grid = new WorkerGrid1D(groups * threadsPerGroup);
         grid.setLocalWork(threadsPerGroup, 1, 1);
         return grid;
     }
 
-    private static FloatArray floats(int n, long seed) {
+    static FloatArray floats(int n, long seed) {
         return MlxBenchmarks.randomFloat(n, 1f, seed);
     }
 
-    private static IntArray randomInts(int n, long seed) {
+    static IntArray randomInts(int n, long seed) {
         Random r = new Random(seed);
         IntArray a = new IntArray(n);
         for (int i = 0; i < n; i++) {
@@ -456,10 +481,16 @@ public final class OpEvaluation {
 
     // ---------------------------------------------------------------- report
 
+    /** A CSV field, quoted when it contains a comma or a quote. */
+    private static String quote(String field) {
+        return field.contains(",") || field.contains("\"") ? "\"" + field.replace("\"", "\"\"") + "\"" : field;
+    }
+
     private static void writeCsv(PrintStream out) {
         out.println("family,op,shape,regime,dtype,jit_kernel,mlx_execute_us,mlx_p10_us,mlx_p90_us,mlx_marginal_us,jit_execute_us,jit_p10_us,jit_p90_us,jit_marginal_us,bytes,flops");
         for (Result r : RESULTS) {
-            out.printf(Locale.ROOT, "%s,%s,%s,%s,%s,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.0f,%.0f%n", r.family(), r.op(), r.shape(), r.regime(), r.dtype(), r.jitKernel(), r.mlx().medianUs(),
+            out.printf(Locale.ROOT, "%s,%s,%s,%s,%s,%s,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.0f,%.0f%n", quote(r.family()), quote(r.op()), quote(r.shape()), quote(r.regime()), quote(r.dtype()),
+                    quote(r.jitKernel()), r.mlx().medianUs(),
                     r.mlx().p10Us(), r.mlx().p90Us(), r.mlxMarginalUs(), r.jit().medianUs(), r.jit().p10Us(), r.jit().p90Us(), r.jitMarginalUs(), r.bytes(), r.flops());
         }
     }
@@ -484,6 +515,11 @@ public final class OpEvaluation {
         fast();
         reductions();
         quantized();
+        Tier2Cases.all();
+        if (!FAILURES.isEmpty()) {
+            System.out.println(FAILURES.size() + " cases failed:");
+            FAILURES.forEach(f -> System.out.println("  " + f));
+        }
         if (outDir != null) {
             Files.createDirectories(outDir);
             try (PrintStream csv = new PrintStream(Files.newOutputStream(outDir.resolve("op-evaluation.csv")))) {
