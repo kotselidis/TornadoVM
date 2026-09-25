@@ -7,7 +7,7 @@
     "inScope": 292,
     "bound": 33,
     "tested": 33,
-    "benchmarked": 0,
+    "benchmarked": 10,
     "remaining": 259,
     "byTier": {
       "1": {
@@ -229,7 +229,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1182,7 +1182,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1523,7 +1523,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1541,7 +1541,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1942,7 +1942,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2272,7 +2272,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2307,7 +2307,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2700,7 +2700,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2717,7 +2717,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2752,7 +2752,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "dtypes": [
         "bfloat16",
         "float16",
