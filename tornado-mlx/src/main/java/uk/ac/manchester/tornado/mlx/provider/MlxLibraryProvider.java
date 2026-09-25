@@ -19,7 +19,9 @@ package uk.ac.manchester.tornado.mlx.provider;
 
 import static java.util.Map.entry;
 
+import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -137,6 +139,19 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
      */
     public static long copyFallbacks() {
         return COPY_FALLBACKS.get();
+    }
+
+    /**
+     * Bytes MLX currently has allocated for live arrays (excluding its buffer cache). Used by the
+     * leak tests.
+     */
+    public static long activeMemoryBytes() {
+        MlxNativeLib.load();
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment bytes = arena.allocate(ValueLayout.JAVA_LONG);
+            MlxNativeLib.check(MlxC.mlx_get_active_memory(bytes), "mlx_get_active_memory");
+            return bytes.get(ValueLayout.JAVA_LONG, 0);
+        }
     }
 
     /** Names of the operations this provider dispatches, e.g. "add". */
