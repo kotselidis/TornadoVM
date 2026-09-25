@@ -180,7 +180,10 @@ final class MlxNativeLib {
     /** Wraps {@code shape} elements at {@code address} as an MLX array without asking MLX to copy them. */
     static MemorySegment wrap(long address, int[] shape, int dtype) {
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment shapeSegment = arena.allocateArray(C_INT, shape);
+            // allocate + copy rather than allocateArray/allocateFrom, whose names differ between
+            // the JDK 21 preview FFM API and JDK 22+.
+            MemorySegment shapeSegment = FFMSupport.allocateArray(arena, C_INT, shape.length);
+            MemorySegment.copy(shape, 0, shapeSegment, C_INT, 0, shape.length);
             return (MemorySegment) ARRAY_NEW_DATA_MANAGED.invokeExact(MemorySegment.ofAddress(address), shapeSegment, shape.length, dtype, COUNTING_DELETER);
         } catch (Throwable t) {
             throw rethrow(t);
