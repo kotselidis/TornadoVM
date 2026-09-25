@@ -8,7 +8,7 @@
     "bound": 33,
     "tested": 33,
     "benchmarked": 10,
-    "jitBaselines": 14,
+    "jitBaselines": 17,
     "remaining": 259,
     "byTier": {
       "1": {
@@ -70,6 +70,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.addmm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (alpha/beta epilogue)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1220,6 +1229,23 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemm",
+          "JitBlas.gemmTransposed",
+          "JitBlas.gemmTransposedF16",
+          "JitBlas.gemv",
+          "JitBlas.gemvF16"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled",
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (float16 operands, transposed B staging)",
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (transposed B staging)",
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd",
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (float16 operands)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2435,6 +2461,21 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemmTransposed",
+          "JitBlas.gemmTransposedF16",
+          "JitBlas.gemvF16",
+          "JitBlas.transpose"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (float16 operands, transposed B staging)",
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (transposed B staging)",
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (float16 operands)",
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
