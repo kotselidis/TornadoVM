@@ -8,7 +8,7 @@
     "bound": 33,
     "tested": 33,
     "benchmarked": 10,
-    "jitBaselines": 29,
+    "jitBaselines": 33,
     "remaining": 259,
     "byTier": {
       "1": {
@@ -673,6 +673,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.dequantize"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -941,6 +950,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.gatherQmm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (MLX affine weights, gathered)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1641,6 +1659,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.quantize"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1659,6 +1686,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.quantizedMatmul"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (MLX affine weights)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",

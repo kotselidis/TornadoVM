@@ -1,6 +1,6 @@
 {
   "comment": "Hand-maintained decisions merged into coverage.json by scripts/update_coverage.py. Tiers not listed here are assigned by the rules in that script.",
-  "requireJitBaseline": false,
+  "requireJitBaseline": true,
   "noJitBaseline": {},
   "tier1": [
     "mlx_add", "mlx_subtract", "mlx_multiply", "mlx_divide", "mlx_negative", "mlx_maximum", "mlx_minimum",
