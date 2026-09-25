@@ -54,6 +54,7 @@ final class MlxNativeLib {
     static final int MLX_FLOAT32 = 10;
     static final int MLX_FLOAT64 = 11;
     static final int MLX_BFLOAT16 = 12;
+    static final int MLX_COMPLEX64 = 13;
 
     private static final SymbolLookup LIBOBJC = FFMSupport.loadLibrary("/usr/lib/libobjc.A.dylib");
     private static final MethodHandle OBJC_RETAIN = LIBOBJC == null ? null : FFMSupport.downcall(LIBOBJC, FunctionDescriptor.of(C_LONG, C_LONG), "objc_retain");

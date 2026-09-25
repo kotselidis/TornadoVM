@@ -107,6 +107,18 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         int apply(MemorySegment res, MemorySegment a, boolean upper, MemorySegment stream);
     }
 
+    private interface Fft1d {
+        int apply(MemorySegment res, MemorySegment a, int n, int axis, int norm, MemorySegment stream);
+    }
+
+    private interface FftNd {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment n, long nNum, MemorySegment axes, long axesNum, int norm, MemorySegment stream);
+    }
+
+    private interface FftShift {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment axes, long axesNum, MemorySegment stream);
+    }
+
     private interface Binary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment b, MemorySegment stream);
     }
@@ -267,6 +279,23 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("linalg_pinv", MlxLibraryProvider::pinv), //
             entry("linalg_eig", MlxLibraryProvider::eig), //
             entry("linalg_eigvals", MlxLibraryProvider::eigvals), //
+            // FFT (MlxFft).
+            entry("fft_fft", c -> fft1d(c, "mlx_fft_fft", MlxC::mlx_fft_fft, true, true)), //
+            entry("fft_ifft", c -> fft1d(c, "mlx_fft_ifft", MlxC::mlx_fft_ifft, true, true)), //
+            entry("fft_rfft", c -> fft1d(c, "mlx_fft_rfft", MlxC::mlx_fft_rfft, false, true)), //
+            entry("fft_irfft", c -> fft1d(c, "mlx_fft_irfft", MlxC::mlx_fft_irfft, true, false)), //
+            entry("fft_fft2", c -> fftNd(c, "mlx_fft_fft2", MlxC::mlx_fft_fft2, 2, true, true, false)), //
+            entry("fft_ifft2", c -> fftNd(c, "mlx_fft_ifft2", MlxC::mlx_fft_ifft2, 2, true, true, false)), //
+            entry("fft_rfft2", c -> fftNd(c, "mlx_fft_rfft2", MlxC::mlx_fft_rfft2, 2, false, true, false)), //
+            entry("fft_irfft2", c -> fftNd(c, "mlx_fft_irfft2", MlxC::mlx_fft_irfft2, 2, true, false, true)), //
+            entry("fft_fftn", c -> fftNd(c, "mlx_fft_fftn", MlxC::mlx_fft_fftn, 3, true, true, false)), //
+            entry("fft_ifftn", c -> fftNd(c, "mlx_fft_ifftn", MlxC::mlx_fft_ifftn, 3, true, true, false)), //
+            entry("fft_rfftn", c -> fftNd(c, "mlx_fft_rfftn", MlxC::mlx_fft_rfftn, 3, false, true, false)), //
+            entry("fft_irfftn", c -> fftNd(c, "mlx_fft_irfftn", MlxC::mlx_fft_irfftn, 3, true, false, true)), //
+            entry("fft_fftshift", c -> fftShift(c, "mlx_fft_fftshift", MlxC::mlx_fft_fftshift)), //
+            entry("fft_ifftshift", c -> fftShift(c, "mlx_fft_ifftshift", MlxC::mlx_fft_ifftshift)), //
+            entry("fft_fftfreq", c -> c.store(c.op("mlx_fft_fftfreq", res -> MlxC.mlx_fft_fftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
+            entry("fft_rfftfreq", c -> c.store(c.op("mlx_fft_rfftfreq", res -> MlxC.mlx_fft_rfftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -433,6 +462,48 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // complex [dims..., len] input given as float pairs: wrapped as float32 [dims..., 2 * len], viewed as complex64
+    private static MemorySegment complexInput(MlxCall c, int index, int... shape) {
+        int[] floats = shape.clone();
+        floats[floats.length - 1] *= 2;
+        MemorySegment pairs = c.input(index, floats);
+        return c.op("mlx_view", res -> MlxC.mlx_view(res, pairs, MlxNativeLib.MLX_COMPLEX64, c.stream()));
+    }
+
+    // fft/ifft/rfft/irfft(x, out, rows, len, n, norm) along the last axis
+    private static void fft1d(MlxCall c, String name, Fft1d op, boolean complexIn, boolean complexOut) {
+        int rows = c.intArg(2);
+        int len = c.intArg(3);
+        MemorySegment x = complexIn ? complexInput(c, 0, rows, len) : c.input(0, rows, len);
+        MemorySegment y = c.op(name, res -> op.apply(res, x, c.intArg(4), -1, c.intArg(5), c.stream()));
+        c.store(complexOut ? complexAsFloats(c, y) : y, 1);
+    }
+
+    // 2D (x, out, batch, h, w, norm) or 3D (x, out, batch, d, h, w, norm) transforms over the last axes;
+    // halfIn: the input's last axis holds w / 2 + 1 complex values (irfft2, irfftn)
+    private static void fftNd(MlxCall c, String name, FftNd op, int dims, boolean complexIn, boolean complexOut, boolean halfIn) {
+        int[] shape = new int[dims + 1];
+        for (int i = 0; i <= dims; i++) {
+            shape[i] = c.intArg(2 + i);
+        }
+        int norm = c.intArg(3 + dims);
+        int[] sizes = java.util.Arrays.copyOfRange(shape, 1, dims + 1);
+        int[] inShape = shape.clone();
+        if (halfIn) {
+            inShape[dims] = shape[dims] / 2 + 1;
+        }
+        MemorySegment x = complexIn ? complexInput(c, 0, inShape) : c.input(0, inShape);
+        MemorySegment axes = dims == 2 ? c.ints(1, 2) : c.ints(1, 2, 3);
+        MemorySegment y = c.op(name, res -> op.apply(res, x, c.ints(sizes), dims, axes, dims, norm, c.stream()));
+        c.store(complexOut ? complexAsFloats(c, y) : y, 1);
+    }
+
+    // fftshift / ifftshift(x, out, rows, len) along the last axis
+    private static void fftShift(MlxCall c, String name, FftShift op) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3));
+        c.store(c.op(name, res -> op.apply(res, x, c.ints(1), 1, c.stream())), 1);
+    }
 
     // linalg_cross(a, b, out, count): 3-vectors along the last axis
     private static void cross(MlxCall c) {
