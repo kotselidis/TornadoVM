@@ -19,6 +19,7 @@ package uk.ac.manchester.tornado.mlx.benchmarks;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.foreign.MemorySegment;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import uk.ac.manchester.tornado.mlx.jit.JitElementwise;
 import uk.ac.manchester.tornado.mlx.jit.JitFast;
 import uk.ac.manchester.tornado.mlx.jit.JitQuantized;
 import uk.ac.manchester.tornado.mlx.jit.JitReductions;
+import uk.ac.manchester.tornado.mlx.provider.MlxC;
 
 /**
  * Per-operation evaluation: every bound MLX operation as an {@code apple/mlx} library task against
@@ -54,7 +56,7 @@ import uk.ac.manchester.tornado.mlx.jit.JitReductions;
  * {@value MlxBenchmarks#CHAIN}.
  *
  * <pre>
- * tornado -m tornado.mlx/uk.ac.manchester.tornado.mlx.benchmarks.OpEvaluation [--only family] [--out dir]
+ * tornado -m tornado.mlx/uk.ac.manchester.tornado.mlx.benchmarks.OpEvaluation [--only family] [--out dir] [--probe]
  * </pre>
  */
 public final class OpEvaluation {
@@ -442,6 +444,16 @@ public final class OpEvaluation {
                 jit(() -> groups(batches * m * n, JitQuantized.SIMD_THREADS), (g, gs, gn, t) -> g.task(t, JitQuantized::gatherQmm, new KernelContext(), x, wq, scales, biases, lhs, rhs, y,
                         m, k, n, GROUP_SIZE, bits)), (double) batches * n * k * bits / 8 + 8.0 * batches * n * k / GROUP_SIZE, 2.0 * batches * m * n * k);
     }
+    /** MLX alone (MLX-owned arrays, no TornadoVM) for the large element-wise shape. */
+    private static void probe() {
+        int n = 1 << 24;
+        MemorySegment ma = MlxBenchmarks.mlxCopy(floats(n, 1), MlxBenchmarks.MLX_FLOAT32, n);
+        MemorySegment mb = MlxBenchmarks.mlxCopy(floats(n, 2), MlxBenchmarks.MLX_FLOAT32, n);
+        MlxBenchmarks.measureMlxAlone("add", Integer.toString(n), "f32", (st, ar) -> MlxBenchmarks.op(ar, res -> MlxC.mlx_add(res, ma, mb, st)), 12.0 * n, n);
+        MlxBenchmarks.measureMlxAlone("exp", Integer.toString(n), "f32", (st, ar) -> MlxBenchmarks.op(ar, res -> MlxC.mlx_exp(res, ma, st)), 8.0 * n, n);
+        MlxBenchmarks.measureMlxAlone("copy", Integer.toString(n), "f32", (st, ar) -> MlxBenchmarks.op(ar, res -> MlxC.mlx_contiguous(res, ma, true, st)), 8.0 * n, 0);
+    }
+
     // ---------------------------------------------------------------- report
 
     private static void writeCsv(PrintStream out) {
@@ -458,6 +470,10 @@ public final class OpEvaluation {
             switch (args[i]) {
                 case "--only" -> only = args[++i];
                 case "--out" -> outDir = Path.of(args[++i]);
+                case "--probe" -> {
+                    probe();
+                    return;
+                }
                 default -> throw new IllegalArgumentException("unknown argument " + args[i]);
             }
         }

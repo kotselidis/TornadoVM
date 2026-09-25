@@ -121,6 +121,12 @@ public class TestMlx extends TornadoTestBase {
         addFloat(1 << 22);
     }
 
+    /** A result copied out by several threads whose last chunk is shorter than the others. */
+    @Test
+    public void testAddFloatLargeOddSize() throws TornadoExecutionPlanException {
+        addFloat((1 << 22) + 13);
+    }
+
     @Test
     public void testAddHalfFloat() throws TornadoExecutionPlanException {
         final int n = 1027;

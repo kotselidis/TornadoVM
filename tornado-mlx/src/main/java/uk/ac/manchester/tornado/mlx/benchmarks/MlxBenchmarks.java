@@ -164,7 +164,7 @@ public final class MlxBenchmarks {
                 one.medianUs(), one.p10Us(), one.p90Us(), marginal, row.gbs(), row.gflops());
     }
 
-    private static void measureMlxAlone(String op, String shape, String dtype, MlxOperation operation, double bytes, double flops) {
+    static void measureMlxAlone(String op, String shape, String dtype, MlxOperation operation, double bytes, double flops) {
         MemorySegment stream = MlxC.mlx_default_gpu_stream_new();
         try (Arena arena = Arena.ofConfined()) {
             for (int i = 0; i < WARMUP; i++) {
@@ -196,7 +196,7 @@ public final class MlxBenchmarks {
     // ---------------------------------------------------------------- MLX-owned arrays for "MLX alone"
 
     private static final int MLX_FLOAT16 = 9;
-    private static final int MLX_FLOAT32 = 10;
+    static final int MLX_FLOAT32 = 10;
     private static final int MLX_UINT32 = 3;
 
     private static void check(int status, String call) {
