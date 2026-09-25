@@ -8,7 +8,7 @@
     "bound": 33,
     "tested": 33,
     "benchmarked": 10,
-    "jitBaselines": 17,
+    "jitBaselines": 22,
     "remaining": 259,
     "byTier": {
       "1": {
@@ -2722,6 +2722,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.layerNorm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2869,6 +2878,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.rmsNorm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2886,6 +2904,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.rope"
+        ],
+        "sources": [
+          "tornado-unittests/.../compute/TransformerKernelsTest.java#ropeRotation (out of place, parametric base/scale/offset, both pairings)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2903,6 +2930,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.ropeDynamic"
+        ],
+        "sources": [
+          "tornado-unittests/.../compute/TransformerKernelsTest.java#ropeRotation (position from device memory)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2921,6 +2957,15 @@
       "bound": true,
       "tested": true,
       "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.attentionDecode"
+        ],
+        "sources": [
+          "tornado-unittests/.../kernelcontext/api/TestFlashAttentionKernelContext.java#processHeadsFlashAttentionOptV2 (MLX layout, head dim 128, explicit scale)"
+        ],
+        "tested": true
+      },
       "dtypes": [
         "bfloat16",
         "float16",
