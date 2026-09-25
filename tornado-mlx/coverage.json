@@ -5,11 +5,11 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 99,
-    "tested": 99,
+    "bound": 104,
+    "tested": 104,
     "benchmarked": 33,
-    "jitBaselines": 99,
-    "remaining": 193,
+    "jitBaselines": 104,
+    "remaining": 188,
     "byTier": {
       "1": {
         "inScope": 32,
@@ -17,7 +17,7 @@
       },
       "2": {
         "inScope": 148,
-        "bound": 66
+        "bound": 71
       },
       "3": {
         "inScope": 112,
@@ -973,36 +973,112 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_cummin",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_cumprod",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_cumsum",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_degrees",
@@ -1737,9 +1813,27 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_logical_and",

@@ -69,6 +69,10 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
     }
 
+    private interface Scan {
+        int apply(MemorySegment res, MemorySegment a, int axis, boolean reverse, boolean inclusive, MemorySegment stream);
+    }
+
     private interface Reduce {
         int apply(MemorySegment res, MemorySegment a, boolean keepdims, MemorySegment stream);
     }
@@ -169,6 +173,11 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("any_axes", c -> reduceAxes(c, "mlx_any_axes", MlxC::mlx_any_axes)), //
             entry("argmin", c -> reduce(c, "mlx_argmin", MlxC::mlx_argmin)), //
             entry("argmin_axis", c -> reduceAxis(c, "mlx_argmin_axis", MlxC::mlx_argmin_axis)), //
+            entry("cumsum", c -> scan(c, "mlx_cumsum", MlxC::mlx_cumsum)), //
+            entry("cumprod", c -> scan(c, "mlx_cumprod", MlxC::mlx_cumprod)), //
+            entry("cummax", c -> scan(c, "mlx_cummax", MlxC::mlx_cummax)), //
+            entry("cummin", c -> scan(c, "mlx_cummin", MlxC::mlx_cummin)), //
+            entry("logcumsumexp", c -> scan(c, "mlx_logcumsumexp", MlxC::mlx_logcumsumexp)), //
             entry("median", c -> reduceAxes(c, "mlx_median", (r, a, axes, n, k, s) -> MlxC.mlx_median(r, a, axes, n, k, s), true)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
@@ -337,6 +346,13 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
 
     // ---------------------------------------------------------------- operation families
 
+    // scan(x, out, outer, len, inner, reverse, inclusive): along axis 1 of x viewed as [outer, len, inner]
+    private static void scan(MlxCall c, String name, Scan op) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4));
+        boolean reverse = c.boolArg(5);
+        boolean inclusive = c.boolArg(6);
+        c.store(c.op(name, res -> op.apply(res, x, 1, reverse, inclusive, c.stream())), 1);
+    }
     // reduce(x, out, ...): over the whole array, into out[0]
     private static void reduce(MlxCall c, String name, Reduce op) {
         MemorySegment x = c.input(0, c.length(0));

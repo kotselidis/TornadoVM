@@ -30,7 +30,8 @@ import uk.ac.manchester.tornado.api.types.arrays.IntArray;
  * {@code [outer, len, inner]} and the middle axis reduced), and over two adjacent axes
  * ({@code sumAxes}, input viewed as {@code [outer, len1, len2, inner]}). Outputs hold
  * {@code outer * inner} elements (one for a whole-array reduction). all and any write 0 or 1 into
- * a byte array; argmin writes int32 indices.
+ * a byte array; argmin writes int32 indices. The scans (cumsum ... logcumsumexp) keep the input's
+ * shape and run along the middle axis of the same {@code [outer, len, inner]} view.
  */
 public final class MlxReduce {
 
@@ -761,5 +762,195 @@ public final class MlxReduce {
     @MlxOp("mlx_median")
     public static LibraryTaskDescriptor median(BFloat16Array x, BFloat16Array out, int outer, int len, int inner) {
         return Mlx.task("median", 1, x, out, outer, len, inner);
+    }
+
+    /**
+     * Cumulative sum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumsum")
+    public static LibraryTaskDescriptor cumsum(FloatArray x, FloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumsum", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative sum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumsum")
+    public static LibraryTaskDescriptor cumsum(HalfFloatArray x, HalfFloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumsum", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative sum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumsum")
+    public static LibraryTaskDescriptor cumsum(BFloat16Array x, BFloat16Array out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumsum", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative sum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumsum")
+    public static LibraryTaskDescriptor cumsum(IntArray x, IntArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumsum", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative product along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumprod")
+    public static LibraryTaskDescriptor cumprod(FloatArray x, FloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumprod", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative product along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumprod")
+    public static LibraryTaskDescriptor cumprod(HalfFloatArray x, HalfFloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumprod", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative product along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumprod")
+    public static LibraryTaskDescriptor cumprod(BFloat16Array x, BFloat16Array out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumprod", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative product along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cumprod")
+    public static LibraryTaskDescriptor cumprod(IntArray x, IntArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cumprod", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative maximum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummax")
+    public static LibraryTaskDescriptor cummax(FloatArray x, FloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummax", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative maximum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummax")
+    public static LibraryTaskDescriptor cummax(HalfFloatArray x, HalfFloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummax", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative maximum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummax")
+    public static LibraryTaskDescriptor cummax(BFloat16Array x, BFloat16Array out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummax", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative maximum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummax")
+    public static LibraryTaskDescriptor cummax(IntArray x, IntArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummax", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative minimum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummin")
+    public static LibraryTaskDescriptor cummin(FloatArray x, FloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummin", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative minimum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummin")
+    public static LibraryTaskDescriptor cummin(HalfFloatArray x, HalfFloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummin", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative minimum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummin")
+    public static LibraryTaskDescriptor cummin(BFloat16Array x, BFloat16Array out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummin", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative minimum along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_cummin")
+    public static LibraryTaskDescriptor cummin(IntArray x, IntArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("cummin", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative log(sum(exp(x))) along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_logcumsumexp")
+    public static LibraryTaskDescriptor logcumsumexp(FloatArray x, FloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("logcumsumexp", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative log(sum(exp(x))) along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_logcumsumexp")
+    public static LibraryTaskDescriptor logcumsumexp(HalfFloatArray x, HalfFloatArray out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("logcumsumexp", 1, x, out, outer, len, inner, reverse, inclusive);
+    }
+
+    /**
+     * Cumulative log(sum(exp(x))) along the middle axis of {@code x} viewed as {@code [outer, len, inner]}, into
+     * {@code out} (same shape). {@code reverse} scans from the end; an exclusive scan
+     * ({@code inclusive == false}) shifts the result by one.
+     */
+    @MlxOp("mlx_logcumsumexp")
+    public static LibraryTaskDescriptor logcumsumexp(BFloat16Array x, BFloat16Array out, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return Mlx.task("logcumsumexp", 1, x, out, outer, len, inner, reverse, inclusive);
     }
 }
