@@ -33,7 +33,6 @@
 package uk.ac.manchester.tornado.mlx.benchmarks;
 
 import uk.ac.manchester.tornado.api.KernelContext;
-import uk.ac.manchester.tornado.api.annotations.Parallel;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
 import uk.ac.manchester.tornado.api.types.arrays.ByteArray;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
@@ -246,23 +245,6 @@ public final class JitKernels {
         }
         if (row < m && col < n) {
             c.set(row * n + col, acc);
-        }
-    }
-
-    /** Half-split RoPE of x[heads * headDim] at one position. */
-    public static void rope(FloatArray x, FloatArray out, int heads, int headDim, int position, float base) {
-        int half = headDim / 2;
-        for (@Parallel int idx = 0; idx < heads * half; idx++) {
-            int h = idx / half;
-            int i = idx % half;
-            float theta = position * TornadoMath.pow(base, -2.0f * i / headDim);
-            float cosT = TornadoMath.cos(theta);
-            float sinT = TornadoMath.sin(theta);
-            int p = h * headDim + i;
-            float x1 = x.get(p);
-            float x2 = x.get(p + half);
-            out.set(p, x1 * cosT - x2 * sinT);
-            out.set(p + half, x1 * sinT + x2 * cosT);
         }
     }
 

@@ -49,6 +49,7 @@ import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 import uk.ac.manchester.tornado.mlx.Mlx;
+import uk.ac.manchester.tornado.mlx.jit.JitFast;
 import uk.ac.manchester.tornado.mlx.provider.MlxC;
 import uk.ac.manchester.tornado.mlx.provider.MlxLibraryProvider;
 import uk.ac.manchester.tornado.runtime.ffm.FFMSupport;
@@ -433,10 +434,14 @@ public final class MlxBenchmarks {
         MlxC.mlx_array_free(mx);
         measure("RoPE", shape, "f32", "apple/mlx", new Object[] { x }, new Object[] { out }, (g, grid, gn, t) -> g.libraryTask(t, Mlx::rope, x, out, 1, heads, seqLen, headDim, headDim, false,
                 base, 1f, position), false, bytes, flops, "");
-        if (seqLen == 1) {
-            measure("RoPE", shape, "f32", "JIT", new Object[] { x }, new Object[] { out }, (g, grid, gn, t) -> g.task(t, JitKernels::rope, x, out, heads, headDim, position, base), false,
-                    bytes, flops, "@Parallel kernel (jitLLM fuses RoPE with its KV-cache write)");
-        }
+        final int rows = heads * seqLen;
+        measure("RoPE", shape, "f32", "JIT", new Object[] { x }, new Object[] { out }, (g, grid, gn, t) -> {
+            int pairs = rows * headDim / 2;
+            WorkerGrid1D wg = new WorkerGrid1D((pairs + 255) / 256 * 256);
+            wg.setLocalWork(256, 1, 1);
+            grid.addWorkerGrid(gn + "." + t, wg);
+            g.task(t, JitFast::rope, new KernelContext(), x, out, rows, seqLen, headDim, headDim, 0, base, 1f, position);
+        }, true, bytes, flops, "KernelContext kernel, one thread per pair (mlx.jit.JitFast#rope)");
     }
 
     private static void attentionDecode(int ctx) {
