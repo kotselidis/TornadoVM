@@ -5,11 +5,11 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 66,
-    "tested": 66,
+    "bound": 99,
+    "tested": 99,
     "benchmarked": 33,
-    "jitBaselines": 66,
-    "remaining": 226,
+    "jitBaselines": 99,
+    "remaining": 193,
     "byTier": {
       "1": {
         "inScope": 32,
@@ -17,7 +17,7 @@
       },
       "2": {
         "inScope": 148,
-        "bound": 33
+        "bound": 66
       },
       "3": {
         "inScope": 112,
@@ -111,27 +111,85 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_all_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_all",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny",
+          "JitReduce.reducePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_allclose",
@@ -147,27 +205,85 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_any_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_any",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny",
+          "JitReduce.reducePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_arange",
@@ -419,18 +535,54 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.argmin"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_argmin",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.argmin"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_argpartition_axis",
@@ -1621,27 +1773,80 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.logsumexp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_logsumexp_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.logsumexp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_logsumexp",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.logsumexp",
+          "JitReduce.logsumexpMerge",
+          "JitReduce.logsumexpPartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_masked_scatter",
@@ -1691,27 +1896,84 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_max_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_max",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_maximum",
@@ -1745,36 +2007,107 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_mean_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_mean",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_median",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.median"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_meshgrid",
@@ -1790,27 +2123,84 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_min_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_min",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_minimum",
@@ -2023,27 +2413,84 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_prod_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_prod",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_put_along_axis",
@@ -2822,27 +3269,80 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_std_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_std",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance",
+          "JitReduce.varianceMerge",
+          "JitReduce.variancePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_stop_gradient",
@@ -2886,27 +3386,84 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_sum_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_sum",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_swapaxes",
@@ -3175,27 +3732,80 @@
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_var_axis",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_var",
       "header": "ops.h",
       "tier": 2,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance",
+          "JitReduce.varianceMerge",
+          "JitReduce.variancePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
     },
     {
       "name": "mlx_view",

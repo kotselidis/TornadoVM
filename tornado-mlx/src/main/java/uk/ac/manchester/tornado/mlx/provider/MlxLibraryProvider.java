@@ -69,6 +69,18 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
     }
 
+    private interface Reduce {
+        int apply(MemorySegment res, MemorySegment a, boolean keepdims, MemorySegment stream);
+    }
+
+    private interface ReduceAxis {
+        int apply(MemorySegment res, MemorySegment a, int axis, boolean keepdims, MemorySegment stream);
+    }
+
+    private interface ReduceAxes {
+        int apply(MemorySegment res, MemorySegment a, MemorySegment axes, long axesNum, boolean keepdims, MemorySegment stream);
+    }
+
     private interface Binary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment b, MemorySegment stream);
     }
@@ -124,6 +136,40 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("divmod", MlxLibraryProvider::divmod), //
             entry("clip", MlxLibraryProvider::clip), //
             entry("where", MlxLibraryProvider::where), //
+            // Reductions (MlxReduce).
+            entry("sum", c -> reduce(c, "mlx_sum", MlxC::mlx_sum)), //
+            entry("sum_axis", c -> reduceAxis(c, "mlx_sum_axis", MlxC::mlx_sum_axis)), //
+            entry("sum_axes", c -> reduceAxes(c, "mlx_sum_axes", MlxC::mlx_sum_axes)), //
+            entry("prod", c -> reduce(c, "mlx_prod", MlxC::mlx_prod)), //
+            entry("prod_axis", c -> reduceAxis(c, "mlx_prod_axis", MlxC::mlx_prod_axis)), //
+            entry("prod_axes", c -> reduceAxes(c, "mlx_prod_axes", MlxC::mlx_prod_axes)), //
+            entry("max", c -> reduce(c, "mlx_max", MlxC::mlx_max)), //
+            entry("max_axis", c -> reduceAxis(c, "mlx_max_axis", MlxC::mlx_max_axis)), //
+            entry("max_axes", c -> reduceAxes(c, "mlx_max_axes", MlxC::mlx_max_axes)), //
+            entry("min", c -> reduce(c, "mlx_min", MlxC::mlx_min)), //
+            entry("min_axis", c -> reduceAxis(c, "mlx_min_axis", MlxC::mlx_min_axis)), //
+            entry("min_axes", c -> reduceAxes(c, "mlx_min_axes", MlxC::mlx_min_axes)), //
+            entry("mean", c -> reduce(c, "mlx_mean", MlxC::mlx_mean)), //
+            entry("mean_axis", c -> reduceAxis(c, "mlx_mean_axis", MlxC::mlx_mean_axis)), //
+            entry("mean_axes", c -> reduceAxes(c, "mlx_mean_axes", MlxC::mlx_mean_axes)), //
+            entry("logsumexp", c -> reduce(c, "mlx_logsumexp", MlxC::mlx_logsumexp)), //
+            entry("logsumexp_axis", c -> reduceAxis(c, "mlx_logsumexp_axis", MlxC::mlx_logsumexp_axis)), //
+            entry("logsumexp_axes", c -> reduceAxes(c, "mlx_logsumexp_axes", MlxC::mlx_logsumexp_axes)), //
+            entry("var", c -> reduce(c, "mlx_var", (r, a, k, s) -> MlxC.mlx_var(r, a, k, c.intArg(2), s))), //
+            entry("var_axis", c -> reduceAxis(c, "mlx_var_axis", (r, a, ax, k, s) -> MlxC.mlx_var_axis(r, a, ax, k, c.intArg(5), s))), //
+            entry("var_axes", c -> reduceAxes(c, "mlx_var_axes", (r, a, axes, n, k, s) -> MlxC.mlx_var_axes(r, a, axes, n, k, c.intArg(6), s))), //
+            entry("std", c -> reduce(c, "mlx_std", (r, a, k, s) -> MlxC.mlx_std(r, a, k, c.intArg(2), s))), //
+            entry("std_axis", c -> reduceAxis(c, "mlx_std_axis", (r, a, ax, k, s) -> MlxC.mlx_std_axis(r, a, ax, k, c.intArg(5), s))), //
+            entry("std_axes", c -> reduceAxes(c, "mlx_std_axes", (r, a, axes, n, k, s) -> MlxC.mlx_std_axes(r, a, axes, n, k, c.intArg(6), s))), //
+            entry("all", c -> reduce(c, "mlx_all", MlxC::mlx_all)), //
+            entry("all_axis", c -> reduceAxis(c, "mlx_all_axis", MlxC::mlx_all_axis)), //
+            entry("all_axes", c -> reduceAxes(c, "mlx_all_axes", MlxC::mlx_all_axes)), //
+            entry("any", c -> reduce(c, "mlx_any", MlxC::mlx_any)), //
+            entry("any_axis", c -> reduceAxis(c, "mlx_any_axis", MlxC::mlx_any_axis)), //
+            entry("any_axes", c -> reduceAxes(c, "mlx_any_axes", MlxC::mlx_any_axes)), //
+            entry("argmin", c -> reduce(c, "mlx_argmin", MlxC::mlx_argmin)), //
+            entry("argmin_axis", c -> reduceAxis(c, "mlx_argmin_axis", MlxC::mlx_argmin_axis)), //
+            entry("median", c -> reduceAxes(c, "mlx_median", (r, a, axes, n, k, s) -> MlxC.mlx_median(r, a, axes, n, k, s), true)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -290,6 +336,40 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // reduce(x, out, ...): over the whole array, into out[0]
+    private static void reduce(MlxCall c, String name, Reduce op) {
+        MemorySegment x = c.input(0, c.length(0));
+        c.store(c.op(name, res -> op.apply(res, x, false, c.stream())), 1);
+    }
+
+    // reduce_axis(x, out, outer, len, inner, ...): over axis 1 of x viewed as [outer, len, inner]
+    private static void reduceAxis(MlxCall c, String name, ReduceAxis op) {
+        MemorySegment x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4));
+        c.store(c.op(name, res -> op.apply(res, x, 1, false, c.stream())), 1);
+    }
+
+    // reduce_axes(x, out, outer, len1, len2, inner, ...): over axes 1 and 2 of x viewed as [outer, len1, len2, inner]
+    private static void reduceAxes(MlxCall c, String name, ReduceAxes op) {
+        reduceAxes(c, name, op, false);
+    }
+
+    // with singleAxis, the arguments are (x, out, outer, len, inner) and axis 1 is reduced through the axes form
+    private static void reduceAxes(MlxCall c, String name, ReduceAxes op, boolean singleAxis) {
+        MemorySegment x;
+        MemorySegment axes;
+        long count;
+        if (singleAxis) {
+            x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4));
+            axes = c.ints(1);
+            count = 1;
+        } else {
+            x = c.input(0, c.intArg(2), c.intArg(3), c.intArg(4), c.intArg(5));
+            axes = c.ints(1, 2);
+            count = 2;
+        }
+        c.store(c.op(name, res -> op.apply(res, x, axes, count, false, c.stream())), 1);
+    }
 
     // round(a, out, decimals)
     private static void round(MlxCall c) {
