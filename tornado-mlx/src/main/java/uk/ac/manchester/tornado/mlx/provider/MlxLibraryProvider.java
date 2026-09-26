@@ -346,6 +346,53 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("trace", c -> c.store(c.op("mlx_trace", res -> MlxC.mlx_trace(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.dtype(1), c.stream())), 1)), //
             entry("tril", c -> c.store(c.op("mlx_tril", res -> MlxC.mlx_tril(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
             entry("triu", c -> c.store(c.op("mlx_triu", res -> MlxC.mlx_triu(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
+            // Shape and layout (MlxShape).
+            entry("reshape", c -> c.store(c.op("mlx_reshape", res -> MlxC.mlx_reshape(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
+            entry("flatten", c -> c.store(c.op("mlx_flatten", res -> MlxC.mlx_flatten(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), 1, 2, c.stream())), 1)), //
+            entry("unflatten", c -> c.store(c.op("mlx_unflatten", res -> MlxC.mlx_unflatten(res, c.input(0, c.length(0)), 0, c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
+            entry("squeeze", c -> c.store(c.op("mlx_squeeze", res -> MlxC.mlx_squeeze(res, c.input(0, c.intArg(2), 1, c.intArg(3)), c.stream())), 1)), //
+            entry("squeeze_axis", c -> c.store(c.op("mlx_squeeze_axis", res -> MlxC.mlx_squeeze_axis(res, c.input(0, c.intArg(2), 1, c.intArg(3)), 1, c.stream())), 1)), //
+            entry("squeeze_axes", c -> c.store(c.op("mlx_squeeze_axes", res -> MlxC.mlx_squeeze_axes(res, c.input(0, 1, c.intArg(2), 1, c.intArg(3)), c.ints(0, 2), 2, c.stream())), 1)), //
+            entry("expand_dims", c -> c.store(c.op("mlx_expand_dims", res -> MlxC.mlx_expand_dims(res, c.input(0, c.intArg(2), c.intArg(3)), 1, c.stream())), 1)), //
+            entry("expand_dims_axes", c -> c.store(c.op("mlx_expand_dims_axes", res -> MlxC.mlx_expand_dims_axes(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(0, 2), 2,
+                    c.stream())), 1)), //
+            entry("atleast_1d", c -> c.store(c.op("mlx_atleast_1d", res -> MlxC.mlx_atleast_1d(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("atleast_2d", c -> c.store(c.op("mlx_atleast_2d", res -> MlxC.mlx_atleast_2d(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("atleast_3d", c -> c.store(c.op("mlx_atleast_3d", res -> MlxC.mlx_atleast_3d(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("transpose_axes", c -> c.store(c.op("mlx_transpose_axes", res -> MlxC.mlx_transpose_axes(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.ints(c.intArg(5),
+                    c.intArg(6), c.intArg(7)), 3, c.stream())), 1)), //
+            entry("swapaxes", c -> c.store(c.op("mlx_swapaxes", res -> MlxC.mlx_swapaxes(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.intArg(5), c.intArg(6), c.stream())),
+                    1)), //
+            entry("moveaxis", c -> c.store(c.op("mlx_moveaxis", res -> MlxC.mlx_moveaxis(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.intArg(5), c.intArg(6), c.stream())),
+                    1)), //
+            entry("broadcast_to", c -> c.store(c.op("mlx_broadcast_to", res -> MlxC.mlx_broadcast_to(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
+            entry("broadcast_arrays", MlxLibraryProvider::broadcastArrays), //
+            entry("as_strided", c -> c.store(c.op("mlx_as_strided", res -> MlxC.mlx_as_strided(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.longs(c.intArg(4),
+                    c.intArg(5)), 2, c.intArg(6), c.stream())), 1)), //
+            entry("contiguous", c -> c.store(c.op("mlx_contiguous", res -> MlxC.mlx_contiguous(res, c.input(0, c.length(0)), false, c.stream())), 1)), //
+            entry("copy", c -> c.store(c.op("mlx_copy", res -> MlxC.mlx_copy(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("astype", c -> c.store(c.op("mlx_astype", res -> MlxC.mlx_astype(res, c.input(0, c.length(0)), c.dtype(1), c.stream())), 1)), //
+            entry("view", c -> c.store(c.op("mlx_view", res -> MlxC.mlx_view(res, c.input(0, c.length(0)), c.dtype(1), c.stream())), 1)), //
+            entry("number_of_elements", c -> c.store(c.op("mlx_number_of_elements", res -> MlxC.mlx_number_of_elements(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.ints(1,
+                    2), 2, false, MlxNativeLib.MLX_INT32, c.stream())), 1)), //
+            entry("concatenate", c -> c.store(c.op("mlx_concatenate", res -> MlxC.mlx_concatenate(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), c.stream())), 2)), //
+            entry("concatenate_axis", c -> c.store(c.op("mlx_concatenate_axis", res -> MlxC.mlx_concatenate_axis(res, c.vector(c.input(0, c.intArg(3), c.intArg(4)), c.input(1,
+                    c.intArg(3), c.intArg(5))), 1, c.stream())), 2)), //
+            entry("stack", c -> c.store(c.op("mlx_stack", res -> MlxC.mlx_stack(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), c.stream())), 2)), //
+            entry("stack_axis", c -> c.store(c.op("mlx_stack_axis", res -> MlxC.mlx_stack_axis(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), 1, c.stream())), 2)), //
+            entry("split", c -> splitTwo(c, false)), //
+            entry("split_sections", c -> splitTwo(c, true)), //
+            entry("repeat", c -> c.store(c.op("mlx_repeat", res -> MlxC.mlx_repeat(res, c.input(0, c.length(0)), c.intArg(2), c.stream())), 1)), //
+            entry("repeat_axis", c -> c.store(c.op("mlx_repeat_axis", res -> MlxC.mlx_repeat_axis(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, c.stream())), 1)), //
+            entry("tile", c -> c.store(c.op("mlx_tile", res -> MlxC.mlx_tile(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4), c.intArg(5)), 2, c.stream())), 1)), //
+            entry("roll", c -> c.store(c.op("mlx_roll", res -> MlxC.mlx_roll(res, c.input(0, c.length(0)), c.ints(c.intArg(2)), 1, c.stream())), 1)), //
+            entry("roll_axis", c -> c.store(c.op("mlx_roll_axis", res -> MlxC.mlx_roll_axis(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4)), 1, 1, c.stream())), 1)), //
+            entry("roll_axes", c -> c.store(c.op("mlx_roll_axes", res -> MlxC.mlx_roll_axes(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4), c.intArg(5)), 2, c.ints(0,
+                    1), 2, c.stream())), 1)), //
+            entry("pad", c -> c.store(c.op("mlx_pad", res -> MlxC.mlx_pad(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(0, 1), 2, c.ints(c.intArg(4), c.intArg(6)), 2,
+                    c.ints(c.intArg(5), c.intArg(7)), 2, c.scalar(c.floatArg(8)), c.cString("constant"), c.stream())), 1)), //
+            entry("pad_symmetric", c -> c.store(c.op("mlx_pad_symmetric", res -> MlxC.mlx_pad_symmetric(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.scalar(c.floatArg(5)),
+                    c.cString("constant"), c.stream())), 1)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -512,6 +559,25 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // broadcast_arrays(a, b, outA, outB, rows, cols): a row [1, cols] and a column [rows, 1]
+    private static void broadcastArrays(MlxCall c) {
+        int rows = c.intArg(4);
+        int cols = c.intArg(5);
+        MemorySegment pair = c.vector(c.input(0, 1, cols), c.input(1, rows, 1));
+        MemorySegment[] out = c.vectorOp("mlx_broadcast_arrays", 2, vec -> MlxC.mlx_broadcast_arrays(vec, pair, c.stream()));
+        c.store(out[0], 2);
+        c.store(out[1], 3);
+    }
+
+    // split(x, first, second, rows, cols) in halves, or split_sections(..., index) at a column, along axis 1
+    private static void splitTwo(MlxCall c, boolean atIndex) {
+        MemorySegment x = c.input(0, c.intArg(3), c.intArg(4));
+        MemorySegment[] parts = atIndex ? c.vectorOp("mlx_split_sections", 2, vec -> MlxC.mlx_split_sections(vec, x, c.ints(c.intArg(5)), 1, 1, c.stream()))
+                : c.vectorOp("mlx_split", 2, vec -> MlxC.mlx_split(vec, x, 2, 1, c.stream()));
+        c.store(parts[0], 1);
+        c.store(parts[1], 2);
+    }
 
     // arange(out, start, stop, step): MLX must generate exactly out.length values
     private static void arange(MlxCall c) {

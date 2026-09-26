@@ -244,6 +244,13 @@ final class MlxCall implements AutoCloseable {
         return segment;
     }
 
+    /** A C {@code int64_t[]}. */
+    MemorySegment longs(long... values) {
+        MemorySegment segment = FFMSupport.allocateArray(arena, FFMSupport.C_LONG, Math.max(values.length, 1));
+        MemorySegment.copy(values, 0, segment, FFMSupport.C_LONG, 0, values.length);
+        return segment;
+    }
+
     /** The null {@code mlx_array}, for optional array arguments. */
     static MemorySegment none() {
         return MemorySegment.NULL;
