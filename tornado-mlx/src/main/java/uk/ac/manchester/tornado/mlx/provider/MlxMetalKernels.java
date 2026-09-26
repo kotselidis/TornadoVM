@@ -835,6 +835,26 @@ final class MlxMetalKernels {
         });
     }
 
+    private static final Map<String, Boolean> KERNEL_PRESENT = new ConcurrentHashMap<>();
+
+    /** Whether mlx.metallib has a kernel named {@code name} (some tile combinations are not instantiated). */
+    static boolean hasKernel(long queue, String name) {
+        long device = send(queue, "device");
+        return KERNEL_PRESENT.computeIfAbsent(device + ":" + name, k -> {
+            long pool = poolPush();
+            try {
+                long library = LIBRARIES.computeIfAbsent(device, MlxMetalKernels::loadLibrary);
+                long function = send(library, "newFunctionWithName:", nsString(name));
+                if (function != 0) {
+                    sendVoid(function, "release");
+                }
+                return function != 0;
+            } finally {
+                poolPop(pool);
+            }
+        });
+    }
+
     /** MLX's get_architecture_gen: the number after "applegpu_g", or 0. */
     static int architectureGeneration(String architecture) {
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("applegpu_g(\\d+)").matcher(architecture);

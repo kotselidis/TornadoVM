@@ -99,6 +99,15 @@ final class MlxKernelRoutes {
         }
 
         /** The GPU architecture name of this call's device, or null if it cannot be read. */
+        /** Whether mlx.metallib has kernel {@code name} on this call's device. */
+        boolean hasKernel(String name) {
+            if (!(invocation.getDevice() instanceof TornadoNativeStreamSupport streams)) {
+                return false;
+            }
+            long queue = streams.getNativeStream(invocation.getExecutionPlanId());
+            return queue != 0 && MlxMetalKernels.hasKernel(queue, name);
+        }
+
         String architecture() {
             if (!(invocation.getDevice() instanceof TornadoNativeStreamSupport streams)) {
                 return null;
@@ -332,6 +341,7 @@ final class MlxKernelRoutes {
         registerRandomRoutes();
         registerSmallCompositeRoutes();
         registerFftRoutes();
+        registerConvRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -2887,6 +2897,183 @@ final class MlxKernelRoutes {
         ROUTES.put("fft_ifftn", v -> fftNd(v, 3, true, false));
         ROUTES.put("fft_rfftn", v -> fftNd(v, 3, false, true));
         ROUTES.put("fft_irfftn", v -> fftNd(v, 3, true, true));
+    }
+
+    // ---------------------------------------------------------------- convolutions
+
+    /** MLXConvParams for two spatial dimensions (1D convolutions use a unit second dimension). */
+    private record Conv2(int n, int c, int o, int[] is, int[] ws, int[] os, int[] str, int[] pad, int[] kdil, int[] idil, long[] inStrides, long[] wtStrides, long[] outStrides,
+            int groups, boolean flip) {
+        byte[] bytes() {
+            java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(176).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            b.putInt(n).putInt(c).putInt(o);
+            for (int[] a : new int[][] { is, ws, os, str, pad, kdil, idil }) {
+                b.putInt(a[0]).putInt(a[1]);
+            }
+            b.putInt(0);
+            for (long[] a : new long[][] { inStrides, wtStrides, outStrides }) {
+                for (long x : a) {
+                    b.putLong(x);
+                }
+            }
+            b.putInt(groups).put((byte) (flip ? 1 : 0));
+            return b.array();
+        }
+    }
+
+    /** MLX's implicit_gemm_conv_2D_gpu, or null when the kernel it would pick is not in the metallib. */
+    private static Encoder implicitGemmConv2(View v, int t, Conv2 cp) {
+        int cpg = cp.c() / cp.groups();
+        int opg = cp.o() / cp.groups();
+        long implicitM = (long) cp.n() * cp.os()[0] * cp.os()[1];
+        int implicitN = opg;
+        int implicitK = cp.ws()[0] * cp.ws()[1] * cpg;
+        int wm = 2;
+        int wn = 2;
+        int bm = implicitM >= 8192 && cpg >= 64 ? 64 : 32;
+        int bn = (bm == 64 || implicitN >= 64) ? 64 : 32;
+        int bk = 16;
+        if (implicitN <= 16) {
+            bn = 8;
+            wm = 4;
+            wn = 1;
+        }
+        int tn = (implicitN + bn - 1) / bn;
+        int tm = (int) ((implicitM + bm - 1) / bm);
+        int channelSpecialization = 0;
+        int kIters = cp.ws()[0] * cp.ws()[1] * ((cpg + bk - 1) / bk);
+        if (cpg <= 2) {
+            kIters = (implicitK + bk - 1) / bk;
+            channelSpecialization = cpg;
+        } else if (cpg <= 4) {
+            kIters = ((cp.ws()[0] * cp.ws()[1] * 4) + bk - 1) / bk;
+            channelSpecialization = cpg;
+        }
+        boolean smallFilter = channelSpecialization == 0 && cp.ws()[0] <= 16 && cp.ws()[1] <= 16;
+        int sign = cp.flip() ? -1 : 1;
+        int ijw = (int) (cp.inStrides()[2] * cp.kdil()[1]);
+        int ijh = (int) (cp.inStrides()[1] * cp.kdil()[0]);
+        int jumpW = sign * ijw;
+        int jumpH = sign * (ijh - (cp.ws()[1] - 1) * ijw);
+        int jumpC = bk - sign * (cp.ws()[0] - 1) * ijh - sign * (cp.ws()[1] - 1) * ijw;
+        String kernel = "implicit_gemm_conv_2d_" + MlxMetalKernels.typeName(t) + "_bm" + bm + "_bn" + bn + "_bk" + bk + "_wm" + wm + "_wn" + wn + "_channel_"
+                + (channelSpecialization > 0 ? Integer.toString(channelSpecialization) : "l") + "_filter_" + (smallFilter ? "s" : "l");
+        if (implicitM > Integer.MAX_VALUE || !v.hasKernel(kernel)) {
+            return null;
+        }
+        java.nio.ByteBuffer gemm = java.nio.ByteBuffer.allocate(40).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        gemm.putInt((int) implicitM).putInt(implicitN).putInt(implicitK).putInt(kIters).putInt(jumpW).putInt(jumpH).putInt(jumpC).putInt(tn).putInt(tm).putInt(0);
+        byte[] gemmBytes = gemm.array();
+        byte[] convBytes = cp.bytes();
+        int gy = wn;
+        int gz = wm;
+        return p -> p.launch(kernel).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).bytes(3, convBytes).bytes(4, gemmBytes).threadgroups(tn, tm, cp.groups(), 32, gy, gz);
+    }
+
+    /** MLX's dispatch_conv_2D_gpu, for the strategies reproduced here (implicit GEMM); null otherwise. */
+    private static Encoder dispatchConv2(View v, int t, Conv2 cp) {
+        boolean strideOne = cp.str()[0] == 1 && cp.str()[1] == 1;
+        boolean kdilOne = cp.kdil()[0] == 1 && cp.kdil()[1] == 1;
+        boolean idilOne = cp.idil()[0] == 1 && cp.idil()[1] == 1;
+        int cpg = cp.c() / cp.groups();
+        int opg = cp.o() / cp.groups();
+        if (cp.groups() > 1) {
+            if (!idilOne) {
+                return null;
+            }
+            boolean depthwise = cpg == 1 && opg == 1 && kdilOne && cp.ws()[0] <= 7 && cp.ws()[1] <= 7 && cp.str()[0] <= 2 && cp.str()[1] <= 2 && cp.wtStrides()[1] == cp.ws()[1]
+                    && cp.c() % 16 == 0 && cp.c() == cp.o();
+            if (depthwise) {
+                return null;
+            }
+            return (cpg <= 4 || cpg % 16 == 0) && (opg <= 16 || opg % 16 == 0) ? implicitGemmConv2(v, t, cp) : null;
+        }
+        boolean inputLarge = (long) cp.n() * cp.is()[0] * cp.is()[1] >= 4096;
+        boolean channelsLarge = cp.c() + cp.o() >= 256;
+        boolean outLarge = (long) cp.n() * cp.os()[0] * cp.os()[1] >= 256;
+        if (!cp.flip() && strideOne && kdilOne && idilOne && cp.ws()[0] == 3 && cp.ws()[1] == 3 && cp.c() % 32 == 0 && cp.o() % 32 == 0 && inputLarge && channelsLarge) {
+            return null;
+        }
+        boolean specialized = (cp.c() <= 4 || cp.c() % 16 == 0) && (cp.o() <= 16 || cp.o() % 16 == 0);
+        boolean outAligned = cp.o() <= 16 || cp.o() % 16 == 0;
+        if (idilOne && strideOne && outLarge && !specialized && outAligned && cp.ws()[0] * cp.ws()[1] >= 9) {
+            return null;
+        }
+        return idilOne && specialized ? implicitGemmConv2(v, t, cp) : null;
+    }
+
+    private static int convOut(int in, int k, int stride, int padLo, int padHi, int kdil, int idil) {
+        int dilatedIn = idil * (in - 1) + 1;
+        int dilatedK = kdil * (k - 1) + 1;
+        return (dilatedIn + padLo + padHi - dilatedK) / stride + 1;
+    }
+
+    private static void registerConvRoutes() {
+        // conv1d(x[N, L, C], w[O, K, C/g], out, N, L, C, O, K, stride, pad, dil, groups).
+        ROUTES.put("conv1d", v -> {
+            int t = floatType(v, 0, 1, 2);
+            if (t < 0 || v.args() < 12) {
+                return null;
+            }
+            int n = v.intArg(3);
+            int len = v.intArg(4);
+            int c = v.intArg(5);
+            int o = v.intArg(6);
+            int k = v.intArg(7);
+            int stride = v.intArg(8);
+            int pad = v.intArg(9);
+            int dil = v.intArg(10);
+            int groups = v.intArg(11);
+            int outLen = convOut(len, k, stride, pad, pad, dil, 1);
+            if (pad < 0 || groups <= 0 || c % groups != 0 || o % groups != 0 || outLen <= 0 || v.size(0) != n * len * c || v.size(1) != o * k * (c / groups)
+                    || v.size(2) != n * outLen * o) {
+                return null;
+            }
+            if (groups == c && groups == o && stride == 1 && dil == 1 && pad == 0) {
+                String kernel = "depthwise_conv_1d_" + MlxMetalKernels.typeName(t);
+                return p -> p.launch(kernel).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).bytes(3, MlxMetalKernels.intBytes(new int[] { len * c, c, 1 })).i32(4, k)
+                        .blocks(c, outLen, n);
+            }
+            int cpg = c / groups;
+            int opg = o / groups;
+            if (!((cpg <= 4 || cpg % 16 == 0) && (opg <= 16 || opg % 16 == 0))) {
+                return null;
+            }
+            Conv2 cp = new Conv2(n, c, o, new int[] { len, 1 }, new int[] { k, 1 }, new int[] { outLen, 1 }, new int[] { stride, 1 }, new int[] { pad, 0 }, new int[] { dil, 1 },
+                    new int[] { 1, 1 }, new long[] { (long) len * c, c, 0, 1 }, new long[] { (long) k * cpg, cpg, 0, 1 }, new long[] { (long) outLen * o, o, 0, 1 }, groups, false);
+            return dispatchConv2(v, t, cp);
+        });
+        // conv2d(x[N, H, W, C], w[O, KH, KW, C/g], out, N, H, W, C, O, KH, KW, stride, pad, dil, groups) and
+        // conv_general(..., stride, pad_lo, pad_hi, kernel_dil, input_dil, groups, flip) in two dimensions.
+        ROUTES.put("conv2d", v -> v.args() < 14 ? null : conv2(v, v.intArg(10), v.intArg(11), v.intArg(11), v.intArg(12), 1, v.intArg(13), false));
+        ROUTES.put("conv_general", v -> v.args() < 17 ? null : conv2(v, v.intArg(10), v.intArg(11), v.intArg(12), v.intArg(13), v.intArg(14), v.intArg(15), v.boolArg(16)));
+    }
+
+    private static Encoder conv2(View v, int stride, int padLo, int padHi, int kdil, int idil, int groups, boolean flip) {
+        int t = floatType(v, 0, 1, 2);
+        if (t < 0 || padLo < 0 || padHi < 0 || groups <= 0) {
+            return null;
+        }
+        int n = v.intArg(3);
+        int h = v.intArg(4);
+        int w = v.intArg(5);
+        int c = v.intArg(6);
+        int o = v.intArg(7);
+        int kh = v.intArg(8);
+        int kw = v.intArg(9);
+        if (c % groups != 0 || o % groups != 0) {
+            return null;
+        }
+        int oh = convOut(h, kh, stride, padLo, padHi, kdil, idil);
+        int ow = convOut(w, kw, stride, padLo, padHi, kdil, idil);
+        int cpg = c / groups;
+        if (oh <= 0 || ow <= 0 || v.size(0) != n * h * w * c || v.size(1) != o * kh * kw * cpg || v.size(2) != n * oh * ow * o) {
+            return null;
+        }
+        Conv2 cp = new Conv2(n, c, o, new int[] { h, w }, new int[] { kh, kw }, new int[] { oh, ow }, new int[] { stride, stride }, new int[] { padLo, padLo },
+                new int[] { kdil, kdil }, new int[] { idil, idil }, new long[] { (long) h * w * c, (long) w * c, c, 1 }, new long[] { (long) kh * kw * cpg, (long) kw * cpg, cpg, 1 },
+                new long[] { (long) oh * ow * o, (long) ow * o, o, 1 }, groups, flip);
+        return dispatchConv2(v, t, cp);
     }
 
     private static Encoder scaled(View v, double factor) {

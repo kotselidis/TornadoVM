@@ -42,6 +42,7 @@ import uk.ac.manchester.tornado.mlx.Mlx;
 import uk.ac.manchester.tornado.mlx.MlxLinalg;
 import uk.ac.manchester.tornado.mlx.MlxLogic;
 import uk.ac.manchester.tornado.mlx.MlxMath;
+import uk.ac.manchester.tornado.mlx.MlxConv;
 import uk.ac.manchester.tornado.mlx.MlxCreate;
 import uk.ac.manchester.tornado.mlx.MlxFft;
 import uk.ac.manchester.tornado.mlx.MlxIndex;
@@ -1110,5 +1111,50 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                 (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.rfftn(x, y, b, d, h, w, 0), c), real, (FloatArray) o[0]));
         same("irfftn", new Object[] { half }, floatsOut(b * d * h * w),
                 (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.irfftn(x, y, b, d, h, w, 0), c), half, (FloatArray) o[0]));
+    }
+
+    // ---------------------------------------------------------------- convolutions
+
+    private static int convLength(int in, int k, int stride, int lo, int hi, int kd, int id) {
+        return ((id * (in - 1) + 1) + lo + hi - (kd * (k - 1) + 1)) / stride + 1;
+    }
+
+    @Test
+    public void testConvolutions() throws TornadoExecutionPlanException {
+        // conv1d {n, len, cin, cout, k, stride, pad, dil, groups}: implicit GEMM, depthwise, grouped, small channels, strided and dilated.
+        int[][] c1 = { { 8, 512, 64, 64, 5, 1, 2, 1, 1 }, { 2, 300, 32, 32, 3, 1, 0, 1, 32 }, { 2, 200, 64, 64, 3, 1, 1, 1, 4 }, { 3, 100, 3, 16, 7, 2, 2, 2, 1 },
+                { 1, 64, 16, 8, 3, 1, 1, 1, 1 } };
+        for (int[] q : c1) {
+            int outLen = convLength(q[1], q[4], q[5], q[6], q[6], q[7], 1);
+            FloatArray x = FloatArray.fromArray(values(q[0] * q[1] * q[2], -1, 1, 240 + q[1]));
+            FloatArray w = FloatArray.fromArray(values(q[3] * q[4] * (q[2] / q[8]), -1, 1, 241 + q[3]));
+            same("conv1d " + java.util.Arrays.toString(q), new Object[] { x, w }, floatsOut(q[0] * outLen * q[3]), (g, id, c, o) -> g.libraryTask(id,
+                    (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11) -> tune(MlxConv.conv1d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11), c), x, w, (FloatArray) o[0], q[0], q[1], q[2],
+                    q[3], q[4], q[5], q[6], q[7], q[8]));
+        }
+        // conv2d {n, h, w, cin, cout, kh, kw, stride, pad, dil, groups}.
+        int[][] c2 = { { 1, 32, 32, 16, 32, 3, 3, 1, 1, 1, 1 }, { 2, 17, 19, 3, 8, 5, 5, 1, 2, 1, 1 }, { 1, 40, 40, 32, 64, 3, 3, 2, 1, 1, 2 }, { 1, 24, 24, 64, 16, 1, 1, 1, 0, 1, 1 } };
+        for (int[] q : c2) {
+            int oh = convLength(q[1], q[5], q[7], q[8], q[8], q[9], 1);
+            int ow = convLength(q[2], q[6], q[7], q[8], q[8], q[9], 1);
+            FloatArray x = FloatArray.fromArray(values(q[0] * q[1] * q[2] * q[3], -1, 1, 242 + q[1]));
+            FloatArray w = FloatArray.fromArray(values(q[4] * q[5] * q[6] * (q[3] / q[10]), -1, 1, 243 + q[4]));
+            same("conv2d " + java.util.Arrays.toString(q), new Object[] { x, w }, floatsOut(q[0] * oh * ow * q[4]), (g, id, c, o) -> g.libraryTask(id,
+                    (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13) -> tune(MlxConv.conv2d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13), c), x, w,
+                    (FloatArray) o[0], q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9], q[10]));
+        }
+        // conv_general with flipped kernels, asymmetric padding and kernel dilation.
+        int n = 1;
+        int h = 20;
+        int w = 22;
+        int cin = 16;
+        int cout = 16;
+        int oh = convLength(h, 3, 1, 1, 2, 2, 1);
+        int ow = convLength(w, 3, 1, 1, 2, 2, 1);
+        FloatArray x = FloatArray.fromArray(values(n * h * w * cin, -1, 1, 244));
+        FloatArray wt = FloatArray.fromArray(values(cout * 3 * 3 * cin, -1, 1, 245));
+        same("convGeneral2d flip", new Object[] { x, wt }, floatsOut(n * oh * ow * cout), (g, id, c, o) -> g.libraryTask(id,
+                (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16) -> tune(MlxConv.convGeneral2d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14,
+                        i15, i16), c), x, wt, (FloatArray) o[0], n, h, w, cin, cout, 3, 3, 1, 1, 2, 2, 1, 1, true));
     }
 }
