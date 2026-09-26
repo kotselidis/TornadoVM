@@ -83,52 +83,212 @@ final class MlxMetalKernels {
         return LIBOBJC != null && FOUNDATION != null && METALLIB != null && Files.isReadable(Path.of(METALLIB));
     }
 
-    /** MLX's type suffix for a kernel name, or null for a type the element-wise route does not take. */
+    /** MLX's type suffix for a kernel name, or null for a type MLX's kernels do not take. */
     static String typeName(int dtype) {
         return switch (dtype) {
-            case MlxNativeLib.MLX_FLOAT32 -> "float32";
+            case MlxNativeLib.MLX_BOOL -> "bool_";
+            case MlxNativeLib.MLX_UINT8 -> "uint8";
+            case MlxNativeLib.MLX_UINT16 -> "uint16";
+            case MlxNativeLib.MLX_UINT32 -> "uint32";
+            case MlxNativeLib.MLX_INT8 -> "int8";
+            case MlxNativeLib.MLX_INT16 -> "int16";
+            case MlxNativeLib.MLX_INT32 -> "int32";
+            case MlxNativeLib.MLX_INT64 -> "int64";
             case MlxNativeLib.MLX_FLOAT16 -> "float16";
+            case MlxNativeLib.MLX_FLOAT32 -> "float32";
             case MlxNativeLib.MLX_BFLOAT16 -> "bfloat16";
+            case MlxNativeLib.MLX_COMPLEX64 -> "complex64";
             default -> null;
         };
     }
 
+    static boolean isFloating(int dtype) {
+        return dtype == MlxNativeLib.MLX_FLOAT32 || dtype == MlxNativeLib.MLX_FLOAT16 || dtype == MlxNativeLib.MLX_BFLOAT16;
+    }
+
     static int itemSize(int dtype) {
-        return dtype == MlxNativeLib.MLX_FLOAT32 ? 4 : 2;
+        return switch (dtype) {
+            case MlxNativeLib.MLX_BOOL, MlxNativeLib.MLX_UINT8, MlxNativeLib.MLX_INT8 -> 1;
+            case MlxNativeLib.MLX_UINT16, MlxNativeLib.MLX_INT16, MlxNativeLib.MLX_FLOAT16, MlxNativeLib.MLX_BFLOAT16 -> 2;
+            case MlxNativeLib.MLX_INT64, MlxNativeLib.MLX_COMPLEX64 -> 8;
+            default -> 4;
+        };
+    }
+
+    /** MLX's work per thread for contiguous element-wise kernels ({@code get_work_per_thread}). */
+    private static int workPerThread(int dtype, long size) {
+        return size < WORK_PER_THREAD_THRESHOLD ? 1 : Math.max(1, 8 / itemSize(dtype));
+    }
+
+    /** A kernel argument: a buffer with the byte offset of its first element. */
+    record Ref(long buffer, long offset) {
     }
 
     /**
-     * Runs MLX's contiguous element-wise kernel {@code op} over {@code size} elements: {@code out =
-     * op(in...)}. {@code buffers} and {@code offsets} hold the inputs then the output, as MTLBuffers
-     * and the byte offsets of their first elements.
+     * A sequence of MLX kernels encoded into one command buffer on TornadoVM's queue and waited on
+     * once. The compute encoder dispatches serially, so each kernel sees the previous one's writes,
+     * as in MLX's own command buffers. Scratch buffers come from a per-device pool and are reused.
      */
-    static void elementwise(long queue, String op, boolean binary, int dtype, boolean boolResult, int size, long[] buffers, long[] offsets) {
-        String type = typeName(dtype);
-        int workPerThread = size < WORK_PER_THREAD_THRESHOLD ? 1 : Math.max(1, 8 / itemSize(dtype));
-        String prefix = (binary ? "vv" : "v") + (workPerThread > 1 ? "n_" : "_");
-        // Unary kernels name the input and output types; binary ones only the input type.
-        String name = prefix + op + type + (binary ? "" : (boolResult ? "bool_" : type));
-        long pool = poolPush();
-        try (Arena arena = Arena.ofConfined()) {
-            long device = send(queue, "device");
+    static final class Program implements AutoCloseable {
+        private final long queue;
+        private final long device;
+        private final long pool;
+        private final Arena arena = Arena.ofConfined();
+        private final long commandBuffer;
+        private final long encoder;
+        private int scratchUsed;
+
+        Program(long queue) {
+            this.queue = queue;
+            this.pool = poolPush();
+            this.device = send(queue, "device");
+            this.commandBuffer = send(queue, "commandBuffer");
+            this.encoder = send(commandBuffer, "computeCommandEncoder");
+        }
+
+        /** A scratch buffer of at least {@code bytes}, valid until this program is closed. */
+        Ref scratch(long bytes) {
+            return new Ref(scratchBuffer(device, scratchUsed++, bytes), 0);
+        }
+
+        /** {@code out = op(in)}: MLX's contiguous unary kernel. */
+        void unary(String op, int inType, int outType, int size, Ref in, Ref out) {
+            int wpt = workPerThread(inType, size);
+            dispatch((wpt > 1 ? "vn_" : "v_") + op + typeName(inType) + typeName(outType), size, wpt, new Ref[] { in, out }, null);
+        }
+
+        /** {@code out = static_cast<outType>(in)}: MLX's contiguous copy kernel. */
+        void copy(int inType, int outType, int size, Ref in, Ref out) {
+            int wpt = workPerThread(outType, size);
+            dispatch((wpt > 1 ? "vn_copy" : "v_copy") + typeName(inType) + typeName(outType), size, wpt, new Ref[] { in, out }, null);
+        }
+
+        /** {@code out[:] = value}: MLX's scalar-fill copy kernel. */
+        void fill(int type, int size, double value, Ref out) {
+            int wpt = workPerThread(type, size);
+            dispatch((wpt > 1 ? "sn_copy" : "s_copy") + typeName(type) + typeName(type), size, wpt, new Ref[] { null, out }, scalarBytes(type, value));
+        }
+
+        /** {@code out = op(a, b)}, both vectors: MLX's {@code vv} binary kernel. */
+        void binary(String op, int inType, int size, Ref a, Ref b, Ref out) {
+            int wpt = workPerThread(inType, size);
+            dispatch((wpt > 1 ? "vvn_" : "vv_") + op + typeName(inType), size, wpt, new Ref[] { a, b, out }, null);
+        }
+
+        /** {@code out = op(a, scalar)}: MLX's {@code vs} binary kernel. */
+        void binaryScalarRight(String op, int inType, int size, Ref a, double scalar, Ref out) {
+            int wpt = workPerThread(inType, size);
+            dispatch((wpt > 1 ? "vsn_" : "vs_") + op + typeName(inType), size, wpt, new Ref[] { a, null, out }, scalarBytes(inType, scalar));
+        }
+
+        /** {@code out = op(scalar, b)}: MLX's {@code sv} binary kernel. */
+        void binaryScalarLeft(String op, int inType, int size, double scalar, Ref b, Ref out) {
+            int wpt = workPerThread(inType, size);
+            dispatch((wpt > 1 ? "svn_" : "sv_") + op + typeName(inType), size, wpt, new Ref[] { null, b, out }, scalarBytes(inType, scalar));
+        }
+
+        /** {@code out1, out2 = op(a, b)}: MLX's two-output binary kernel (divmod). */
+        void binaryTwo(String op, int inType, int size, Ref a, Ref b, Ref out1, Ref out2) {
+            int wpt = workPerThread(inType, size);
+            dispatch((wpt > 1 ? "vvn_" : "vv_") + op + typeName(inType), size, wpt, new Ref[] { a, b, out1, out2 }, null);
+        }
+
+        /** {@code out = condition ? x : y}, with MLX bools as the condition: MLX's {@code v} Select kernel. */
+        void select(int type, int size, Ref condition, Ref x, Ref y, Ref out) {
+            int wpt = workPerThread(type, size);
+            dispatch((wpt > 1 ? "vn_Select" : "v_Select") + typeName(type), size, wpt, new Ref[] { condition, x, y, out }, null);
+        }
+
+        /** {@code out = condition ? scalar : y}: MLX's {@code sv} Select kernel. */
+        void selectScalar(int type, int size, Ref condition, double scalar, Ref y, Ref out) {
+            int wpt = workPerThread(type, size);
+            dispatch((wpt > 1 ? "svn_Select" : "sv_Select") + typeName(type), size, wpt, new Ref[] { condition, null, y, out }, scalarBytes(type, scalar));
+        }
+
+        /**
+         * Encodes one element-wise dispatch: {@code refs} bound at indices 0.., where a null entry is
+         * the scalar operand {@code scalar} (bound with {@code setBytes}), and the element count after
+         * them.
+         */
+        private void dispatch(String name, long size, int wpt, Ref[] refs, byte[] scalar) {
             long[] pipeline = pipeline(device, name);
-            long commandBuffer = send(queue, "commandBuffer");
-            long encoder = send(commandBuffer, "computeCommandEncoder");
             sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
-            for (int i = 0; i < buffers.length; i++) {
-                sendVoid(encoder, "setBuffer:offset:atIndex:", buffers[i], offsets[i], i);
+            for (int i = 0; i < refs.length; i++) {
+                if (refs[i] == null) {
+                    MemorySegment bytes = arena.allocate(scalar.length);
+                    MemorySegment.copy(scalar, 0, bytes, FFMSupport.C_CHAR, 0, scalar.length);
+                    sendVoid(encoder, "setBytes:length:atIndex:", bytes.address(), scalar.length, i);
+                } else {
+                    sendVoid(encoder, "setBuffer:offset:atIndex:", refs[i].buffer(), refs[i].offset(), i);
+                }
             }
             MemorySegment sizeArg = arena.allocate(Integer.BYTES);
-            sizeArg.set(FFMSupport.C_INT, 0, size);
-            sendVoid(encoder, "setBytes:length:atIndex:", sizeArg.address(), Integer.BYTES, buffers.length);
-            long threads = (size + workPerThread - 1) / workPerThread;
-            long group = Math.min(threads, pipeline[1]);
-            dispatchThreads(arena, encoder, threads, group);
-            sendVoid(encoder, "endEncoding");
-            commitAndWait(queue, device, commandBuffer);
-        } finally {
-            poolPop(pool);
+            sizeArg.set(FFMSupport.C_INT, 0, (int) size);
+            sendVoid(encoder, "setBytes:length:atIndex:", sizeArg.address(), Integer.BYTES, refs.length);
+            long threads = (size + wpt - 1) / wpt;
+            dispatchThreads(arena, encoder, threads, Math.min(threads, pipeline[1]));
         }
+
+        /** Ends encoding, commits, and waits for the GPU to finish. */
+        @Override
+        public void close() {
+            try {
+                sendVoid(encoder, "endEncoding");
+                commitAndWait(queue, device, commandBuffer);
+            } finally {
+                arena.close();
+                poolPop(pool);
+            }
+        }
+    }
+
+    /** A scalar in MLX's representation of {@code dtype}, as {@code array(value, dtype)} would hold it. */
+    static byte[] scalarBytes(int dtype, double value) {
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(8).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        switch (dtype) {
+            case MlxNativeLib.MLX_FLOAT32 -> b.putFloat((float) value);
+            case MlxNativeLib.MLX_FLOAT16 -> b.putShort(Float.floatToFloat16((float) value));
+            case MlxNativeLib.MLX_BFLOAT16 -> b.putShort(floatToBFloat16((float) value));
+            case MlxNativeLib.MLX_INT32, MlxNativeLib.MLX_UINT32 -> b.putInt((int) value);
+            case MlxNativeLib.MLX_INT64 -> b.putLong((long) value);
+            case MlxNativeLib.MLX_INT16, MlxNativeLib.MLX_UINT16 -> b.putShort((short) value);
+            case MlxNativeLib.MLX_INT8, MlxNativeLib.MLX_UINT8, MlxNativeLib.MLX_BOOL -> b.put((byte) value);
+            default -> throw new TornadoRuntimeException("[ERROR] No scalar form for MLX dtype " + dtype);
+        }
+        byte[] out = new byte[itemSize(dtype)];
+        System.arraycopy(b.array(), 0, out, 0, out.length);
+        return out;
+    }
+
+    /** Round-to-nearest-even float to bfloat16, as MLX's {@code bfloat16_t} conversion does. */
+    private static short floatToBFloat16(float value) {
+        int bits = Float.floatToRawIntBits(value);
+        if (Float.isNaN(value)) {
+            return (short) ((bits >>> 16) | 0x40);
+        }
+        int rounding = 0x7fff + ((bits >>> 16) & 1);
+        return (short) ((bits + rounding) >>> 16);
+    }
+
+    /** Scratch buffers by device and slot, grown on demand and kept for reuse. */
+    private static final Map<Long, long[][]> SCRATCH = new ConcurrentHashMap<>();
+    private static final int SCRATCH_SLOTS = 8;
+
+    private static synchronized long scratchBuffer(long device, int slot, long bytes) {
+        if (slot >= SCRATCH_SLOTS) {
+            throw new TornadoRuntimeException("[ERROR] Too many MLX scratch buffers in one program");
+        }
+        long[][] slots = SCRATCH.computeIfAbsent(device, d -> new long[SCRATCH_SLOTS][2]);
+        long[] entry = slots[slot];
+        if (entry[1] < bytes) {
+            if (entry[0] != 0) {
+                sendVoid(entry[0], "release");
+            }
+            long capacity = Math.max(bytes, 4096);
+            entry[0] = send(device, "newBufferWithLength:options:", capacity, 0);
+            entry[1] = capacity;
+        }
+        return entry[0];
     }
 
     private static long[] pipeline(long device, String name) {

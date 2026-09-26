@@ -29,6 +29,11 @@ package uk.ac.manchester.tornado.mlx;
  * By default MLX operations run on the GPU stream. Operations MLX only implements on the CPU (some
  * linear-algebra decompositions) always use the CPU stream.
  * </p>
+ * <p>
+ * On the GPU, operations that have one run MLX's own Metal kernel in place on the TornadoVM buffers.
+ * {@code MlxOptions.gpu().inPlaceKernels(false)} sends the call through MLX's C API instead, which
+ * allocates an MLX result and copies it back.
+ * </p>
  */
 public final class MlxOptions {
 
@@ -38,20 +43,31 @@ public final class MlxOptions {
     }
 
     private final Device device;
+    private final boolean inPlaceKernels;
 
-    private MlxOptions(Device device) {
+    private MlxOptions(Device device, boolean inPlaceKernels) {
         this.device = device;
+        this.inPlaceKernels = inPlaceKernels;
     }
 
     public static MlxOptions gpu() {
-        return new MlxOptions(Device.GPU);
+        return new MlxOptions(Device.GPU, true);
     }
 
     public static MlxOptions cpu() {
-        return new MlxOptions(Device.CPU);
+        return new MlxOptions(Device.CPU, true);
+    }
+
+    /** These options, with in-place MLX kernels allowed or not. */
+    public MlxOptions inPlaceKernels(boolean enabled) {
+        return new MlxOptions(device, enabled);
     }
 
     public Device getDevice() {
         return device;
+    }
+
+    public boolean isInPlaceKernels() {
+        return inPlaceKernels;
     }
 }
