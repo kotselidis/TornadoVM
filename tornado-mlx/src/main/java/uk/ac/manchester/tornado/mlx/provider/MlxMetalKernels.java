@@ -396,7 +396,16 @@ final class MlxMetalKernels {
 
         /** Starts a hand-bound launch of kernel {@code name}, optionally specialised with boolean function constants 1... */
         Launch launch(String name, boolean... constants) {
-            long[] pipeline = pipeline(device, name, constants.length == 0 ? null : constants);
+            int[] indices = new int[constants.length];
+            for (int i = 0; i < indices.length; i++) {
+                indices[i] = i + 1;
+            }
+            return launchIndexed(name, indices, constants);
+        }
+
+        /** A launch of kernel {@code name} specialised with boolean function constants {@code values[i]} at {@code indices[i]}. */
+        Launch launchIndexed(String name, int[] indices, boolean[] values) {
+            long[] pipeline = pipeline(device, name, indices.length == 0 ? null : indices, values);
             sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
             return new Launch(pipeline[1]);
         }
@@ -434,6 +443,11 @@ final class MlxMetalKernels {
             /** {@code dispatchThreads} over (x, y, z) threads in groups of (gx, gy, gz). */
             void threads(long x, long gx, long y, long gy, long z, long gz) {
                 dispatchThreads(arena, encoder, x, gx, y, gy, z, gz);
+            }
+
+            /** {@code dispatchThreadgroups}: (x, y, z) threadgroups of (gx, gy, gz) threads. */
+            void threadgroups(long x, long y, long z, long gx, long gy, long gz) {
+                dispatchThreadgroups(arena, encoder, x, y, z, gx, gy, gz);
             }
 
             /** {@code dispatchThreads} over (x, y, z) threads in MLX's {@code get_block_dims} groups. */
@@ -579,7 +593,7 @@ final class MlxMetalKernels {
     }
 
     private static long[] pipeline(long device, String name) {
-        return pipeline(device, name, null);
+        return pipeline(device, name, null, null);
     }
 
     /** MTLDataTypeBool, for boolean function constants. */
@@ -587,10 +601,10 @@ final class MlxMetalKernels {
 
     /**
      * The pipeline for kernel {@code name}, specialised with boolean function constants
-     * {@code constants[i]} at index {@code i + 1} when given (index 0 unused, as in MLX's kernels).
+     * {@code constants[i]} at index {@code indices[i]} when given.
      */
-    private static long[] pipeline(long device, String name, boolean[] constants) {
-        String key = device + ":" + name + (constants == null ? "" : java.util.Arrays.toString(constants));
+    private static long[] pipeline(long device, String name, int[] indices, boolean[] constants) {
+        String key = device + ":" + name + (constants == null ? "" : java.util.Arrays.toString(indices) + java.util.Arrays.toString(constants));
         return PIPELINES.computeIfAbsent(key, k -> {
             long library = LIBRARIES.computeIfAbsent(device, MlxMetalKernels::loadLibrary);
             long function;
@@ -602,7 +616,7 @@ final class MlxMetalKernels {
                     for (int i = 0; i < constants.length; i++) {
                         MemorySegment value = arena.allocate(1);
                         value.set(FFMSupport.C_CHAR, 0, (byte) (constants[i] ? 1 : 0));
-                        sendVoid(values, "setConstantValue:type:atIndex:", value.address(), MTL_DATA_TYPE_BOOL, i + 1);
+                        sendVoid(values, "setConstantValue:type:atIndex:", value.address(), MTL_DATA_TYPE_BOOL, indices[i]);
                     }
                 }
                 MemorySegment error = FFMSupport.scratchPointer();
@@ -759,6 +773,43 @@ final class MlxMetalKernels {
         } catch (Throwable t) {
             throw rethrow(t);
         }
+    }
+
+    private static void dispatchThreadgroups(Arena arena, long encoder, long x, long y, long z, long gx, long gy, long gz) {
+        MemorySegment grid = arena.allocate(MTL_SIZE);
+        grid.set(C_LONG, 0, x);
+        grid.set(C_LONG, 8, y);
+        grid.set(C_LONG, 16, z);
+        MemorySegment tg = arena.allocate(MTL_SIZE);
+        tg.set(C_LONG, 0, gx);
+        tg.set(C_LONG, 8, gy);
+        tg.set(C_LONG, 16, gz);
+        try {
+            msgSend(FunctionDescriptor.ofVoid(C_LONG, C_LONG, MTL_SIZE, MTL_SIZE)).invokeExact(encoder, sel("dispatchThreadgroups:threadsPerThreadgroup:"), grid, tg);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    private static final Map<Long, String> ARCHITECTURES = new ConcurrentHashMap<>();
+
+    /** The GPU architecture name MLX reads ({@code [[device architecture] name]}, e.g. applegpu_g13s). */
+    static String architecture(long queue) {
+        long device = send(queue, "device");
+        return ARCHITECTURES.computeIfAbsent(device, d -> {
+            long arch = send(d, "architecture");
+            if (arch == 0) {
+                return "";
+            }
+            long utf8 = send(send(arch, "name"), "UTF8String");
+            return utf8 == 0 ? "" : FFMSupport.readCString(FFMSupport.asSegment(utf8, 256), 256);
+        });
+    }
+
+    /** MLX's get_architecture_gen: the number after "applegpu_g", or 0. */
+    static int architectureGeneration(String architecture) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("applegpu_g(\\d+)").matcher(architecture);
+        return m.find() ? Integer.parseInt(m.group(1)) : 0;
     }
 
     /** {@code dispatchThreads:threadsPerThreadgroup:}, whose two {@code MTLSize} arguments go by value. */

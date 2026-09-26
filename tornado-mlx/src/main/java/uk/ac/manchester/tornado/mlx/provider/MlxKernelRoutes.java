@@ -98,6 +98,15 @@ final class MlxKernelRoutes {
             return ((Number) invocation.getArg(i)).floatValue();
         }
 
+        /** The GPU architecture name of this call's device, or null if it cannot be read. */
+        String architecture() {
+            if (!(invocation.getDevice() instanceof TornadoNativeStreamSupport streams)) {
+                return null;
+            }
+            long queue = streams.getNativeStream(invocation.getExecutionPlanId());
+            return queue == 0 ? null : MlxMetalKernels.architecture(queue);
+        }
+
         int intArg(int i) {
             return ((Number) invocation.getArg(i)).intValue();
         }
@@ -317,6 +326,7 @@ final class MlxKernelRoutes {
         registerRowRoutes();
         registerReductionRoutes();
         registerCompositeRoutes();
+        registerMatmulRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -1431,6 +1441,223 @@ final class MlxKernelRoutes {
         ROUTES.put("softmax_axes", MlxKernelRoutes::softmaxLastTwo);
         ROUTES.put("logsumexp_axis", v -> logsumexpComposite(v, "axis"));
         ROUTES.put("logsumexp_axes", v -> logsumexpComposite(v, "axes"));
+    }
+
+    // ---------------------------------------------------------------- matmul (GEMV and steel GEMM)
+
+    /** GEMMParams: M, N, K, lda, ldb, ldd, tiles_n, tiles_m, three int64 batch strides, swizzle_log, k iterations, batch_ndim. */
+    private static byte[] gemmParams(int m, int n, int k, int lda, int ldb, int ldd, int tilesN, int tilesM, long strideA, long strideB, long strideD, int kIterations) {
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(72).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        b.putInt(m).putInt(n).putInt(k).putInt(lda).putInt(ldb).putInt(ldd).putInt(tilesN).putInt(tilesM);
+        b.putLong(strideA).putLong(strideB).putLong(strideD);
+        b.putInt(0).putInt(kIterations).putInt(1);
+        return b.array();
+    }
+
+    private static int nextPowerOfTwo(int n) {
+        int p = 1;
+        while (p < n) {
+            p <<= 1;
+        }
+        return p;
+    }
+
+    /**
+     * a[m, k] @ b for contiguous a, with b either [k, n] contiguous ({@code bTransposed} false, ldb = n)
+     * or the transpose of w[n, k] ({@code bTransposed} true, ldb = k): MLX's GEMV, split-K or regular
+     * steel GEMM exactly as Matmul::eval_gpu picks them on GPUs before generation 15.
+     */
+    private static Encoder matmul(View v, int ai, int bi, int oi, int m, int k, int n, boolean bTransposed, String architecture) {
+        int t = v.isArray(ai) ? v.dtype(ai) : -1;
+        boolean types = FLOATS.contains(t) && v.isArray(oi) && v.dtype(oi) == t && v.isArray(bi) && v.dtype(bi) == t;
+        if (!types || v.size(ai) != m * k || v.size(bi) != k * n || v.size(oi) != m * n || m <= 0 || k <= 0 || n <= 0) {
+            return null;
+        }
+        if (MlxMetalKernels.architectureGeneration(architecture) >= 15 || architecture.isEmpty() || (m == 1 && n == 1)) {
+            return null;
+        }
+        char devc = architecture.charAt(architecture.length() - 1);
+        String type = MlxMetalKernels.typeName(t);
+        int lda = k;
+        int ldb = bTransposed ? k : n;
+        Ref a = v.ref(ai);
+        Ref b = v.ref(bi);
+        Ref out = v.ref(oi);
+        if (Math.min(m, n) == 1) {
+            // gemv_axbpy: the matrix is b when n != 1.
+            boolean bMatrix = n != 1;
+            boolean transposeMat = bMatrix ? !bTransposed : false;
+            int inLen = k;
+            int outLen = bMatrix ? n : m;
+            int matLd = bMatrix ? ldb : lda;
+            int tm = 4;
+            int tn = 4;
+            int sm = 1;
+            int sn = 32;
+            int bm = 1;
+            int bn = 1;
+            int perGroup;
+            String name;
+            if (transposeMat) {
+                if (inLen >= 8192 && outLen >= 2048) {
+                    sm = 4;
+                    sn = 8;
+                } else {
+                    sm = 8;
+                    sn = 4;
+                }
+                bn = outLen >= 2048 ? 16 : outLen >= 512 ? 4 : 2;
+                tn = outLen < tn ? 1 : tn;
+                perGroup = bn * sn * tn;
+                name = "gemv_t_" + type;
+            } else {
+                bm = outLen >= 4096 ? 8 : 4;
+                sn = 32;
+                if (k <= 64) {
+                    bm = 1;
+                    sm = 8;
+                    sn = 4;
+                } else if (k >= 16 * outLen) {
+                    bm = 1;
+                    bn = 8;
+                }
+                tm = outLen < tm ? 1 : tm;
+                perGroup = bm * sm * tm;
+                name = "gemv_" + type;
+            }
+            String kernel = name + "_bm" + bm + "_bn" + bn + "_sm" + sm + "_sn" + sn + "_tm" + tm + "_tn" + tn + "_nc0_axpby0";
+            Ref mat = bMatrix ? b : a;
+            Ref vec = bMatrix ? a : b;
+            int groups = (outLen + perGroup - 1) / perGroup;
+            int gy = bn;
+            int gz = bm;
+            return p -> p.launch(kernel).buffer(0, mat).buffer(1, vec).buffer(3, out).i32(4, inLen).i32(5, outLen).i32(6, matLd).i32(9, 1)
+                    .bytes(10, MlxMetalKernels.intBytes(new int[] { 1 })).i64(11, 0).i64(12, 0).threadgroups(groups, 1, 1, 32, gy, gz);
+        }
+        int tmTiles = (m + 15) / 16;
+        int tnTiles = (n + 15) / 16;
+        int tk = k / 16;
+        int threshold = (devc == 's' || devc == 'd') ? 2048 : 1024;
+        char ta = 'n';
+        char tb = bTransposed ? 't' : 'n';
+        if (tmTiles * tnTiles <= threshold && tk >= 8 && k >= Math.max(m, n)) {
+            // steel_gemm_splitk: float32 partial products, then an accumulate pass.
+            int bm = m < 40 ? 16 : 32;
+            int bn = n < 40 ? 16 : 32;
+            int bk = 16;
+            int partitions = Math.min(Math.max(2, nextPowerOfTwo(tk / (((m + 31) / 32) * ((n + 31) / 32)))), 32);
+            int kIterations = (k / bk) / partitions;
+            boolean mnAligned = m % bm == 0 && n % bn == 0;
+            boolean kAligned = k % bk == 0;
+            String kernel = "steel_gemm_splitk_" + ta + tb + "_" + type + "_float32_bm" + bm + "_bn" + bn + "_bk" + bk + "_wm2_wn2_MN_" + (mnAligned ? "t" : "n") + "aligned_K_"
+                    + (kAligned ? "t" : "n") + "aligned";
+            int tilesN = (n + bn - 1) / bn;
+            int tilesM = (m + bm - 1) / bm;
+            java.nio.ByteBuffer params = java.nio.ByteBuffer.allocate(52).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            params.putInt(m).putInt(n).putInt(k).putInt(lda).putInt(ldb).putInt(n).putInt(tilesN).putInt(tilesM).putInt(partitions).putInt(m * n).putInt(kIterations * bk).putInt(0)
+                    .putInt(kIterations);
+            byte[] paramBytes = params.array();
+            return p -> {
+                Ref split = p.scratch(4L * partitions * m * n);
+                p.launch(kernel).buffer(0, a).buffer(1, b).buffer(2, split).bytes(3, paramBytes).threadgroups(tilesN, tilesM, partitions, 32, 2, 2);
+                p.launch("steel_gemm_splitk_accum_" + type + "_float32").buffer(0, split).buffer(1, out).i32(2, partitions).i32(3, m * n).i32(4, n).blocks(n, m, 1);
+            };
+        }
+        // steel_matmul_regular with the device's tile parameters.
+        int bm = 64;
+        int bn = 64;
+        int bk = 16;
+        int wm = 2;
+        int wn = 2;
+        if (devc == 'g' || devc == 'p') {
+            if (bTransposed) {
+                bm = 64;
+                bn = 32;
+                bk = 32;
+                wm = 2;
+                wn = 2;
+            } else if (t != MLX_FLOAT32) {
+                bm = 64;
+                bn = 64;
+                bk = 16;
+                wm = 1;
+                wn = 2;
+            }
+        } else if (devc == 'd') {
+            boolean nt = bTransposed;
+            if ((long) m * n >= 1L << 20) {
+                if (t != MLX_FLOAT32) {
+                    if (2 * Math.max(m, n) > k) {
+                        bm = 64;
+                        bn = 64;
+                        bk = 16;
+                        wm = 1;
+                        wn = 2;
+                    } else if (nt) {
+                        bm = 64;
+                        bn = 32;
+                        bk = 32;
+                        wm = 2;
+                        wn = 2;
+                    } else {
+                        bm = 32;
+                        bn = 64;
+                        bk = 16;
+                        wm = 1;
+                        wn = 2;
+                    }
+                }
+            } else if (t != MLX_FLOAT32) {
+                if (nt) {
+                    bm = 64;
+                    bn = 32;
+                    bk = 32;
+                    wm = 2;
+                    wn = 2;
+                } else {
+                    bm = 64;
+                    bn = 64;
+                    bk = 16;
+                    wm = 1;
+                    wn = 2;
+                }
+            } else if (nt) {
+                bm = 32;
+                bn = 64;
+                bk = 16;
+                wm = 1;
+                wn = 2;
+            } else {
+                bm = 64;
+                bn = 32;
+                bk = 32;
+                wm = 2;
+                wn = 2;
+            }
+        }
+        String kernel = "steel_gemm_fused_" + ta + tb + "_" + type + "_" + type + "_bm" + bm + "_bn" + bn + "_bk" + bk + "_wm" + wm + "_wn" + wn;
+        // Function constants 10 has_batch, 100 use_out_source, 110 do_axpby, 200/201/202 align_M/N/K.
+        boolean alignM = m % bm == 0;
+        boolean alignN = n % bn == 0;
+        boolean alignK = k % bk == 0;
+        int tilesN = (n + bn - 1) / bn;
+        int tilesM = (m + bm - 1) / bm;
+        byte[] params = gemmParams(m, n, k, lda, ldb, n, tilesN, tilesM, 0, 0, (long) m * n, k / bk);
+        int gy = wn;
+        int gz = wm;
+        return p -> p.launchIndexed(kernel, new int[] { 10, 100, 110, 200, 201, 202 }, new boolean[] { false, false, false, alignM, alignN, alignK }).buffer(0, a).buffer(1, b)
+                .buffer(3, out).bytes(4, params).threadgroups(tilesN, tilesM, 1, 32, gy, gz);
+    }
+
+    private static void registerMatmulRoutes() {
+        // matmul(a, b, out, m, k, n); matmul_transposed(a, w[n, k], out, m, k, n) = a @ w^T.
+        ROUTES.put("matmul", v -> v.args() < 6 ? null : matmulRoute(v, false));
+        ROUTES.put("matmul_transposed", v -> v.args() < 6 ? null : matmulRoute(v, true));
+    }
+
+    private static Encoder matmulRoute(View v, boolean transposed) {
+        String architecture = v.architecture();
+        return architecture == null ? null : matmul(v, 0, 1, 2, v.intArg(3), v.intArg(4), v.intArg(5), transposed, architecture);
     }
 
     private static Encoder scaled(View v, double factor) {

@@ -767,4 +767,28 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         same("logsumexpAxes", new Object[] { y }, floatsOut(d0),
                 (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxReduce.logsumexpAxes(p, q, d0, d1, d2, 1), c), y, (FloatArray) o[0]));
     }
+
+    // ---------------------------------------------------------------- matmul
+
+    @Test
+    public void testMatmul() throws TornadoExecutionPlanException {
+        // {m, k, n}: decode GEMV both ways, a column GEMV, split-K, and regular GEMMs, aligned and not.
+        int[][] shapes = { { 1, 4096, 4096 }, { 1, 2048, 311 }, { 1, 64, 1000 }, { 300, 512, 1 }, { 32, 4096, 32 }, { 64, 2048, 96 }, { 128, 512, 256 }, { 100, 300, 70 },
+                { 512, 1024, 1024 } };
+        for (int[] sh : shapes) {
+            int m = sh[0];
+            int k = sh[1];
+            int n = sh[2];
+            FloatArray a = FloatArray.fromArray(values(m * k, -1, 1, 120 + m + k));
+            FloatArray b = FloatArray.fromArray(values(k * n, -1, 1, 121 + k + n));
+            same("matmul " + m + "x" + k + "x" + n, new Object[] { a, b }, floatsOut(m * n),
+                    (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(Mlx.matmul(p, q, r, m, k, n), c), a, b, (FloatArray) o[0]));
+            same("matmulTransposed " + m + "x" + k + "x" + n, new Object[] { a, b }, floatsOut(m * n),
+                    (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(Mlx.matmulTransposed(p, q, r, m, k, n), c), a, b, (FloatArray) o[0]));
+            HalfFloatArray ah = halfValues(m * k, -1, 1, 122 + m);
+            HalfFloatArray bh = halfValues(k * n, -1, 1, 123 + n);
+            same("matmul f16 " + m + "x" + k + "x" + n, new Object[] { ah, bh }, halvesOut(m * n),
+                    (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(Mlx.matmul(p, q, r, m, k, n), c), ah, bh, (HalfFloatArray) o[0]));
+        }
+    }
 }
