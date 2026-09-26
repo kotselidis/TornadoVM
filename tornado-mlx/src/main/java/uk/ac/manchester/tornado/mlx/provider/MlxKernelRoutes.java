@@ -1654,8 +1654,88 @@ final class MlxKernelRoutes {
         ROUTES.put("matmul", v -> v.args() < 6 ? null : matmulRoute(v, false));
         ROUTES.put("matmul_transposed", v -> v.args() < 6 ? null : matmulRoute(v, true));
         ROUTES.put("quantized_matmul", MlxKernelRoutes::quantizedMatmul);
+        ROUTES.put("fast_scaled_dot_product_attention", MlxKernelRoutes::attention);
         ROUTES.put("quantize", v -> quantize(v, false));
         ROUTES.put("dequantize", v -> quantize(v, true));
+    }
+
+    /**
+     * scaled_dot_product_attention(q[B, Hq, Lq, D], k[B, Hkv, Lk, D], v[B, Hkv, Lk, D], out, B, Hq, Hkv, Lq, Lk, D, scale, causal):
+     * MLX's sdpa_vector or two-pass sdpa_vector kernels, where MLX itself uses them (Lq <= 8).
+     */
+    private static Encoder attention(View v) {
+        if (v.args() < 12 || !v.isArray(0) || !v.isArray(1) || !v.isArray(2) || !v.isArray(3)) {
+            return null;
+        }
+        int t = v.dtype(0);
+        int b = v.intArg(4);
+        int hq = v.intArg(5);
+        int hkv = v.intArg(6);
+        int lq = v.intArg(7);
+        int lk = v.intArg(8);
+        int d = v.intArg(9);
+        float scale = v.floatArg(10);
+        boolean causal = v.boolArg(11) && lq > 1;
+        String type = cType(t);
+        String architecture = v.architecture();
+        boolean headDim = d == 64 || d == 96 || d == 128 || d == 256;
+        if (type == null || architecture == null || architecture.isEmpty() || v.dtype(1) != t || v.dtype(2) != t || v.dtype(3) != t || hkv <= 0 || hq % hkv != 0) {
+            return null;
+        }
+        int gqa = hq / hkv;
+        if (!headDim || lq > 8 || lq > lk || lq * gqa > 32 || v.size(0) != b * hq * lq * d || v.size(1) != b * hkv * lk * d || v.size(2) != b * hkv * lk * d
+                || v.size(3) != b * hq * lq * d) {
+            return null;
+        }
+        char devc = architecture.charAt(architecture.length() - 1);
+        long headStride = hkv == 1 ? (long) hkv * lk * d : (long) lk * d;
+        long seqStride = d;
+        Ref q = v.ref(0);
+        Ref k = v.ref(1);
+        Ref vv = v.ref(2);
+        Ref out = v.ref(3);
+        int[] indices = { 20, 21, 22, 23, 24, 25 };
+        Object[] constants = { false, false, causal, false, false, false };
+        if (((devc == 'd' || devc == 's') && lk >= 1024) || (hkv < hq && lk >= 4096)) {
+            int simds = gqa * lq;
+            int blocks;
+            if (devc == 's') {
+                blocks = 64;
+                if (lk > 1024 && simds > 4) {
+                    blocks = lk <= 8192 ? 128 : lk <= 32768 ? 256 : lk <= 65536 ? 512 : 1024;
+                }
+            } else if (devc == 'd') {
+                blocks = 128;
+                if (simds <= 2 && lk > 8192) {
+                    blocks = 256;
+                } else if (simds >= 6) {
+                    blocks = lk >= 65536 ? 1024 : lk >= 16384 ? 512 : blocks;
+                }
+            } else {
+                blocks = simds >= 4 ? 64 : 32;
+            }
+            String override = System.getenv("MLX_SDPA_BLOCKS");
+            if (override != null && !override.isEmpty() && Integer.parseInt(override) > 0) {
+                blocks = (Integer.parseInt(override) + 31) / 32 * 32;
+            }
+            int finalBlocks = blocks;
+            String first = "sdpa_vector_2pass_1_" + type + "_" + d + "_" + d;
+            String second = "sdpa_vector_2pass_2_" + type + "_" + d;
+            Object[] withBlocks = { false, false, causal, false, false, false, finalBlocks };
+            int[] withBlocksIndices = { 20, 21, 22, 23, 24, 25, 26 };
+            long rows = (long) b * hq * lq;
+            return p -> {
+                Ref intermediate = p.scratch(rows * finalBlocks * d * MlxMetalKernels.itemSize(t));
+                Ref sums = p.scratch(4L * rows * finalBlocks);
+                Ref maxs = p.scratch(4L * rows * finalBlocks);
+                p.launchConstants(first, withBlocksIndices, withBlocks).buffer(0, q).buffer(1, k).buffer(2, vv).buffer(3, intermediate).buffer(4, sums).buffer(5, maxs).i32(7, lk)
+                        .i64(8, headStride).i64(9, seqStride).i64(10, headStride).i64(11, seqStride).f32(12, scale).threadgroups(hkv, b, finalBlocks, 32, gqa, lq);
+                p.launch(second).buffer(0, intermediate).buffer(1, sums).buffer(2, maxs).buffer(3, out).i32(4, finalBlocks).threadgroups((long) b * hq, lq, 1, 1024, 1, 1);
+            };
+        }
+        String kernel = "sdpa_vector_" + type + "_" + d + "_" + d;
+        return p -> p.launchConstants(kernel, indices, constants).buffer(0, q).buffer(1, k).buffer(2, vv).buffer(3, out).i32(4, gqa).i32(5, lk).i64(6, headStride).i64(7, seqStride)
+                .i64(8, headStride).i64(9, seqStride).f32(10, scale).threadgroups((long) b * hq, lq, 1, 1024, 1, 1);
     }
 
     /** MLX's C type names, as its quantized kernel names use them. */

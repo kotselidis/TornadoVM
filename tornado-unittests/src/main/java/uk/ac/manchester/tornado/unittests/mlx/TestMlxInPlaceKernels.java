@@ -840,4 +840,32 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     (g, id, c, o) -> g.libraryTask(id, (p, q, r, t) -> tune(Mlx.dequantize(p, q, r, t, rows, cols, gs, bits), c), pw, s1, b1, (FloatArray) o[0]));
         }
     }
+
+    // ---------------------------------------------------------------- attention
+
+    @Test
+    public void testAttention() throws TornadoExecutionPlanException {
+        // {batch, qHeads, kvHeads, qLen, kvLen, headDim, causal}: one-pass and two-pass decode, grouped queries, a causal query block.
+        int[][] shapes = { { 1, 32, 8, 1, 512, 128, 0 }, { 1, 32, 8, 1, 2048, 128, 0 }, { 2, 8, 8, 1, 300, 64, 0 }, { 1, 8, 2, 4, 100, 128, 1 }, { 1, 16, 16, 1, 9000, 64, 0 } };
+        for (int[] sh : shapes) {
+            int b = sh[0];
+            int hq = sh[1];
+            int hkv = sh[2];
+            int lq = sh[3];
+            int lk = sh[4];
+            int d = sh[5];
+            boolean causal = sh[6] == 1;
+            float scale = (float) (1.0 / Math.sqrt(d));
+            FloatArray q = FloatArray.fromArray(values(b * hq * lq * d, -1, 1, 150 + lk));
+            FloatArray k = FloatArray.fromArray(values(b * hkv * lk * d, -1, 1, 151 + lk));
+            FloatArray vv = FloatArray.fromArray(values(b * hkv * lk * d, -1, 1, 152 + lk));
+            same("sdpa " + java.util.Arrays.toString(sh), new Object[] { q, k, vv }, floatsOut(b * hq * lq * d), (g, id, c, o) -> g.libraryTask(id,
+                    (x1, x2, x3, x4) -> tune(Mlx.scaledDotProductAttention(x1, x2, x3, x4, b, hq, hkv, lq, lk, d, scale, causal), c), q, k, vv, (FloatArray) o[0]));
+            HalfFloatArray qh = halfValues(b * hq * lq * d, -1, 1, 153 + lk);
+            HalfFloatArray kh = halfValues(b * hkv * lk * d, -1, 1, 154 + lk);
+            HalfFloatArray vh = halfValues(b * hkv * lk * d, -1, 1, 155 + lk);
+            same("sdpa f16 " + java.util.Arrays.toString(sh), new Object[] { qh, kh, vh }, halvesOut(b * hq * lq * d), (g, id, c, o) -> g.libraryTask(id,
+                    (x1, x2, x3, x4) -> tune(Mlx.scaledDotProductAttention(x1, x2, x3, x4, b, hq, hkv, lq, lk, d, scale, causal), c), qh, kh, vh, (HalfFloatArray) o[0]));
+        }
+    }
 }

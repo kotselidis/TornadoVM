@@ -403,8 +403,18 @@ final class MlxMetalKernels {
             return launchIndexed(name, indices, constants);
         }
 
+
         /** A launch of kernel {@code name} specialised with boolean function constants {@code values[i]} at {@code indices[i]}. */
         Launch launchIndexed(String name, int[] indices, boolean[] values) {
+            Object[] boxed = new Object[values.length];
+            for (int i = 0; i < values.length; i++) {
+                boxed[i] = values[i];
+            }
+            return launchConstants(name, indices, boxed);
+        }
+
+        /** A launch of kernel {@code name} specialised with function constants (Boolean or Integer) {@code values[i]} at {@code indices[i]}. */
+        Launch launchConstants(String name, int[] indices, Object[] values) {
             long[] pipeline = pipeline(device, name, indices.length == 0 ? null : indices, values);
             sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
             return new Launch(pipeline[1]);
@@ -596,14 +606,15 @@ final class MlxMetalKernels {
         return pipeline(device, name, null, null);
     }
 
-    /** MTLDataTypeBool, for boolean function constants. */
+    /** MTLDataTypeBool and MTLDataTypeInt, for function constants. */
     private static final long MTL_DATA_TYPE_BOOL = 53;
+    private static final long MTL_DATA_TYPE_INT = 29;
 
     /**
      * The pipeline for kernel {@code name}, specialised with boolean function constants
      * {@code constants[i]} at index {@code indices[i]} when given.
      */
-    private static long[] pipeline(long device, String name, int[] indices, boolean[] constants) {
+    private static long[] pipeline(long device, String name, int[] indices, Object[] constants) {
         String key = device + ":" + name + (constants == null ? "" : java.util.Arrays.toString(indices) + java.util.Arrays.toString(constants));
         return PIPELINES.computeIfAbsent(key, k -> {
             long library = LIBRARIES.computeIfAbsent(device, MlxMetalKernels::loadLibrary);
@@ -614,9 +625,14 @@ final class MlxMetalKernels {
                 long values = send(objcClass("MTLFunctionConstantValues"), "new");
                 try (Arena arena = Arena.ofConfined()) {
                     for (int i = 0; i < constants.length; i++) {
-                        MemorySegment value = arena.allocate(1);
-                        value.set(FFMSupport.C_CHAR, 0, (byte) (constants[i] ? 1 : 0));
-                        sendVoid(values, "setConstantValue:type:atIndex:", value.address(), MTL_DATA_TYPE_BOOL, indices[i]);
+                        MemorySegment value = arena.allocate(4);
+                        if (constants[i] instanceof Integer number) {
+                            value.set(FFMSupport.C_INT, 0, number);
+                            sendVoid(values, "setConstantValue:type:atIndex:", value.address(), MTL_DATA_TYPE_INT, indices[i]);
+                        } else {
+                            value.set(FFMSupport.C_CHAR, 0, (byte) (Boolean.TRUE.equals(constants[i]) ? 1 : 0));
+                            sendVoid(values, "setConstantValue:type:atIndex:", value.address(), MTL_DATA_TYPE_BOOL, indices[i]);
+                        }
                     }
                 }
                 MemorySegment error = FFMSupport.scratchPointer();
