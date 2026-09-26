@@ -516,6 +516,7 @@ public final class OpEvaluation {
         reductions();
         quantized();
         Tier2Cases.all();
+        Tier3Cases.all();
         if (!FAILURES.isEmpty()) {
             System.out.println(FAILURES.size() + " cases failed:");
             FAILURES.forEach(f -> System.out.println("  " + f));

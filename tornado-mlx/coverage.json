@@ -7,7 +7,7 @@
     "inScope": 292,
     "bound": 292,
     "tested": 292,
-    "benchmarked": 181,
+    "benchmarked": 292,
     "jitBaselines": 292,
     "remaining": 0,
     "byTier": {
@@ -198,7 +198,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.allcloseCheck",
@@ -311,7 +311,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.arange"
@@ -748,7 +748,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.arrayEqualCheck",
@@ -777,7 +777,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.asStrided"
@@ -804,7 +804,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.toHalf"
@@ -831,7 +831,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -858,7 +858,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -885,7 +885,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -912,7 +912,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.window"
@@ -936,7 +936,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.bitwise"
@@ -960,7 +960,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.invert"
@@ -984,7 +984,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.bitwise"
@@ -1008,7 +1008,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.bitwise"
@@ -1032,7 +1032,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.window"
@@ -1056,7 +1056,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.blockMaskedGemm"
@@ -1083,7 +1083,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.broadcastPair"
@@ -1110,7 +1110,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.broadcastRows"
@@ -1190,7 +1190,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.concat"
@@ -1217,7 +1217,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.concat"
@@ -1244,7 +1244,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.conjugate"
@@ -1268,7 +1268,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -1477,7 +1477,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -1731,7 +1731,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.diag"
@@ -1758,7 +1758,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.diagonal"
@@ -1839,7 +1839,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.batchedGemm"
@@ -1865,7 +1865,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.compare"
@@ -1971,7 +1971,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -1998,7 +1998,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -2051,7 +2051,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.eye"
@@ -2078,7 +2078,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -2158,7 +2158,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.fromFp8"
@@ -2183,7 +2183,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.fill"
@@ -2210,7 +2210,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.fill"
@@ -2345,7 +2345,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.compare"
@@ -2373,7 +2373,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.compare"
@@ -2401,7 +2401,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.hadamard"
@@ -2427,7 +2427,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.window"
@@ -2451,7 +2451,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.window"
@@ -2475,7 +2475,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.eye"
@@ -2502,7 +2502,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.complexPart"
@@ -2526,7 +2526,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.dotPartial"
@@ -2552,7 +2552,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.isclose"
@@ -2579,7 +2579,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.classify"
@@ -2606,7 +2606,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.classify"
@@ -2633,7 +2633,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.classify"
@@ -2660,7 +2660,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.classify"
@@ -2687,7 +2687,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.classify"
@@ -2714,7 +2714,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.kron"
@@ -2740,7 +2740,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.bitwise"
@@ -2764,7 +2764,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.compare"
@@ -2792,7 +2792,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.compare"
@@ -2820,7 +2820,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.linspace"
@@ -3003,7 +3003,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.logical"
@@ -3027,7 +3027,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.logicalNot"
@@ -3051,7 +3051,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.logical"
@@ -3436,7 +3436,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.meshgrid"
@@ -3574,7 +3574,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.permute3"
@@ -3628,7 +3628,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.nanToNum"
@@ -3681,7 +3681,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.compare"
@@ -3709,7 +3709,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.writeInt"
@@ -3736,7 +3736,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.fill"
@@ -3763,7 +3763,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.fill"
@@ -3790,7 +3790,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.outer"
@@ -3816,7 +3816,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.pad"
@@ -3843,7 +3843,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.pad"
@@ -4068,7 +4068,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.qqmm"
@@ -4176,7 +4176,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.complexPart"
@@ -4253,7 +4253,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.repeatRows"
@@ -4280,7 +4280,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.repeatRows"
@@ -4307,7 +4307,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -4334,7 +4334,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitLogic.bitwise"
@@ -4358,7 +4358,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.roll"
@@ -4385,7 +4385,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.roll"
@@ -4412,7 +4412,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.roll"
@@ -4799,7 +4799,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.segmentedGemm"
@@ -5291,7 +5291,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.split"
@@ -5318,7 +5318,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.split"
@@ -5398,7 +5398,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -5425,7 +5425,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -5452,7 +5452,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -5479,7 +5479,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.interleave"
@@ -5506,7 +5506,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.concat"
@@ -5734,7 +5734,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.permute3"
@@ -5894,7 +5894,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitBlas.gemm"
@@ -5920,7 +5920,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitBlas.gemm"
@@ -5946,7 +5946,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.tile"
@@ -5973,7 +5973,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitProducts.toFp8"
@@ -6050,7 +6050,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.trace"
@@ -6077,7 +6077,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.permute3"
@@ -6136,7 +6136,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.eye"
@@ -6163,7 +6163,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.triangle"
@@ -6190,7 +6190,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.triangle"
@@ -6217,7 +6217,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.copy"
@@ -6324,7 +6324,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitShape.viewAsInt"
@@ -6377,7 +6377,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.fill"
@@ -6404,7 +6404,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitCreate.fill"
@@ -7690,7 +7690,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.bernoulli"
@@ -7717,7 +7717,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.bits"
@@ -7741,7 +7741,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.categorical"
@@ -7768,7 +7768,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.categorical"
@@ -7795,7 +7795,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.categorical"
@@ -7822,7 +7822,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.gumbel"
@@ -7858,7 +7858,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.laplace"
@@ -7884,7 +7884,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.multivariateNormal"
@@ -7908,7 +7908,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.normal"
@@ -7934,7 +7934,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.normal"
@@ -7960,7 +7960,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.sortKeys"
@@ -7987,7 +7987,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.sortKeys"
@@ -8011,7 +8011,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.randint"
@@ -8065,7 +8065,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.truncatedNormal"
@@ -8091,7 +8091,7 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
+      "benchmarked": true,
       "jitBaseline": {
         "kernels": [
           "JitRandom.uniformRange"
