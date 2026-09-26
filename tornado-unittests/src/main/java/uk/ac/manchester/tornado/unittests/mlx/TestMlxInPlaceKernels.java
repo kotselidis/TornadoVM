@@ -1248,6 +1248,12 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14) -> tune(MlxConv.convTranspose2d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14), c), x,
                     w, (FloatArray) o[0], q[0], q[1], q[2], q[3], q[4], q[5], q[5], q[6], q[7], q[8], q[9], 1));
         }
+        FloatArray x1 = FloatArray.fromArray(values(2 * 50 * 32, -1, 1, 284));
+        FloatArray w1 = FloatArray.fromArray(values(16 * 5 * 32, -1, 1, 285));
+        int l1 = (50 - 1) - 2 * 1 + (5 - 1) + 1;
+        same("convTranspose1d", new Object[] { x1, w1 }, floatsOut(2 * l1 * 16), (g, id, c, o) -> g.libraryTask(id,
+                (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12) -> tune(MlxConv.convTranspose1d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12), c), x1, w1, (FloatArray) o[0],
+                2, 50, 32, 16, 5, 1, 1, 1, 0, 1));
         int h = 10;
         int w = 12;
         int oh = convLength(h, 3, 1, 2, 2, 1, 3);

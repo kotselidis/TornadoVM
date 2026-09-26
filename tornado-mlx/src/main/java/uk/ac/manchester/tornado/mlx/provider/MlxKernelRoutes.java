@@ -3318,6 +3318,34 @@ final class MlxKernelRoutes {
                     new int[] { 1, 1 }, new long[] { (long) len * c, c, 0, 1 }, new long[] { (long) k * cpg, cpg, 0, 1 }, new long[] { (long) outLen * o, o, 0, 1 }, groups, false);
             return dispatchConv2(v, t, cp);
         });
+        // conv_transpose1d(x, w, out, N, L, C, O, K, stride, pad, dil, output_pad, groups): a flipped convolution; MLX runs
+        // stride 1 through the 1D-as-2D implicit GEMM path (larger strides dilate the input and take explicit GEMM).
+        ROUTES.put("conv_transpose1d", v -> {
+            int t = floatType(v, 0, 1, 2);
+            if (t < 0 || v.args() < 13 || v.intArg(8) != 1) {
+                return null;
+            }
+            int n = v.intArg(3);
+            int len = v.intArg(4);
+            int c = v.intArg(5);
+            int o = v.intArg(6);
+            int k = v.intArg(7);
+            int pad = v.intArg(9);
+            int dil = v.intArg(10);
+            int groups = v.intArg(12);
+            int lo = dil * (k - 1) - pad;
+            int hi = transposedHighPad(len, k, 1, pad, dil, v.intArg(11));
+            int outLen = convOut(len, k, 1, lo, hi, dil, 1);
+            int cpg = groups > 0 ? c / groups : 0;
+            int opg = groups > 0 ? o / groups : 0;
+            if (lo < 0 || hi < 0 || groups <= 0 || c % groups != 0 || o % groups != 0 || outLen <= 0 || v.size(0) != n * len * c || v.size(1) != o * k * cpg
+                    || v.size(2) != n * outLen * o || !((cpg <= 4 || cpg % 16 == 0) && (opg <= 16 || opg % 16 == 0))) {
+                return null;
+            }
+            Conv2 cp = new Conv2(n, c, o, new int[] { len, 1 }, new int[] { k, 1 }, new int[] { outLen, 1 }, new int[] { 1, 1 }, new int[] { lo, 0 }, new int[] { dil, 1 },
+                    new int[] { 1, 1 }, new long[] { (long) len * c, c, 0, 1 }, new long[] { (long) k * cpg, cpg, 0, 1 }, new long[] { (long) outLen * o, o, 0, 1 }, groups, true);
+            return dispatchConv2(v, t, cp);
+        });
         // conv2d(x[N, H, W, C], w[O, KH, KW, C/g], out, N, H, W, C, O, KH, KW, stride, pad, dil, groups) and
         // conv_general(..., stride, pad_lo, pad_hi, kernel_dil, input_dil, groups, flip) in two dimensions.
         ROUTES.put("conv2d", v -> v.args() < 14 ? null : conv2(v, v.intArg(10), v.intArg(11), v.intArg(11), v.intArg(12), 1, v.intArg(13), false));
