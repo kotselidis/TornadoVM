@@ -32,12 +32,14 @@ import java.util.function.Consumer;
 
 import uk.ac.manchester.tornado.api.enums.TornadoVMBackendType;
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
+import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 import uk.ac.manchester.tornado.mlx.Mlx;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 import uk.ac.manchester.tornado.runtime.library.spi.LibraryContext;
 import uk.ac.manchester.tornado.runtime.library.spi.LibraryInvocation;
 import uk.ac.manchester.tornado.runtime.library.spi.TornadoLibraryProvider;
+import uk.ac.manchester.tornado.runtime.library.spi.TornadoNativeStreamSupport;
 
 /**
  * {@link TornadoLibraryProvider} for Apple MLX, reached through mlx-c. Discovered by the
@@ -48,6 +50,12 @@ import uk.ac.manchester.tornado.runtime.library.spi.TornadoLibraryProvider;
  * shared-storage memory. MLX runs the operation on its own command queue and waits for it; the
  * Metal backend waits after every kernel too, so the two queues never overlap. MLX operations
  * allocate their own result, which is copied into the output buffer.
+ * </p>
+ *
+ * <p>
+ * Contiguous element-wise operations skip the C API: {@link MlxMetalKernels} runs MLX's own kernel
+ * from {@code mlx.metallib} on TornadoVM's command queue with the TornadoVM buffers bound in place,
+ * as a JIT-compiled kernel would run, so there is neither a result array nor a copy.
  * </p>
  *
  * <p>
@@ -599,11 +607,100 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
         MlxContext ctx = (MlxContext) invocation.getContext();
         MlxOptions.Device device = CPU_ONLY.contains(functionName) ? MlxOptions.Device.CPU
                 : (invocation.getTuning() instanceof MlxOptions options) ? options.getDevice() : MlxOptions.Device.GPU;
+        if (device == MlxOptions.Device.GPU && dispatchKernel(functionName, invocation)) {
+            return;
+        }
         synchronized (ctx) {
             try (MlxCall call = new MlxCall(ctx, invocation, ctx.stream(device))) {
                 operation.accept(call);
             }
         }
+    }
+
+    // ---------------------------------------------------------------- MLX kernels in place
+
+    /**
+     * Whether contiguous element-wise operations run MLX's own Metal kernels directly on TornadoVM's
+     * buffers ({@link MlxMetalKernels}) instead of through the C API, which would allocate a result
+     * and copy it back. {@code -Dtornado.mlx.kernels=False} turns this off.
+     */
+    private static final boolean IN_PLACE_KERNELS = Boolean.parseBoolean(System.getProperty("tornado.mlx.kernels", "True")) && MlxMetalKernels.isAvailable();
+
+    private static final AtomicLong KERNEL_DISPATCHES = new AtomicLong();
+
+    /** Element-wise operations with an in-place kernel: provider name to MLX's Metal op name. */
+    private static final Map<String, String> UNARY_KERNELS = Map.ofEntries(entry("negative", "Negative"), entry("exp", "Exp"), entry("tanh", "Tanh"), entry("erf", "Erf"), //
+            entry("sigmoid", "Sigmoid"), entry("sqrt", "Sqrt"), entry("rsqrt", "Rsqrt"), entry("square", "Square"), entry("abs", "Abs"), entry("arccos", "ArcCos"), //
+            entry("arccosh", "ArcCosh"), entry("arcsin", "ArcSin"), entry("arcsinh", "ArcSinh"), entry("arctan", "ArcTan"), entry("arctanh", "ArcTanh"), entry("ceil", "Ceil"), //
+            entry("cos", "Cos"), entry("cosh", "Cosh"), entry("erfinv", "ErfInv"), entry("expm1", "Expm1"), entry("floor", "Floor"), entry("log", "Log"), entry("log10", "Log10"), //
+            entry("log1p", "Log1p"), entry("log2", "Log2"), entry("sign", "Sign"), entry("sin", "Sin"), entry("sinh", "Sinh"), entry("tan", "Tan"));
+
+    private static final Map<String, String> BINARY_KERNELS = Map.ofEntries(entry("add", "Add"), entry("subtract", "Subtract"), entry("multiply", "Multiply"), //
+            entry("divide", "Divide"), entry("maximum", "Maximum"), entry("minimum", "Minimum"), entry("arctan2", "ArcTan2"), entry("logaddexp", "LogAddExp"), //
+            entry("power", "Power"), entry("remainder", "Remainder"));
+
+    /** Comparisons, whose kernels write MLX bools (one byte, 0 or 1) into a byte array. */
+    private static final Map<String, String> COMPARISON_KERNELS = Map.ofEntries(entry("equal", "Equal"), entry("not_equal", "NotEqual"), entry("greater", "Greater"), //
+            entry("greater_equal", "GreaterEqual"), entry("less", "Less"), entry("less_equal", "LessEqual"));
+
+    /** How many operations ran as in-place MLX kernels rather than through the C API. */
+    public static long kernelDispatches() {
+        return KERNEL_DISPATCHES.get();
+    }
+
+    /** Runs {@code functionName} as an in-place MLX kernel if it has one and its arguments fit; false otherwise. */
+    private static boolean dispatchKernel(String functionName, LibraryInvocation invocation) {
+        if (!IN_PLACE_KERNELS || invocation.isCapturing() || !(invocation.getDevice() instanceof TornadoNativeStreamSupport streams)) {
+            return false;
+        }
+        String op = UNARY_KERNELS.get(functionName);
+        boolean binary = false;
+        boolean comparison = false;
+        if (op == null) {
+            op = BINARY_KERNELS.get(functionName);
+            binary = op != null;
+        }
+        if (op == null) {
+            op = COMPARISON_KERNELS.get(functionName);
+            binary = op != null;
+            comparison = op != null;
+        }
+        if (op == null) {
+            return false;
+        }
+        int arrays = binary ? 3 : 2;
+        if (invocation.getNumArgs() != arrays) {
+            return false;
+        }
+        long[] buffers = new long[arrays];
+        long[] offsets = new long[arrays];
+        int[] types = new int[arrays];
+        long[] sizes = new long[arrays];
+        for (int i = 0; i < arrays; i++) {
+            if (!(invocation.getArg(i) instanceof TornadoNativeArray array) || invocation.getNativeBuffer(i) == 0) {
+                return false;
+            }
+            types[i] = MlxCall.dtypeOf(array);
+            sizes[i] = array.getSize();
+            buffers[i] = invocation.getNativeBuffer(i);
+            offsets[i] = invocation.getNativeOffset(i);
+        }
+        // Inputs share one floating-point type; the output has it too, or is a byte array for a comparison.
+        int dtype = types[0];
+        int outputType = types[arrays - 1];
+        boolean typesMatch = (!binary || types[1] == dtype) && outputType == (comparison ? MlxNativeLib.MLX_UINT8 : dtype);
+        long size = sizes[0];
+        boolean sizesMatch = sizes[arrays - 1] == size && (!binary || sizes[1] == size);
+        if (!typesMatch || !sizesMatch || MlxMetalKernels.typeName(dtype) == null || size <= 0 || size > Integer.MAX_VALUE) {
+            return false;
+        }
+        long queue = streams.getNativeStream(invocation.getExecutionPlanId());
+        if (queue == 0) {
+            return false;
+        }
+        MlxMetalKernels.elementwise(queue, op, binary, dtype, comparison, (int) size, buffers, offsets);
+        KERNEL_DISPATCHES.incrementAndGet();
+        return true;
     }
 
     // ---------------------------------------------------------------- operation families
