@@ -296,6 +296,34 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("fft_ifftshift", c -> fftShift(c, "mlx_fft_ifftshift", MlxC::mlx_fft_ifftshift)), //
             entry("fft_fftfreq", c -> c.store(c.op("mlx_fft_fftfreq", res -> MlxC.mlx_fft_fftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
             entry("fft_rfftfreq", c -> c.store(c.op("mlx_fft_rfftfreq", res -> MlxC.mlx_fft_rfftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
+            // Comparisons, logic, bitwise and complex parts (MlxLogic).
+            entry("equal", c -> binary(c, "mlx_equal", MlxC::mlx_equal)), //
+            entry("not_equal", c -> binary(c, "mlx_not_equal", MlxC::mlx_not_equal)), //
+            entry("greater", c -> binary(c, "mlx_greater", MlxC::mlx_greater)), //
+            entry("greater_equal", c -> binary(c, "mlx_greater_equal", MlxC::mlx_greater_equal)), //
+            entry("less", c -> binary(c, "mlx_less", MlxC::mlx_less)), //
+            entry("less_equal", c -> binary(c, "mlx_less_equal", MlxC::mlx_less_equal)), //
+            entry("bitwise_and", c -> binary(c, "mlx_bitwise_and", MlxC::mlx_bitwise_and)), //
+            entry("bitwise_or", c -> binary(c, "mlx_bitwise_or", MlxC::mlx_bitwise_or)), //
+            entry("bitwise_xor", c -> binary(c, "mlx_bitwise_xor", MlxC::mlx_bitwise_xor)), //
+            entry("left_shift", c -> binary(c, "mlx_left_shift", MlxC::mlx_left_shift)), //
+            entry("right_shift", c -> binary(c, "mlx_right_shift", MlxC::mlx_right_shift)), //
+            entry("isfinite", c -> unary(c, "mlx_isfinite", MlxC::mlx_isfinite)), //
+            entry("isinf", c -> unary(c, "mlx_isinf", MlxC::mlx_isinf)), //
+            entry("isnan", c -> unary(c, "mlx_isnan", MlxC::mlx_isnan)), //
+            entry("isneginf", c -> unary(c, "mlx_isneginf", MlxC::mlx_isneginf)), //
+            entry("isposinf", c -> unary(c, "mlx_isposinf", MlxC::mlx_isposinf)), //
+            entry("bitwise_invert", c -> unary(c, "mlx_bitwise_invert", MlxC::mlx_bitwise_invert)), //
+            entry("isclose", MlxLibraryProvider::isclose), //
+            entry("allclose", MlxLibraryProvider::allclose), //
+            entry("array_equal", MlxLibraryProvider::arrayEqual), //
+            entry("logical_and", c -> logical(c, "mlx_logical_and", MlxC::mlx_logical_and)), //
+            entry("logical_or", c -> logical(c, "mlx_logical_or", MlxC::mlx_logical_or)), //
+            entry("logical_not", MlxLibraryProvider::logicalNot), //
+            entry("nan_to_num", MlxLibraryProvider::nanToNum), //
+            entry("real", c -> complexPart(c, "mlx_real", MlxC::mlx_real, false)), //
+            entry("imag", c -> complexPart(c, "mlx_imag", MlxC::mlx_imag, false)), //
+            entry("conjugate", c -> complexPart(c, "mlx_conjugate", MlxC::mlx_conjugate, true)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -462,6 +490,60 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // isclose(a, b, out, rtol, atol, equalNan)
+    private static void isclose(MlxCall c) {
+        int n = c.length(2);
+        MemorySegment a = c.input(0, n);
+        MemorySegment b = c.input(1, n);
+        c.store(c.op("mlx_isclose", res -> MlxC.mlx_isclose(res, a, b, c.floatArg(3), c.floatArg(4), c.boolArg(5), c.stream())), 2);
+    }
+
+    // allclose(a, b, out, rtol, atol, equalNan): one flag
+    private static void allclose(MlxCall c) {
+        int n = c.length(0);
+        MemorySegment a = c.input(0, n);
+        MemorySegment b = c.input(1, n);
+        c.store(c.op("mlx_allclose", res -> MlxC.mlx_allclose(res, a, b, c.floatArg(3), c.floatArg(4), c.boolArg(5), c.stream())), 2);
+    }
+
+    // array_equal(a, b, out, equalNan): one flag
+    private static void arrayEqual(MlxCall c) {
+        MemorySegment a = c.input(0, c.length(0));
+        MemorySegment b = c.input(1, c.length(1));
+        c.store(c.op("mlx_array_equal", res -> MlxC.mlx_array_equal(res, a, b, c.boolArg(3), c.stream())), 2);
+    }
+
+    // logical_and / logical_or(a, b, out) on byte masks
+    private static void logical(MlxCall c, String name, Binary op) {
+        int n = c.length(2);
+        MemorySegment a = asBool(c, c.input(0, n));
+        MemorySegment b = asBool(c, c.input(1, n));
+        c.store(c.op(name, res -> op.apply(res, a, b, c.stream())), 2);
+    }
+
+    // logical_not(a, out) on a byte mask
+    private static void logicalNot(MlxCall c) {
+        MemorySegment a = asBool(c, c.input(0, c.length(1)));
+        c.store(c.op("mlx_logical_not", res -> MlxC.mlx_logical_not(res, a, c.stream())), 1);
+    }
+
+    private static MemorySegment asBool(MlxCall c, MemorySegment bytes) {
+        return c.op("mlx_astype", res -> MlxC.mlx_astype(res, bytes, MlxNativeLib.MLX_BOOL, c.stream()));
+    }
+
+    // nan_to_num(a, out, nan, posinf, neginf)
+    private static void nanToNum(MlxCall c) {
+        MemorySegment a = c.input(0, c.length(1));
+        c.store(c.op("mlx_nan_to_num", res -> MlxC.mlx_nan_to_num(res, a, c.floatArg(2), c.optionalFloat(c.floatArg(3)), c.optionalFloat(c.floatArg(4)), c.stream())), 1);
+    }
+
+    // real / imag / conjugate(z, out): z holds (re, im) pairs
+    private static void complexPart(MlxCall c, String name, Unary op, boolean complexOut) {
+        MemorySegment z = complexInput(c, 0, c.length(0) / 2);
+        MemorySegment y = c.op(name, res -> op.apply(res, z, c.stream()));
+        c.store(complexOut ? complexAsFloats(c, y) : y, 1);
+    }
 
     // complex [dims..., len] input given as float pairs: wrapped as float32 [dims..., 2 * len], viewed as complex64
     private static MemorySegment complexInput(MlxCall c, int index, int... shape) {
