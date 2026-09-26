@@ -5,11 +5,11 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 277,
-    "tested": 277,
+    "bound": 292,
+    "tested": 292,
     "benchmarked": 181,
-    "jitBaselines": 277,
-    "remaining": 15,
+    "jitBaselines": 292,
+    "remaining": 0,
     "byTier": {
       "1": {
         "inScope": 32,
@@ -21,7 +21,7 @@
       },
       "3": {
         "inScope": 112,
-        "bound": 97
+        "bound": 112
       }
     }
   },
@@ -7688,54 +7688,158 @@
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.bernoulli"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_bits",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.bits"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_categorical_shape",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.categorical"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_categorical_num_samples",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.categorical"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_categorical",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.categorical"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_gumbel",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.gumbel"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_key",
@@ -7752,63 +7856,177 @@
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.laplace"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_multivariate_normal",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.multivariateNormal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_normal_broadcast",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.normal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_normal",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.normal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_permutation",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.sortKeys"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_permutation_arange",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.sortKeys"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_randint",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.randint"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_seed",
@@ -7845,18 +8063,52 @@
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.truncatedNormal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_random_uniform",
       "header": "random.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.uniformRange"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
     },
     {
       "name": "mlx_async_eval",

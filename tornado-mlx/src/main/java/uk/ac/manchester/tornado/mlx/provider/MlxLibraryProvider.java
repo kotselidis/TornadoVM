@@ -64,7 +64,8 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
 
     /** Operations MLX only implements on the CPU stream. */
     private static final Set<String> CPU_ONLY = Set.of("linalg_cholesky", "linalg_cholesky_inv", "linalg_tri_inv", "linalg_inv", "linalg_solve", "linalg_solve_triangular",
-            "linalg_lu", "linalg_lu_factor", "linalg_qr", "linalg_eigh", "linalg_eigvalsh", "linalg_svd", "linalg_svd_values", "linalg_pinv", "linalg_eig", "linalg_eigvals");
+            "linalg_lu", "linalg_lu_factor", "linalg_qr", "linalg_eigh", "linalg_eigvalsh", "linalg_svd", "linalg_svd_values", "linalg_pinv", "linalg_eig", "linalg_eigvals",
+            "random_multivariate_normal");
 
     private interface Unary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
@@ -411,6 +412,35 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("from_fp8", c -> c.store(c.op("mlx_from_fp8", res -> MlxC.mlx_from_fp8(res, c.input(0, c.length(0)), MlxNativeLib.MLX_FLOAT32, c.stream())), 1)), //
             entry("qqmm", MlxLibraryProvider::qqmm), //
             entry("quantize_mx", MlxLibraryProvider::quantizeMx), //
+            // Random sampling (MlxRandom).
+            entry("random_bits", c -> c.storeRaw(c.op("mlx_random_bits", res -> MlxC.mlx_random_bits(res, c.ints(c.length(0)), 1, 4, randomKey(c, 1), c.stream())), 0)), //
+            entry("random_uniform", c -> c.store(c.op("mlx_random_uniform", res -> MlxC.mlx_random_uniform(res, c.scalar(c.floatArg(1)), c.scalar(c.floatArg(2)), c.ints(c.length(0)), 1,
+                    MlxNativeLib.MLX_FLOAT32, randomKey(c, 3), c.stream())), 0)), //
+            entry("random_normal", c -> c.store(c.op("mlx_random_normal", res -> MlxC.mlx_random_normal(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, c.floatArg(1), c.floatArg(2),
+                    randomKey(c, 3), c.stream())), 0)), //
+            entry("random_normal_broadcast", c -> c.store(c.op("mlx_random_normal_broadcast", res -> MlxC.mlx_random_normal_broadcast(res, c.ints(c.length(2)), 1, MlxNativeLib.MLX_FLOAT32,
+                    c.input(0, c.length(0)), c.input(1, c.length(1)), randomKey(c, 3), c.stream())), 2)), //
+            entry("random_bernoulli", c -> c.store(c.op("mlx_random_bernoulli", res -> MlxC.mlx_random_bernoulli(res, c.input(0, c.length(0)), c.ints(c.length(1)), 1, randomKey(c, 2),
+                    c.stream())), 1)), //
+            entry("random_randint", c -> c.store(c.op("mlx_random_randint", res -> MlxC.mlx_random_randint(res, c.scalar(c.intArg(1)), c.scalar(c.intArg(2)), c.ints(c.length(0)), 1,
+                    MlxNativeLib.MLX_INT32, randomKey(c, 3), c.stream())), 0)), //
+            entry("random_truncated_normal", c -> c.store(c.op("mlx_random_truncated_normal", res -> MlxC.mlx_random_truncated_normal(res, c.scalar(c.floatArg(1)), c.scalar(c.floatArg(2)),
+                    c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 3), c.stream())), 0)), //
+            entry("random_gumbel", c -> c.store(c.op("mlx_random_gumbel", res -> MlxC.mlx_random_gumbel(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 1), c.stream())),
+                    0)), //
+            entry("random_laplace", c -> c.store(c.op("mlx_random_laplace", res -> MlxC.mlx_random_laplace(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, c.floatArg(1), c.floatArg(2),
+                    randomKey(c, 3), c.stream())), 0)), //
+            entry("random_categorical", c -> c.store(c.op("mlx_random_categorical", res -> MlxC.mlx_random_categorical(res, c.input(0, c.intArg(2), c.intArg(3)), 1, randomKey(c, 4),
+                    c.stream())), 1)), //
+            entry("random_categorical_num_samples", c -> c.store(c.op("mlx_random_categorical_num_samples", res -> MlxC.mlx_random_categorical_num_samples(res, c.input(0, c.intArg(2),
+                    c.intArg(3)), 1, c.intArg(4), randomKey(c, 5), c.stream())), 1)), //
+            entry("random_categorical_shape", c -> c.store(c.op("mlx_random_categorical_shape", res -> MlxC.mlx_random_categorical_shape(res, c.input(0, c.intArg(2), c.intArg(3)), 1,
+                    c.ints(c.intArg(4), c.intArg(2)), 2, randomKey(c, 5), c.stream())), 1)), //
+            entry("random_multivariate_normal", c -> c.store(c.op("mlx_random_multivariate_normal", res -> MlxC.mlx_random_multivariate_normal(res, c.input(0, c.intArg(4)), c.input(1,
+                    c.intArg(4), c.intArg(4)), c.ints(c.intArg(3)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 5), c.stream())), 2)), //
+            entry("random_permutation", c -> c.store(c.op("mlx_random_permutation", res -> MlxC.mlx_random_permutation(res, c.input(0, c.length(0)), 0, randomKey(c, 2), c.stream())), 1)), //
+            entry("random_permutation_arange", c -> c.store(c.op("mlx_random_permutation_arange", res -> MlxC.mlx_random_permutation_arange(res, c.length(0), randomKey(c, 1), c.stream())),
+                    0)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -577,6 +607,12 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // The MLX PRNG key for the seed in argument seedIndex
+    private static MemorySegment randomKey(MlxCall c, int seedIndex) {
+        int seed = c.intArg(seedIndex);
+        return c.op("mlx_random_key", res -> MlxC.mlx_random_key(res, seed));
+    }
 
     // block_masked_mm(a, b, maskOut, maskLhs, maskRhs, out, m, k, n, blockSize): byte masks at block granularity
     private static void blockMaskedMm(MlxCall c) {
