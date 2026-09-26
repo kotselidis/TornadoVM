@@ -1688,6 +1688,7 @@ final class MlxKernelRoutes {
         ROUTES.put("matmul_transposed", v -> v.args() < 6 ? null : matmulRoute(v, true));
         ROUTES.put("quantized_matmul", MlxKernelRoutes::quantizedMatmul);
         ROUTES.put("gather_mm", MlxKernelRoutes::gatherMm);
+        ROUTES.put("gather_qmm", MlxKernelRoutes::gatherQmm);
         ROUTES.put("segmented_mm", MlxKernelRoutes::segmentedMm);
         // addmm(c, a, b, out, m, k, n, alpha, beta) = alpha * a @ b + beta * c.
         ROUTES.put("addmm", v -> {
@@ -1885,6 +1886,62 @@ final class MlxKernelRoutes {
         byte[] paramBytes = params.array();
         return p -> p.launchIndexed(kernel, new int[] { 200, 201, 300, 301, 302 }, new boolean[] { alignQ, alignK, false, causal, false }).buffer(0, v.ref(0)).buffer(1, v.ref(1))
                 .buffer(2, v.ref(2)).buffer(3, v.ref(3)).bytes(4, paramBytes).threadgroups(nq, hq, b, 32, 4, 1);
+    }
+
+    /**
+     * gather_qmm(x[B, m, k], wq[E, n, k * bits / 32], scales[E, n, k / gs], biases, lhs[B], rhs[B], out[B, m, n],
+     * B, E, m, k, n, gs, bits), affine with transposed weights: MLX's gather_qmv below the batch limit, gather_qmm above.
+     */
+    private static Encoder gatherQmm(View v) {
+        if (v.args() < 14) {
+            return null;
+        }
+        for (int i = 0; i < 7; i++) {
+            if (!v.isArray(i)) {
+                return null;
+            }
+        }
+        int t = v.dtype(0);
+        int batches = v.intArg(7);
+        int experts = v.intArg(8);
+        int m = v.intArg(9);
+        int k = v.intArg(10);
+        int n = v.intArg(11);
+        int gs = v.intArg(12);
+        int bits = v.intArg(13);
+        String type = cType(t);
+        String architecture = v.architecture();
+        if (type == null || architecture == null || architecture.isEmpty() || !powerOfTwoBits(bits) || gs <= 0 || k % gs != 0 || v.dtype(2) != t || v.dtype(3) != t || v.dtype(6) != t
+                || v.dtype(4) != MLX_INT32 || v.dtype(5) != MLX_INT32 || v.size(4) != batches || v.size(5) != batches || v.size(0) != batches * m * k
+                || (long) v.size(1) * 32 != (long) experts * n * k * bits || v.size(2) != experts * n * (k / gs) || v.size(6) != batches * m * n) {
+            return null;
+        }
+        int gen = MlxMetalKernels.architectureGeneration(architecture);
+        boolean matrix = m >= qmvBatchLimit(k, n, architecture);
+        // (MLX's gather_qmm_rhs path needs sorted right indices, which the provider does not ask for.)
+        if (matrix && gen >= 17) {
+            return null;
+        }
+        int words = k * bits / 32;
+        int groups = k / gs;
+        byte[] xShape = MlxMetalKernels.intBytes(new int[] { batches, m, k });
+        byte[] wShape = MlxMetalKernels.intBytes(new int[] { experts, n, words });
+        long[] xStrides = { (long) m * k, k, 1 };
+        long[] wStrides = { (long) n * words, words, 1 };
+        long[] sStrides = { (long) n * groups, groups, 1 };
+        byte[] indexShape = MlxMetalKernels.intBytes(new int[] { batches });
+        if (matrix) {
+            String kernel = "affine_gather_qmm_t_" + type + "_gs_" + gs + "_b_" + bits + (n % 32 == 0 ? "_alN_true" : "_alN_false");
+            return p -> p.launch(kernel).buffer(0, v.ref(1)).buffer(1, v.ref(2)).buffer(2, v.ref(3)).buffer(3, v.ref(0)).buffer(4, v.ref(4)).buffer(5, v.ref(5)).buffer(6, v.ref(6))
+                    .i32(7, k).i32(8, n).i32(9, m).i32(10, 1).bytes(11, xShape).i64(12, xStrides).i32(13, 1).bytes(14, wShape).i64(15, wStrides).i64(16, sStrides).i64(17, sStrides)
+                    .i32(18, 1).bytes(19, indexShape).i64(20, 1).i64(21, 1).threadgroups((n + 31) / 32, (m + 31) / 32, batches, 32, 2, 2);
+        }
+        int alignment = (32 / bits) * (bits == 2 ? 1 : 2) * 32;
+        boolean fast = n % 8 == 0 && k % alignment == 0;
+        String kernel = "affine_gather_qmv" + (fast ? "_fast_" : "_") + type + "_gs_" + gs + "_b_" + bits;
+        return p -> p.launch(kernel).buffer(0, v.ref(1)).buffer(1, v.ref(2)).buffer(2, v.ref(3)).buffer(3, v.ref(0)).buffer(4, v.ref(4)).buffer(5, v.ref(5)).buffer(6, v.ref(6))
+                .i32(7, k).i32(8, n).i32(9, 1).bytes(10, xShape).i64(11, xStrides).i32(12, 1).bytes(13, wShape).i64(14, wStrides).i64(15, sStrides).i64(16, sStrides).i32(17, 1)
+                .bytes(18, indexShape).i64(19, 1).i64(20, 1).threadgroups(m, (n + 7) / 8, batches, 32, 2, 1);
     }
 
     /**

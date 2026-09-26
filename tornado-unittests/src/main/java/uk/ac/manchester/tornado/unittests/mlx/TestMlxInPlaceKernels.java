@@ -1182,4 +1182,30 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     (x1, x2, x3, x4, i4, i5, i6) -> tune(MlxProducts.segmentedMm(x1, x2, x3, x4, i4, i5, i6), c), a2, b2, segments, (FloatArray) o[0], m, k, n));
         }
     }
+
+    @Test
+    public void testGatherQmm() throws TornadoExecutionPlanException {
+        int batches = 6;
+        int experts = 4;
+        int gs = 64;
+        int bits = 4;
+        for (int[] sh : new int[][] { { 1, 2048, 512 }, { 1, 576, 200 }, { 32, 1024, 256 } }) {
+            int m = sh[0];
+            int k = sh[1];
+            int n = sh[2];
+            FloatArray x = FloatArray.fromArray(values(batches * m * k, -1, 1, 260 + m + k));
+            IntArray seed = ints(261 + n, -1000000000, 1000000000);
+            IntArray w = new IntArray(experts * n * k * bits / 32);
+            for (int i = 0; i < w.getSize(); i++) {
+                w.set(i, seed.get(i % seed.getSize()) * 31 + i);
+            }
+            FloatArray scales = FloatArray.fromArray(values(experts * n * (k / gs), 0.001f, 0.02f, 262 + n));
+            FloatArray biases = FloatArray.fromArray(values(experts * n * (k / gs), -0.1f, 0.1f, 263 + n));
+            IntArray lhs = IntArray.fromElements(0, 1, 2, 3, 4, 5);
+            IntArray rhs = IntArray.fromElements(3, 0, 1, 1, 2, 3);
+            same("gatherQmm " + java.util.Arrays.toString(sh), new Object[] { x, w, scales, biases, lhs, rhs }, floatsOut(batches * m * n), (g, id, c, o) -> g.libraryTask(id,
+                    (x0, x1, x2, x3, x4, x5, x6, i7, i8, i9, i10, i11, i12, i13) -> tune(Mlx.gatherQmm(x0, x1, x2, x3, x4, x5, x6, i7, i8, i9, i10, i11, i12, i13), c), x, w, scales,
+                    biases, lhs, rhs, (FloatArray) o[0], batches, experts, m, k, n, gs, bits));
+        }
+    }
 }
