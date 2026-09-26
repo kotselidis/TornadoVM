@@ -39,9 +39,11 @@ import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 import uk.ac.manchester.tornado.mlx.Mlx;
+import uk.ac.manchester.tornado.mlx.MlxLinalg;
 import uk.ac.manchester.tornado.mlx.MlxLogic;
 import uk.ac.manchester.tornado.mlx.MlxMath;
 import uk.ac.manchester.tornado.mlx.MlxCreate;
+import uk.ac.manchester.tornado.mlx.MlxFft;
 import uk.ac.manchester.tornado.mlx.MlxIndex;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
 import uk.ac.manchester.tornado.mlx.MlxProducts;
@@ -1013,5 +1015,41 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
             same("categoricalShape seed=" + seed, new Object[] { logits }, () -> new TornadoNativeArray[] { new IntArray(16 * 3) }, (g, id, c, o) -> g.libraryTask(id,
                     (a, b, r, k, m, sd) -> tune(MlxRandom.categoricalShape(a, b, r, k, m, sd), c), logits, (IntArray) o[0], 16, 1000, 3, seed));
         }
+    }
+
+    // ---------------------------------------------------------------- fft helpers, norms, cross
+
+    @Test
+    public void testSmallComposites() throws TornadoExecutionPlanException {
+        int rows = 13;
+        for (int cols : new int[] { 64, 101 }) {
+            FloatArray x = FloatArray.fromArray(values(rows * cols, -3, 3, 210 + cols));
+            same("fftshift " + cols, new Object[] { x }, floatsOut(rows * cols),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxFft.fftshift(a, b, rows, cols), c), x, (FloatArray) o[0]));
+            same("ifftshift " + cols, new Object[] { x }, floatsOut(rows * cols),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxFft.ifftshift(a, b, rows, cols), c), x, (FloatArray) o[0]));
+        }
+        Object[] none = {};
+        for (int n : new int[] { 1, 8, 1001 }) {
+            same("fftfreq " + n, none, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, m, d) -> tune(MlxFft.fftfreq(a, m, d), c), (FloatArray) o[0], n, 0.37f));
+            same("rfftfreq " + n, none, floatsOut(n / 2 + 1), (g, id, c, o) -> g.libraryTask(id, (a, m, d) -> tune(MlxFft.rfftfreq(a, m, d), c), (FloatArray) o[0], n, 0.37f));
+        }
+        int r = 7;
+        int c = 10000;
+        FloatArray mat = FloatArray.fromArray(values(r * c, -3, 3, 212));
+        for (int i = 0; i < r * c; i += 11) {
+            mat.set(i, 0.0f);
+        }
+        for (float ord : new float[] { 0, 1, 2, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, 3.5f }) {
+            same("norm ord=" + ord, new Object[] { mat }, floatsOut(r), (g, id, cc, o) -> g.libraryTask(id, (a, b, q, w, e) -> tune(MlxLinalg.norm(a, b, q, w, e), cc), mat,
+                    (FloatArray) o[0], r, c, ord));
+        }
+        same("l2Norm", new Object[] { mat }, floatsOut(r), (g, id, cc, o) -> g.libraryTask(id, (a, b) -> tune(MlxLinalg.l2Norm(a, b, r, c), cc), mat, (FloatArray) o[0]));
+        FloatArray batch = FloatArray.fromArray(values(6 * 40 * 50, -3, 3, 213));
+        same("frobeniusNorm", new Object[] { batch }, floatsOut(6),
+                (g, id, cc, o) -> g.libraryTask(id, (a, b) -> tune(MlxLinalg.frobeniusNorm(a, b, 6, 40, 50), cc), batch, (FloatArray) o[0]));
+        FloatArray va = FloatArray.fromArray(values(3 * 5001, -3, 3, 214));
+        FloatArray vb = FloatArray.fromArray(values(3 * 5001, -3, 3, 215));
+        same("cross", new Object[] { va, vb }, floatsOut(3 * 5001), (g, id, cc, o) -> g.libraryTask(id, (a, b, q) -> tune(MlxLinalg.cross(a, b, q, 5001), cc), va, vb, (FloatArray) o[0]));
     }
 }

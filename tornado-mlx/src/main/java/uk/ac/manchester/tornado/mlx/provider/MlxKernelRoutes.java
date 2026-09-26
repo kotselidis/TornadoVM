@@ -330,6 +330,7 @@ final class MlxKernelRoutes {
         registerScanRoutes();
         registerSortRoutes();
         registerRandomRoutes();
+        registerSmallCompositeRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -2371,6 +2372,122 @@ final class MlxKernelRoutes {
                 argReduceInto(p, "argmax", F32, rows, classes, samples, noisy, v.ref(1));
             }
         };
+    }
+
+    // ---------------------------------------------------------------- fft helpers, norms, cross
+
+    /** sqrt(sum(square(x))) over contiguous rows. */
+    private static void l2Rows(Program p, int t, long rows, long len, Ref x, Ref out, Ref scratch) {
+        p.unary("Square", t, t, (int) (rows * len), x, scratch);
+        rowReduce(p, "sum", t, rows, len, scratch, out);
+        p.unary("Sqrt", t, t, (int) rows, out, out);
+    }
+
+    private static void registerSmallCompositeRoutes() {
+        // fftshift / ifftshift along axis 1 of x[r, c]: roll by c / 2 or -(c / 2).
+        ROUTES.put("fft_fftshift", v -> v.args() < 4 ? null : roll2(v, v.intArg(2), v.intArg(3), 0, v.intArg(3) / 2));
+        ROUTES.put("fft_ifftshift", v -> v.args() < 4 ? null : roll2(v, v.intArg(2), v.intArg(3), 0, -(v.intArg(3) / 2)));
+        // fftfreq(n, d): [arange(0, (n + 1) / 2), arange(-(n / 2), 0)] * float(1 / (n * d)).
+        ROUTES.put("fft_fftfreq", v -> {
+            if (v.args() < 3 || !v.isArray(0) || v.dtype(0) != F32 || v.size(0) != v.intArg(1) || v.intArg(1) <= 0) {
+                return null;
+            }
+            int n = v.intArg(1);
+            float scale = (float) (1.0 / ((double) n * v.floatArg(2)));
+            int positive = (n + 1) / 2;
+            return p -> {
+                p.arange(F32, positive, 0, 1, v.ref(0));
+                if (n / 2 > 0) {
+                    p.arange(F32, n / 2, -(n / 2), 1, v.ref(0).plus(positive, F32));
+                }
+                p.binaryScalarRight("Multiply", F32, n, v.ref(0), scale, v.ref(0));
+            };
+        });
+        ROUTES.put("fft_rfftfreq", v -> {
+            if (v.args() < 3 || !v.isArray(0) || v.dtype(0) != F32 || v.intArg(1) <= 0 || v.size(0) != v.intArg(1) / 2 + 1) {
+                return null;
+            }
+            int count = v.size(0);
+            float scale = (float) (1.0 / ((double) v.intArg(1) * v.floatArg(2)));
+            return p -> {
+                p.arange(F32, count, 0, 1, v.ref(0));
+                p.binaryScalarRight("Multiply", F32, count, v.ref(0), scale, v.ref(0));
+            };
+        });
+        // norm(x[r, c], ord) over the last axis.
+        ROUTES.put("linalg_norm", v -> {
+            if (v.args() < 5 || !v.isArray(0) || v.dtype(0) != F32 || !v.is(1, F32, v.intArg(2))) {
+                return null;
+            }
+            long r = v.intArg(2);
+            long c = v.intArg(3);
+            double ord = v.floatArg(4);
+            if (r * c != v.size(0)) {
+                return null;
+            }
+            int n = v.size(0);
+            return p -> {
+                Ref tmp = p.scratch(4L * n);
+                if (ord == 0.0) {
+                    Ref counts = p.scratch(4 * r);
+                    p.binaryScalarRight("NotEqual", F32, n, v.ref(0), 0.0, tmp);
+                    rowReduce(p, "sum", MLX_BOOL, r, c, tmp, counts);
+                    p.copy(MLX_INT32, F32, (int) r, counts, v.ref(1));
+                } else if (ord == 2.0) {
+                    l2Rows(p, F32, r, c, v.ref(0), v.ref(1), tmp);
+                } else {
+                    p.unary("Abs", F32, F32, n, v.ref(0), tmp);
+                    if (ord == 1.0) {
+                        rowReduce(p, "sum", F32, r, c, tmp, v.ref(1));
+                    } else if (ord == Double.POSITIVE_INFINITY) {
+                        rowReduce(p, "max", F32, r, c, tmp, v.ref(1));
+                    } else if (ord == Double.NEGATIVE_INFINITY) {
+                        rowReduce(p, "min", F32, r, c, tmp, v.ref(1));
+                    } else {
+                        p.binaryScalarRight("Power", F32, n, tmp, ord, tmp);
+                        rowReduce(p, "sum", F32, r, c, tmp, v.ref(1));
+                        p.binaryScalarRight("Power", F32, (int) r, v.ref(1), 1.0 / ord, v.ref(1));
+                    }
+                }
+            };
+        });
+        // l2 norm over the last axis of x[r, c]; Frobenius norm of each matrix of x[b, r, c].
+        ROUTES.put("linalg_norm_l2", v -> {
+            if (v.args() < 4 || !v.isArray(0) || !FLOATS.contains(v.dtype(0)) || !v.is(1, v.dtype(0), v.intArg(2)) || (long) v.intArg(2) * v.intArg(3) != v.size(0)) {
+                return null;
+            }
+            int t = v.dtype(0);
+            return p -> l2Rows(p, t, v.intArg(2), v.intArg(3), v.ref(0), v.ref(1), p.scratch((long) v.size(0) * MlxMetalKernels.itemSize(t)));
+        });
+        ROUTES.put("linalg_norm_matrix", v -> {
+            if (v.args() < 5 || !v.isArray(0) || !FLOATS.contains(v.dtype(0)) || !v.is(1, v.dtype(0), v.intArg(2))
+                    || (long) v.intArg(2) * v.intArg(3) * v.intArg(4) != v.size(0)) {
+                return null;
+            }
+            int t = v.dtype(0);
+            return p -> l2Rows(p, t, v.intArg(2), (long) v.intArg(3) * v.intArg(4), v.ref(0), v.ref(1), p.scratch((long) v.size(0) * MlxMetalKernels.itemSize(t)));
+        });
+        // cross(a[count, 3], b[count, 3]) along the last axis, component by component as MLX splits and concatenates.
+        ROUTES.put("linalg_cross", v -> {
+            int t = floatType(v, 0, 1, 2);
+            if (t < 0 || v.args() < 4 || v.size(0) != 3 * v.intArg(3) || v.size(1) != v.size(0) || v.size(2) != v.size(0)) {
+                return null;
+            }
+            int count = v.intArg(3);
+            return p -> {
+                int item = MlxMetalKernels.itemSize(t);
+                Ref left = p.scratch((long) count * item);
+                Ref right = p.scratch((long) count * item);
+                int[][] terms = { { 1, 2, 2, 1 }, { 2, 0, 0, 2 }, { 0, 1, 1, 0 } };
+                for (int component = 0; component < 3; component++) {
+                    int[] q = terms[component];
+                    p.generalBinary("Multiply", t, new int[] { count }, new long[] { 3 }, v.ref(0).plus(q[0], t), new long[] { 3 }, v.ref(1).plus(q[1], t), left);
+                    p.generalBinary("Multiply", t, new int[] { count }, new long[] { 3 }, v.ref(0).plus(q[2], t), new long[] { 3 }, v.ref(1).plus(q[3], t), right);
+                    p.binary("Subtract", t, count, left, right, left);
+                    p.generalCopy(t, t, new int[] { count }, new long[] { 1 }, left, new long[] { 3 }, v.ref(2).plus(component, t), null);
+                }
+            };
+        });
     }
 
     private static Encoder scaled(View v, double factor) {
