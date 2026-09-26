@@ -327,6 +327,7 @@ final class MlxKernelRoutes {
         registerReductionRoutes();
         registerCompositeRoutes();
         registerMatmulRoutes();
+        registerScanRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -1853,6 +1854,53 @@ final class MlxKernelRoutes {
     private static Encoder matmulRoute(View v, boolean transposed) {
         String architecture = v.architecture();
         return architecture == null ? null : matmul(v, 0, 1, 2, v.intArg(3), v.intArg(4), v.intArg(5), transposed, architecture);
+    }
+
+    // ---------------------------------------------------------------- scans
+
+    /** cumsum, cumprod, cummax, cummin, logcumsumexp over axis 1 of x viewed as [outer, len, inner]. */
+    private static Encoder scan(View v, String op) {
+        int t = pairType(v, 0, 1);
+        if (t < 0 || v.args() < 7 || !NUMBERS.contains(t) || (op.equals("logaddexp") && !FLOATS.contains(t))) {
+            return null;
+        }
+        long outer = v.intArg(2);
+        long len = v.intArg(3);
+        long inner = v.intArg(4);
+        boolean reverse = v.boolArg(5);
+        boolean inclusive = v.boolArg(6);
+        if (outer * len * inner != v.size(0) || v.size(1) != v.size(0) || len <= 0) {
+            return null;
+        }
+        boolean contiguous = inner == 1;
+        String type = MlxMetalKernels.typeName(t);
+        String name = (contiguous ? "contig_" : "strided_") + "scan_" + (reverse ? "reverse_" : "") + (inclusive ? "inclusive_" : "exclusive_") + op + "_" + type + "_" + type;
+        int nReads = MlxMetalKernels.itemSize(t) <= 4 ? 4 : 2;
+        return p -> {
+            Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1)).i64(2, len);
+            if (contiguous) {
+                long perSimd = nReads * 32L;
+                long group = k.maxThreads;
+                if (len <= nReads * 1024L) {
+                    group = (len + perSimd - 1) / perSimd * 32;
+                } else if (len <= nReads * 2048L) {
+                    group = (len / 2 + perSimd - 1) / perSimd * 32;
+                }
+                group = Math.min(group, k.maxThreads);
+                k.threads(group, group, outer, 1, 1, 1);
+            } else {
+                long blocks = (inner + 31) / 32;
+                long group = (32 / nReads) * 32L;
+                k.i64(3, inner).i64(4, blocks).threads(group, group, outer * blocks, 1, 1, 1);
+            }
+        };
+    }
+
+    private static void registerScanRoutes() {
+        String[][] scans = { { "cumsum", "sum" }, { "cumprod", "prod" }, { "cummax", "max" }, { "cummin", "min" }, { "logcumsumexp", "logaddexp" } };
+        for (String[] sc : scans) {
+            ROUTES.put(sc[0], v -> scan(v, sc[1]));
+        }
     }
 
     private static Encoder scaled(View v, double factor) {

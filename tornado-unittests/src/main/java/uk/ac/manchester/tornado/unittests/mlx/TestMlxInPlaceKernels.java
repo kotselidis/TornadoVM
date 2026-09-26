@@ -868,4 +868,34 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     (x1, x2, x3, x4) -> tune(Mlx.scaledDotProductAttention(x1, x2, x3, x4, b, hq, hkv, lq, lk, d, scale, causal), c), qh, kh, vh, (HalfFloatArray) o[0]));
         }
     }
+
+    // ---------------------------------------------------------------- scans
+
+    @Test
+    public void testScans() throws TornadoExecutionPlanException {
+        // {outer, len, inner}: short and long rows, a single long row, and strided scans.
+        int[][] shapes = { { 64, 100, 1 }, { 33, 4096, 1 }, { 8, 7000, 1 }, { 1, 100000, 1 }, { 16, 300, 64 }, { 4, 50, 7 } };
+        String[] names = { "cumsum", "cumprod", "cummax", "cummin", "logcumsumexp" };
+        for (int[] sh : shapes) {
+            int n = sh[0] * sh[1] * sh[2];
+            FloatArray x = FloatArray.fromArray(values(n, 0.99f, 1.01f, 160 + n));
+            for (String name : names) {
+                for (boolean reverse : new boolean[] { false, true }) {
+                    boolean inclusive = !reverse || sh[1] % 2 == 0;
+                    same(name + " " + java.util.Arrays.toString(sh) + " reverse=" + reverse + " inclusive=" + inclusive, new Object[] { x }, floatsOut(n), (g, id, c, o) -> g
+                            .libraryTask(id, (a, b) -> tune(scanTask(name, a, b, sh[0], sh[1], sh[2], reverse, inclusive), c), x, (FloatArray) o[0]));
+                }
+            }
+        }
+    }
+
+    private static LibraryTaskDescriptor scanTask(String name, FloatArray a, FloatArray b, int outer, int len, int inner, boolean reverse, boolean inclusive) {
+        return switch (name) {
+            case "cumsum" -> MlxReduce.cumsum(a, b, outer, len, inner, reverse, inclusive);
+            case "cumprod" -> MlxReduce.cumprod(a, b, outer, len, inner, reverse, inclusive);
+            case "cummax" -> MlxReduce.cummax(a, b, outer, len, inner, reverse, inclusive);
+            case "cummin" -> MlxReduce.cummin(a, b, outer, len, inner, reverse, inclusive);
+            default -> MlxReduce.logcumsumexp(a, b, outer, len, inner, reverse, inclusive);
+        };
+    }
 }
