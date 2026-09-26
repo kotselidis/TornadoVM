@@ -802,7 +802,8 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
     @Test
     public void testQuantized() throws TornadoExecutionPlanException {
         // {m, k, n, group, bits}: qmv_fast, qmv (unaligned k), qmv_quad (k = 128), a small batch, 8-bit.
-        int[][] shapes = { { 1, 4096, 4096, 64, 4 }, { 1, 576, 1000, 64, 4 }, { 1, 128, 512, 64, 4 }, { 5, 2048, 1024, 32, 4 }, { 1, 2048, 2048, 64, 8 } };
+        int[][] shapes = { { 1, 4096, 4096, 64, 4 }, { 1, 576, 1000, 64, 4 }, { 1, 128, 512, 64, 4 }, { 5, 2048, 1024, 32, 4 }, { 1, 2048, 2048, 64, 8 },
+                { 128, 2048, 2048, 64, 4 }, { 64, 4096, 1000, 64, 4 }, { 512, 1024, 2048, 64, 4 }, { 32, 4096, 128, 32, 8 } };
         for (int[] sh : shapes) {
             int m = sh[0];
             int k = sh[1];

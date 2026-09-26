@@ -1930,14 +1930,17 @@ final class MlxKernelRoutes {
             return null;
         }
         int gen = MlxMetalKernels.architectureGeneration(architecture);
-        if (m >= qmvBatchLimit(k, n, architecture) || (gen >= 15 && m >= 2)) {
-            return null;
-        }
         Ref w = v.ref(1);
         Ref scales = v.ref(2);
         Ref biases = v.ref(3);
         Ref x = v.ref(0);
         Ref out = v.ref(4);
+        if (m >= qmvBatchLimit(k, n, architecture)) {
+            return gen >= 17 ? null : quantizedPrefill(t, type, m, k, n, gs, bits, w, scales, biases, x, out);
+        }
+        if (gen >= 15 && m >= 2) {
+            return null;
+        }
         if (k == 64 || k == 128) {
             String kernel = "affine_qmv_quad_" + type + "_gs_" + gs + "_b_" + bits + "_d_" + k + "_batch_0";
             return p -> p.launch(kernel).buffer(0, w).buffer(1, scales).buffer(2, biases).buffer(3, x).buffer(4, out).i32(5, k).i32(6, n).threadgroups(m, (n + 63) / 64, 1, 32, 1, 1);
@@ -1946,6 +1949,63 @@ final class MlxKernelRoutes {
         boolean fast = n % 8 == 0 && k % alignment == 0;
         String kernel = "affine_qmv" + (fast ? "_fast_" : "_") + type + "_gs_" + gs + "_b_" + bits + "_batch_0";
         return p -> p.launch(kernel).buffer(0, w).buffer(1, scales).buffer(2, biases).buffer(3, x).buffer(4, out).i32(5, k).i32(6, n).threadgroups(m, (n + 7) / 8, 1, 32, 2, 1);
+    }
+
+    /**
+     * The prefill quantized matmul MLX runs for transposed weights at batch 1: qmm_t_splitk and a column
+     * reduction of the partial products over the split axis, or qmm_t when the split comes to one.
+     */
+    private static Encoder quantizedPrefill(int t, String type, int m, int k, int n, int gs, int bits, Ref w, Ref scales, Ref biases, Ref x, Ref out) {
+        int nTiles = (n + 31) / 32;
+        int mTiles = (m + 31) / 32;
+        int split = Math.max(1, 512 / (nTiles * mTiles));
+        int kAlign = Math.max(gs, 32);
+        split = Math.min(split, k / kAlign);
+        while (split > 1 && k % (split * kAlign) != 0) {
+            split--;
+        }
+        String aligned = n % 32 == 0 ? "_alN_true" : "_alN_false";
+        if (split <= 1) {
+            String kernel = "affine_qmm_t_" + type + "_gs_" + gs + "_b_" + bits + aligned + "_batch_0";
+            return p -> p.launch(kernel).buffer(0, w).buffer(1, scales).buffer(2, biases).buffer(3, x).buffer(4, out).i32(5, k).i32(6, n).i32(7, m)
+                    .threadgroups(nTiles, mTiles, 1, 32, 2, 2);
+        }
+        long stride = (long) m * n;
+        if (split > 256 || (stride < 32 && split >= 1024)) {
+            // MLX would use its 2-pass or long-column reduction here, which are not reproduced.
+            return null;
+        }
+        int finalSplit = split;
+        String kernel = "affine_qmm_t_splitk_" + type + "_gs_" + gs + "_b_" + bits + aligned;
+        return p -> {
+            Ref partial = p.scratch(finalSplit * stride * MlxMetalKernels.itemSize(t));
+            p.launch(kernel).buffer(0, w).buffer(1, scales).buffer(2, biases).buffer(3, x).buffer(4, partial).i32(5, k).i32(6, n).i32(7, m).i32(8, k / finalSplit)
+                    .i32(9, (int) stride).threadgroups(nTiles, mTiles, finalSplit, 32, 2, 2);
+            columnReduce(p, "sum", t, finalSplit, stride, partial, out);
+        };
+    }
+
+    /**
+     * MLX's strided (column) reduce of a contiguous [size, stride] array over axis 0 into [stride]:
+     * col_reduce_small below 32 rows, col_reduce_looped otherwise (the shapes split-K produces).
+     */
+    private static void columnReduce(Program p, String op, int t, long size, long stride, Ref in, Ref out) {
+        String type = MlxMetalKernels.typeName(reduceTypes(t, op)[0]);
+        Program.Launch k;
+        if (size < 32) {
+            k = p.launch("col_reduce_small_1_reduce_" + op + type);
+        } else {
+            k = p.launch("col_reduce_looped_1_32_32_reduce_" + op + type);
+        }
+        k.buffer(0, in).buffer(1, out).i64(2, size).i64(3, stride).i32(4, 0).i64(5, 0).i32(6, 0).i32(7, (int) size).i64(8, stride).i32(9, 1).i64(10, 1);
+        if (size < 32) {
+            long blocks = (stride + 3) / 4;
+            long gx = Math.min(blocks, 32);
+            long gy = Math.min(8, Math.min(k.maxThreads / gx, size));
+            k.threadgroups((blocks + gx - 1) / gx, 1, 1, gx, gy, 1);
+        } else {
+            k.threads(256 * ((stride + 31) / 32), 256, 1, 1, 1, 1);
+        }
     }
 
     /**
