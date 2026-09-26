@@ -324,6 +324,28 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             entry("real", c -> complexPart(c, "mlx_real", MlxC::mlx_real, false)), //
             entry("imag", c -> complexPart(c, "mlx_imag", MlxC::mlx_imag, false)), //
             entry("conjugate", c -> complexPart(c, "mlx_conjugate", MlxC::mlx_conjugate, true)), //
+            // Construction and matrix structure (MlxCreate).
+            entry("arange", MlxLibraryProvider::arange), //
+            entry("linspace", c -> c.store(c.op("mlx_linspace", res -> MlxC.mlx_linspace(res, c.floatArg(1), c.floatArg(2), c.length(0), c.dtype(0), c.stream())), 0)), //
+            entry("eye", c -> c.store(c.op("mlx_eye", res -> MlxC.mlx_eye(res, c.intArg(1), c.intArg(2), c.intArg(3), c.dtype(0), c.stream())), 0)), //
+            entry("identity", c -> c.store(c.op("mlx_identity", res -> MlxC.mlx_identity(res, c.intArg(1), c.dtype(0), c.stream())), 0)), //
+            entry("tri", c -> c.store(c.op("mlx_tri", res -> MlxC.mlx_tri(res, c.intArg(1), c.intArg(2), c.intArg(3), c.dtype(0), c.stream())), 0)), //
+            entry("full", c -> c.store(c.op("mlx_full", res -> MlxC.mlx_full(res, c.ints(c.length(0)), 1, c.scalar(c.floatArg(1)), c.dtype(0), c.stream())), 0)), //
+            entry("full_like", c -> c.store(c.op("mlx_full_like", res -> MlxC.mlx_full_like(res, c.input(0, c.length(0)), c.scalar(c.floatArg(2)), c.dtype(1), c.stream())), 1)), //
+            entry("zeros", c -> c.store(c.op("mlx_zeros", res -> MlxC.mlx_zeros(res, c.ints(c.length(0)), 1, c.dtype(0), c.stream())), 0)), //
+            entry("zeros_like", c -> c.store(c.op("mlx_zeros_like", res -> MlxC.mlx_zeros_like(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("ones", c -> c.store(c.op("mlx_ones", res -> MlxC.mlx_ones(res, c.ints(c.length(0)), 1, c.dtype(0), c.stream())), 0)), //
+            entry("ones_like", c -> c.store(c.op("mlx_ones_like", res -> MlxC.mlx_ones_like(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("bartlett", c -> c.store(c.op("mlx_bartlett", res -> MlxC.mlx_bartlett(res, c.length(0), c.stream())), 0)), //
+            entry("blackman", c -> c.store(c.op("mlx_blackman", res -> MlxC.mlx_blackman(res, c.length(0), c.stream())), 0)), //
+            entry("hamming", c -> c.store(c.op("mlx_hamming", res -> MlxC.mlx_hamming(res, c.length(0), c.stream())), 0)), //
+            entry("hanning", c -> c.store(c.op("mlx_hanning", res -> MlxC.mlx_hanning(res, c.length(0), c.stream())), 0)), //
+            entry("meshgrid", MlxLibraryProvider::meshgrid), //
+            entry("diag", c -> c.store(c.op("mlx_diag", res -> MlxC.mlx_diag(res, c.input(0, c.length(0)), c.intArg(2), c.stream())), 1)), //
+            entry("diagonal", c -> c.store(c.op("mlx_diagonal", res -> MlxC.mlx_diagonal(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.stream())), 1)), //
+            entry("trace", c -> c.store(c.op("mlx_trace", res -> MlxC.mlx_trace(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.dtype(1), c.stream())), 1)), //
+            entry("tril", c -> c.store(c.op("mlx_tril", res -> MlxC.mlx_tril(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
+            entry("triu", c -> c.store(c.op("mlx_triu", res -> MlxC.mlx_triu(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -490,6 +512,23 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // arange(out, start, stop, step): MLX must generate exactly out.length values
+    private static void arange(MlxCall c) {
+        double start = c.floatArg(1);
+        double stop = c.floatArg(2);
+        double step = c.floatArg(3);
+        c.store(c.op("mlx_arange", res -> MlxC.mlx_arange(res, start, stop, step, c.dtype(0), c.stream())), 0);
+    }
+
+    // meshgrid(x, y, outX, outY, ij)
+    private static void meshgrid(MlxCall c) {
+        MemorySegment xy = c.vector(c.input(0, c.length(0)), c.input(1, c.length(1)));
+        MemorySegment indexing = c.cString(c.boolArg(4) ? "ij" : "xy");
+        MemorySegment[] grids = c.vectorOp("mlx_meshgrid", 2, vec -> MlxC.mlx_meshgrid(vec, xy, false, indexing, c.stream()));
+        c.store(grids[0], 2);
+        c.store(grids[1], 3);
+    }
 
     // isclose(a, b, out, rtol, atol, equalNan)
     private static void isclose(MlxCall c) {
