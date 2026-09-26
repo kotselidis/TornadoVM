@@ -3200,7 +3200,81 @@ final class MlxKernelRoutes {
         if (idilOne && strideOne && outLarge && !specialized && outAligned && cp.ws()[0] * cp.ws()[1] >= 9) {
             return null;
         }
-        return idilOne && specialized ? implicitGemmConv2(v, t, cp) : null;
+        if (idilOne && specialized) {
+            return implicitGemmConv2(v, t, cp);
+        }
+        return (cp.c() % 16 == 0 && cp.o() % 16 == 0) || outLarge ? implicitGemmConv2General(v, t, cp) : null;
+    }
+
+    private static int gcd(int a, int b) {
+        return b == 0 ? a : gcd(b, a % b);
+    }
+
+    private static int lcm(int a, int b) {
+        return a / gcd(a, b) * b;
+    }
+
+    /** MLX's implicit_gemm_conv_2D_general_gpu (input dilation, as transposed convolutions produce), groups of one. */
+    private static Encoder implicitGemmConv2General(View v, int t, Conv2 cp) {
+        long implicitM = (long) cp.n() * cp.os()[0] * cp.os()[1];
+        int implicitN = cp.o();
+        int implicitK = cp.ws()[0] * cp.ws()[1] * cp.c();
+        int wgtJumpH = lcm(cp.idil()[0], cp.kdil()[0]) / cp.kdil()[0];
+        int wgtJumpW = lcm(cp.idil()[1], cp.kdil()[1]) / cp.kdil()[1];
+        int outJumpH = lcm(cp.idil()[0], cp.str()[0]) / cp.str()[0];
+        int outJumpW = lcm(cp.idil()[1], cp.str()[1]) / cp.str()[1];
+        int adjOutH = (cp.os()[0] + outJumpH - 1) / outJumpH;
+        int adjOutW = (cp.os()[1] + outJumpW - 1) / outJumpW;
+        int adjOutHw = adjOutH * adjOutW;
+        int adjM = cp.n() * adjOutHw;
+        int jumpH = cp.flip() ? -cp.kdil()[0] : cp.kdil()[0];
+        int jumpW = cp.flip() ? -cp.kdil()[1] : cp.kdil()[1];
+        int initH = cp.flip() ? (cp.ws()[0] - 1) * cp.kdil()[0] : 0;
+        int initW = cp.flip() ? (cp.ws()[1] - 1) * cp.kdil()[1] : 0;
+        int[] baseH = new int[2 * outJumpH];
+        for (int i = 0; i < outJumpH; i++) {
+            int ih = i * cp.str()[0] - cp.pad()[0] + initH;
+            int base = 0;
+            while (base < cp.ws()[0] && ih % cp.idil()[0] != 0) {
+                base++;
+                ih += jumpH;
+            }
+            baseH[2 * i] = base;
+            baseH[2 * i + 1] = ((cp.ws()[0] - base) + wgtJumpH - 1) / wgtJumpH;
+        }
+        int[] baseW = new int[2 * outJumpW];
+        for (int j = 0; j < outJumpW; j++) {
+            int iw = j * cp.str()[1] - cp.pad()[1] + initW;
+            int base = 0;
+            while (base < cp.ws()[1] && iw % cp.idil()[1] != 0) {
+                base++;
+                iw += jumpW;
+            }
+            baseW[2 * j] = base;
+            baseW[2 * j + 1] = ((cp.ws()[1] - base) + wgtJumpW - 1) / wgtJumpW;
+        }
+        int bm = adjM >= 8192 && cp.c() >= 64 ? 64 : 32;
+        int bn = (bm == 64 && implicitN >= 64) ? 64 : 32;
+        int bk = 16;
+        int tn = (implicitN + bn - 1) / bn;
+        int tm = (adjM + bm - 1) / bm;
+        boolean alignC = cp.c() % bk == 0;
+        int sign = cp.flip() ? -1 : 1;
+        int ijw = (int) (cp.inStrides()[2] * cp.kdil()[1]);
+        int ijh = (int) (cp.inStrides()[1] * cp.kdil()[0]);
+        String kernel = "implicit_gemm_conv_2d_general_" + MlxMetalKernels.typeName(t) + "_bm" + bm + "_bn" + bn + "_bk" + bk + "_wm2_wn2";
+        if (implicitM > Integer.MAX_VALUE || !v.hasKernel(kernel)) {
+            return null;
+        }
+        java.nio.ByteBuffer gemm = java.nio.ByteBuffer.allocate(40).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        gemm.putInt((int) implicitM).putInt(implicitN).putInt(implicitK).putInt((cp.c() + bk - 1) / bk).putInt(sign * ijw).putInt(sign * (ijh - (cp.ws()[1] - 1) * ijw))
+                .putInt(bk - sign * (cp.ws()[0] - 1) * ijh - sign * (cp.ws()[1] - 1) * ijw).putInt(tn).putInt(tm).putInt(0);
+        byte[] gemmBytes = gemm.array();
+        byte[] jumpBytes = MlxMetalKernels.intBytes(new int[] { wgtJumpH, wgtJumpW, outJumpH, outJumpW, adjOutH, adjOutW, adjOutHw, adjM });
+        byte[] convBytes = cp.bytes();
+        int phases = outJumpH * outJumpW;
+        return p -> p.launchIndexed(kernel, new int[] { 200 }, new boolean[] { alignC }).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).bytes(3, convBytes)
+                .bytes(4, gemmBytes).bytes(5, jumpBytes).bytes(6, MlxMetalKernels.intBytes(baseH)).bytes(7, MlxMetalKernels.intBytes(baseW)).threadgroups(tn, tm, phases, 32, 2, 2);
     }
 
     private static int convOut(int in, int k, int stride, int padLo, int padHi, int kdil, int idil) {
@@ -3248,6 +3322,29 @@ final class MlxKernelRoutes {
         // conv_general(..., stride, pad_lo, pad_hi, kernel_dil, input_dil, groups, flip) in two dimensions.
         ROUTES.put("conv2d", v -> v.args() < 14 ? null : conv2(v, v.intArg(10), v.intArg(11), v.intArg(11), v.intArg(12), 1, v.intArg(13), false));
         ROUTES.put("conv_general", v -> v.args() < 17 ? null : conv2(v, v.intArg(10), v.intArg(11), v.intArg(12), v.intArg(13), v.intArg(14), v.intArg(15), v.boolArg(16)));
+        // conv_transpose2d(x, w, out, N, H, W, C, O, KH, KW, stride, pad, dil, output_pad, groups): MLX's conv_transpose_general,
+        // a flipped convolution with unit stride, input dilation = stride and the padding it derives (square kernels).
+        ROUTES.put("conv_transpose2d", v -> {
+            if (v.args() < 15 || v.intArg(8) != v.intArg(9)) {
+                return null;
+            }
+            int k = v.intArg(8);
+            int stride = v.intArg(10);
+            int pad = v.intArg(11);
+            int dil = v.intArg(12);
+            int outPad = v.intArg(13);
+            int lo = 1 + dil * (k - 1) - pad - 1;
+            int hiH = transposedHighPad(v.intArg(4), k, stride, pad, dil, outPad);
+            int hiW = transposedHighPad(v.intArg(5), k, stride, pad, dil, outPad);
+            return hiH != hiW ? null : conv2(v, 1, lo, hiH, dil, stride, v.intArg(14), true);
+        });
+    }
+
+    /** padding_hi of MLX's conv_transpose_general for one spatial dimension. */
+    private static int transposedHighPad(int in, int k, int stride, int pad, int dil, int outPad) {
+        long convOut = (long) (in - 1) * stride - 2L * pad + (long) dil * (k - 1) + 1;
+        long outSize = 1 + (long) stride * (in - 1);
+        return (int) (convOut - outSize + pad + outPad);
     }
 
     private static Encoder conv2(View v, int stride, int padLo, int padHi, int kdil, int idil, int groups, boolean flip) {

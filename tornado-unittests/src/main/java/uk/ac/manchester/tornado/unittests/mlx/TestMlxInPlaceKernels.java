@@ -1234,4 +1234,28 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     (a, b, q, r, i4, i5, i6, i7) -> tune(MlxProducts.qqmm(a, b, q, r, i4, i5, i6, i7), c), x, w, scales, (FloatArray) o[0], m, k, n, 0));
         }
     }
+
+    @Test
+    public void testTransposedConvolutions() throws TornadoExecutionPlanException {
+        // {n, h, w, cin, cout, k, stride, pad, dil, outPad}: stride 2 (input dilation, implicit general) and stride 1 (flipped implicit GEMM).
+        int[][] shapes = { { 1, 16, 16, 16, 16, 4, 2, 1, 1, 0 }, { 2, 9, 11, 32, 32, 3, 2, 1, 1, 1 }, { 1, 8, 8, 32, 32, 3, 1, 1, 1, 0 } };
+        for (int[] q : shapes) {
+            int oh = (q[1] - 1) * q[6] - 2 * q[7] + q[8] * (q[5] - 1) + q[9] + 1;
+            int ow = (q[2] - 1) * q[6] - 2 * q[7] + q[8] * (q[5] - 1) + q[9] + 1;
+            FloatArray x = FloatArray.fromArray(values(q[0] * q[1] * q[2] * q[3], -1, 1, 280 + q[1]));
+            FloatArray w = FloatArray.fromArray(values(q[4] * q[5] * q[5] * q[3], -1, 1, 281 + q[4]));
+            same("convTranspose2d " + java.util.Arrays.toString(q), new Object[] { x, w }, floatsOut(q[0] * oh * ow * q[4]), (g, id, c, o) -> g.libraryTask(id,
+                    (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14) -> tune(MlxConv.convTranspose2d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14), c), x,
+                    w, (FloatArray) o[0], q[0], q[1], q[2], q[3], q[4], q[5], q[5], q[6], q[7], q[8], q[9], 1));
+        }
+        int h = 10;
+        int w = 12;
+        int oh = convLength(h, 3, 1, 2, 2, 1, 3);
+        int ow = convLength(w, 3, 1, 2, 2, 1, 3);
+        FloatArray x = FloatArray.fromArray(values(h * w * 16, -1, 1, 282));
+        FloatArray wt = FloatArray.fromArray(values(32 * 3 * 3 * 16, -1, 1, 283));
+        same("convGeneral2d input dilation", new Object[] { x, wt }, floatsOut(oh * ow * 32), (g, id, c, o) -> g.libraryTask(id,
+                (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16) -> tune(MlxConv.convGeneral2d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14,
+                        i15, i16), c), x, wt, (FloatArray) o[0], 1, h, w, 16, 32, 3, 3, 1, 2, 2, 1, 3, 1, false));
+    }
 }
