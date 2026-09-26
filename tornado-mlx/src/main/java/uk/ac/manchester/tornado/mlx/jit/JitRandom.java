@@ -35,6 +35,9 @@ public final class JitRandom {
     private static final float TWO_PI = 6.283185307179586f;
     private static final float SQRT2 = 1.4142135623730951f;
 
+    /** Threads per threadgroup of {@link #categorical}. */
+    public static final int THREADS = 256;
+
     private JitRandom() {
     }
 
@@ -197,24 +200,107 @@ public final class JitRandom {
 
     /**
      * Samples from the softmax of each row of logits [rows, classes] by the Gumbel-max trick; out
-     * [samples, rows]. One thread per sample.
+     * [samples, rows]. One threadgroup of {@link #THREADS} threads per sample: each thread keeps the
+     * best perturbed logit over a strided subset of the classes, then a tree reduction picks the
+     * group's maximum (ties to the lower class).
      */
     @JitBaseline({ "mlx_random_categorical", "mlx_random_categorical_shape", "mlx_random_categorical_num_samples" })
     public static void categorical(KernelContext ctx, FloatArray logits, IntArray out, int rows, int classes, int samples, int seed) {
-        int t = ctx.globalIdx;
-        if (t < samples * rows) {
-            int row = t % rows;
-            float best = -Float.MAX_VALUE;
-            int bestClass = 0;
-            for (int c = 0; c < classes; c++) {
-                float g = -TornadoMath.log(-TornadoMath.log(openUnit(threefry(seed, t, c))));
-                float v = logits.get(row * classes + c) + g;
-                if (v > best) {
-                    best = v;
-                    bestClass = c;
+        float[] bestValue = ctx.allocateFloatLocalArray(THREADS);
+        int[] bestClass = ctx.allocateIntLocalArray(THREADS);
+        int t = ctx.groupIdx;
+        int tid = ctx.localIdx;
+        int base = (t % rows) * classes;
+        float best = -Float.MAX_VALUE;
+        int arg = classes;
+        for (int c = tid; c < classes; c += THREADS) {
+            float v = logits.get(base + c) - TornadoMath.log(-TornadoMath.log(openUnit(threefry(seed, t, c))));
+            if (v > best) {
+                best = v;
+                arg = c;
+            }
+        }
+        bestValue[tid] = best;
+        bestClass[tid] = arg;
+        ctx.localBarrier();
+        for (int stride = THREADS / 2; stride > 0; stride >>= 1) {
+            if (tid < stride) {
+                float other = bestValue[tid + stride];
+                int otherClass = bestClass[tid + stride];
+                if (other > bestValue[tid] || (other == bestValue[tid] && otherClass < bestClass[tid])) {
+                    bestValue[tid] = other;
+                    bestClass[tid] = otherClass;
                 }
             }
-            out.set(t, bestClass);
+            ctx.localBarrier();
+        }
+        if (tid == 0) {
+            out.set(t, bestClass[0] < classes ? bestClass[0] : 0);
+        }
+    }
+
+    /**
+     * The first pass of {@link #categorical} for few samples over wide rows: the row of each sample is
+     * split into {@code chunks} contiguous slices, one threadgroup per slice, and each group writes its
+     * best perturbed logit and class to {@code partialValue} and {@code partialClass} [samples,
+     * chunks]. {@link #categoricalMerge} then picks each sample's maximum. The draws are the same as
+     * {@link #categorical}'s.
+     */
+    @JitBaseline({ "mlx_random_categorical", "mlx_random_categorical_shape", "mlx_random_categorical_num_samples" })
+    public static void categoricalChunked(KernelContext ctx, FloatArray logits, FloatArray partialValue, IntArray partialClass, int rows, int classes, int chunks, int seed) {
+        float[] bestValue = ctx.allocateFloatLocalArray(THREADS);
+        int[] bestClass = ctx.allocateIntLocalArray(THREADS);
+        int group = ctx.groupIdx;
+        int t = group / chunks;
+        int tid = ctx.localIdx;
+        int base = (t % rows) * classes;
+        int len = (classes + chunks - 1) / chunks;
+        int start = (group % chunks) * len;
+        int end = TornadoMath.min(start + len, classes);
+        float best = -Float.MAX_VALUE;
+        int arg = classes;
+        for (int c = start + tid; c < end; c += THREADS) {
+            float v = logits.get(base + c) - TornadoMath.log(-TornadoMath.log(openUnit(threefry(seed, t, c))));
+            if (v > best) {
+                best = v;
+                arg = c;
+            }
+        }
+        bestValue[tid] = best;
+        bestClass[tid] = arg;
+        ctx.localBarrier();
+        for (int stride = THREADS / 2; stride > 0; stride >>= 1) {
+            if (tid < stride) {
+                float other = bestValue[tid + stride];
+                int otherClass = bestClass[tid + stride];
+                if (other > bestValue[tid] || (other == bestValue[tid] && otherClass < bestClass[tid])) {
+                    bestValue[tid] = other;
+                    bestClass[tid] = otherClass;
+                }
+            }
+            ctx.localBarrier();
+        }
+        if (tid == 0) {
+            partialValue.set(group, bestValue[0]);
+            partialClass.set(group, bestClass[0]);
+        }
+    }
+
+    /** The second pass of {@link #categoricalChunked}: one thread per sample; chunks are in class order, so the first maximum wins ties. */
+    @JitBaseline({ "mlx_random_categorical", "mlx_random_categorical_shape", "mlx_random_categorical_num_samples" })
+    public static void categoricalMerge(KernelContext ctx, FloatArray partialValue, IntArray partialClass, IntArray out, int count, int chunks, int classes) {
+        int t = ctx.globalIdx;
+        if (t < count) {
+            float best = -Float.MAX_VALUE;
+            int arg = classes;
+            for (int k = 0; k < chunks; k++) {
+                float v = partialValue.get(t * chunks + k);
+                if (v > best) {
+                    best = v;
+                    arg = partialClass.get(t * chunks + k);
+                }
+            }
+            out.set(t, arg < classes ? arg : 0);
         }
     }
 

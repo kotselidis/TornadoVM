@@ -396,12 +396,12 @@ random,normalBroadcast,16777216,large,f32,JitRandom#normal,10179.3,9940.2,11252.
 random,truncatedNormal,16777216,large,f32,JitRandom#truncatedNormal,9053.7,8762.5,10146.4,9244.0,1268.8,1247.9,1382.9,1252.8,67108864,67108864
 random,gumbel,16777216,large,f32,JitRandom#gumbel,8972.9,8772.7,9970.9,9284.1,1092.8,1074.7,1182.6,1065.7,67108864,50331648
 random,laplace,16777216,large,f32,JitRandom#laplace,12065.3,11791.9,13150.3,12103.2,1086.3,1063.4,1188.0,1071.0,67108864,50331648
-random,categorical,1x151936,decode,f32,JitRandom#categorical,505.8,475.8,573.9,469.5,19855.0,19204.5,20331.7,20019.3,607744,607744
-random,categoricalSamples,1x151936 x8,decode,f32,JitRandom#categorical,477.1,454.9,506.5,465.5,19878.8,19223.3,20558.3,19980.0,607744,4861952
-random,categoricalShape,8 x 1x151936,decode,f32,JitRandom#categorical,478.7,451.7,531.0,459.4,19926.9,19261.3,20421.2,20022.7,607744,4861952
-random,categorical,64x32000,batch,f32,JitRandom#categorical,1117.3,1031.5,1333.1,995.8,4797.2,4638.4,5142.3,4872.8,8192000,8192000
-random,categoricalSamples,64x32000 x16,batch,f32,JitRandom#categorical,20640.7,19854.3,21308.2,20436.5,8046.5,7944.8,8361.2,8026.7,8192000,131072000
-random,categoricalShape,16 x 64x32000,batch,f32,JitRandom#categorical,18175.8,17374.8,18796.6,17876.1,7989.7,7901.2,8343.0,8051.9,8192000,131072000
+random,categorical,1x151936,decode,f32,JitRandom#categorical,513.5,486.0,575.2,501.4,602.3,555.5,683.8,593.3,607744,607744
+random,categoricalSamples,1x151936 x8,decode,f32,JitRandom#categorical,513.3,480.8,560.8,493.7,814.6,751.8,897.1,721.6,607744,4861952
+random,categoricalShape,8 x 1x151936,decode,f32,JitRandom#categorical,505.8,473.8,569.1,487.7,647.7,572.1,808.9,596.2,607744,4861952
+random,categorical,64x32000,batch,f32,JitRandom#categorical,1003.8,966.1,1087.5,955.6,449.1,404.9,600.5,487.9,8192000,8192000
+random,categoricalSamples,64x32000 x16,batch,f32,JitRandom#categorical,19777.1,19640.4,20151.5,20340.8,2036.8,1973.1,2095.5,1947.6,8192000,131072000
+random,categoricalShape,16 x 64x32000,batch,f32,JitRandom#categorical,17686.4,17327.8,18301.2,17792.0,2024.9,1982.8,2129.5,1960.3,8192000,131072000
 random,multivariateNormal,4096 x 16,decode,f32,JitLinalg#cholesky+JitRandom#multivariateNormal,882.8,876.9,894.8,885.0,862.8,827.3,933.8,650.6,262144,1310720
 random,multivariateNormal,1048576 x 16,large,f32,JitLinalg#cholesky+JitRandom#multivariateNormal,198839.9,194612.7,207446.0,198944.7,14159.3,13937.0,15205.6,14450.4,67108864,335544320
 random,permutation,2048,decode,f32,JitRandom#sortKeys+JitSort#sortSlices,300.1,284.1,332.6,253.1,817.9,760.0,899.0,660.7,16384,2048

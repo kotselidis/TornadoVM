@@ -332,11 +332,65 @@ public class TestJitRandom extends MlxTestBase {
                 .libraryTask("m3", MlxRandom::categoricalShape, l4, shaped, rows, CLASSES, samples, SEED) //
                 .task("j", JitRandom::categorical, new KernelContext(), l4, outJit, rows, CLASSES, samples, SEED) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, one, many, shaped, outJit);
-        runPair(g, samples * rows);
+        execute(g, "j", TestJitReduce.groups(samples * rows, JitRandom.THREADS));
         assertCategorical("categorical MLX", one);
         assertCategorical("categoricalSamples MLX", many);
         assertCategorical("categoricalShape MLX", shaped);
         assertCategorical("categorical JIT", outJit);
+    }
+
+    /**
+     * A wide row (more classes than threads, so every thread strides over several) whose softmax
+     * puts most of its mass on four classes spread across the row, including the last one. The
+     * split-row JIT kernels (7 uneven slices) must draw exactly what the single-pass kernel draws.
+     */
+    @Test
+    public void testCategoricalWideRow() throws TornadoExecutionPlanException {
+        int classes = 50000;
+        int samples = 4096;
+        int[] hot = { 3, 12345, 31000, classes - 1 };
+        float[] hotLogits = { 12.0f, 11.0f, 10.5f, 11.5f };
+        FloatArray logits = new FloatArray(classes);
+        for (int k = 0; k < hot.length; k++) {
+            logits.set(hot[k], hotLogits[k]);
+        }
+        double sum = classes - hot.length;
+        for (float l : hotLogits) {
+            sum += Math.exp(l);
+        }
+        int chunks = 7;
+        IntArray outMlx = new IntArray(samples);
+        IntArray outJit = new IntArray(samples);
+        FloatArray partialValue = new FloatArray(samples * chunks);
+        IntArray partialClass = new IntArray(samples * chunks);
+        IntArray outChunked = new IntArray(samples);
+        TaskGraph g = new TaskGraph("catw").transferToDevice(DataTransferMode.FIRST_EXECUTION, logits) //
+                .libraryTask("m", MlxRandom::categoricalSamples, logits, outMlx, 1, classes, samples, SEED) //
+                .task("j", JitRandom::categorical, new KernelContext(), logits, outJit, 1, classes, samples, SEED) //
+                .task("p", JitRandom::categoricalChunked, new KernelContext(), logits, partialValue, partialClass, 1, classes, chunks, SEED) //
+                .task("r", JitRandom::categoricalMerge, new KernelContext(), partialValue, partialClass, outChunked, samples, chunks, classes) //
+                .transferToHost(DataTransferMode.EVERY_EXECUTION, outMlx, outJit, outChunked);
+        execute(g, "j", TestJitReduce.groups(samples, JitRandom.THREADS), "p", TestJitReduce.groups(samples * chunks, JitRandom.THREADS), "r", TestJitElementwise.grid1D(samples));
+        for (int i = 0; i < samples; i++) {
+            assertEquals("chunked draw " + i, outJit.get(i), outChunked.get(i));
+        }
+        for (IntArray out : new IntArray[] { outMlx, outJit }) {
+            String who = out == outMlx ? "MLX" : "JIT";
+            int[] counts = new int[hot.length + 1];
+            for (int i = 0; i < samples; i++) {
+                int v = out.get(i);
+                assertTrue(who + " element " + i + " = " + v, v >= 0 && v < classes);
+                int k = 0;
+                while (k < hot.length && hot[k] != v) {
+                    k++;
+                }
+                counts[k]++;
+            }
+            for (int k = 0; k <= hot.length; k++) {
+                double p = k < hot.length ? Math.exp(hotLogits[k]) / sum : (classes - hot.length) / sum;
+                assertEquals(who + " frequency of " + (k < hot.length ? "class " + hot[k] : "the other classes"), p, counts[k] / (double) samples, 0.03);
+            }
+        }
     }
 
     @Test

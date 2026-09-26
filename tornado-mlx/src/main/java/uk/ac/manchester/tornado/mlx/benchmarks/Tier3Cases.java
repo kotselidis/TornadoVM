@@ -835,6 +835,31 @@ final class Tier3Cases {
         }
     }
 
+    /** Split each row across threadgroups when there are too few draws to fill the GPU. */
+    private static final int CATEGORICAL_GROUPS = 64;
+
+    /**
+     * The JIT categorical baseline for {@code count = rows * samples} draws: one threadgroup per draw
+     * when there are at least {@link #CATEGORICAL_GROUPS} of them, otherwise each row split into
+     * slices across threadgroups, then merged.
+     */
+    private static TaskAdder categoricalJit(FloatArray logits, IntArray out, int rows, int classes, int samples) {
+        int count = rows * samples;
+        if (count >= CATEGORICAL_GROUPS) {
+            return jit(() -> groups(count, JitRandom.THREADS), (g, gs, gn, t) -> g.task(t, JitRandom::categorical, new KernelContext(), logits, out, rows, classes, samples, SEED));
+        }
+        int chunks = CATEGORICAL_GROUPS / count;
+        FloatArray partialValue = new FloatArray(count * chunks);
+        IntArray partialClass = new IntArray(count * chunks);
+        TaskAdder partial = jit(() -> groups(count * chunks, JitRandom.THREADS), (g, gs, gn, t) -> g.task(t, JitRandom::categoricalChunked, new KernelContext(), logits, partialValue,
+                partialClass, rows, classes, chunks, SEED));
+        TaskAdder merge = jit(() -> grid1D(count), (g, gs, gn, t) -> g.task(t, JitRandom::categoricalMerge, new KernelContext(), partialValue, partialClass, out, count, chunks, classes));
+        return (g, gs, gn, t) -> {
+            partial.add(g, gs, gn, t + "p");
+            merge.add(g, gs, gn, t + "m");
+        };
+    }
+
     private static void categoricalCases() {
         // {rows, classes, samples}: one decode step over a full vocabulary, and a batch.
         for (int[] s : new int[][] { { 1, VOCAB, 8 }, { 64, 32000, 16 } }) {
@@ -849,14 +874,14 @@ final class Tier3Cases {
             double bytes = 4.0 * rows * classes;
             compare("random", "categorical", shape, regime, "f32", "JitRandom#categorical", new Object[] { logits }, new Object[] { one }, //
                     (g, gs, gn, t) -> g.libraryTask(t, MlxRandom::categorical, logits, one, rows, classes, SEED), //
-                    jit(() -> grid1D(rows), (g, gs, gn, t) -> g.task(t, JitRandom::categorical, new KernelContext(), logits, one, rows, classes, 1, SEED)), bytes, bytes);
+                    categoricalJit(logits, one, rows, classes, 1), bytes, bytes);
             compare("random", "categoricalSamples", shape + " x" + samples, regime, "f32", "JitRandom#categorical", new Object[] { logits }, new Object[] { many }, //
                     (g, gs, gn, t) -> g.libraryTask(t, MlxRandom::categoricalSamples, logits, many, rows, classes, samples, SEED), //
-                    jit(() -> grid1D(rows * samples), (g, gs, gn, t) -> g.task(t, JitRandom::categorical, new KernelContext(), logits, many, rows, classes, samples, SEED)), bytes,
+                    categoricalJit(logits, many, rows, classes, samples), bytes,
                     bytes * samples);
             compare("random", "categoricalShape", samples + " x " + shape, regime, "f32", "JitRandom#categorical", new Object[] { logits }, new Object[] { many }, //
                     (g, gs, gn, t) -> g.libraryTask(t, MlxRandom::categoricalShape, logits, many, rows, classes, samples, SEED), //
-                    jit(() -> grid1D(rows * samples), (g, gs, gn, t) -> g.task(t, JitRandom::categorical, new KernelContext(), logits, many, rows, classes, samples, SEED)), bytes,
+                    categoricalJit(logits, many, rows, classes, samples), bytes,
                     bytes * samples);
         }
     }
