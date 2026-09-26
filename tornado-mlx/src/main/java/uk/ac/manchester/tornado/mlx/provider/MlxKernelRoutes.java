@@ -316,6 +316,7 @@ final class MlxKernelRoutes {
         registerConstructionRoutes();
         registerRowRoutes();
         registerReductionRoutes();
+        registerCompositeRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -1248,6 +1249,190 @@ final class MlxKernelRoutes {
         ROUTES.put("argmax_axis", v -> v.args() < 4 ? null : argReduce(v, "argmax", v.intArg(2), v.intArg(3), 1));
     }
 
+    // ---------------------------------------------------------------- slices and reduction composites
+
+    /** slice(x[rows, cols], [r0:r1:rs, c0:c1:cs]) with positive steps. */
+    private static Encoder slice(View v) {
+        if (v.args() < 10 || !v.isArray(0)) {
+            return null;
+        }
+        int rows = v.intArg(2);
+        int cols = v.intArg(3);
+        int r0 = v.intArg(4);
+        int r1 = v.intArg(5);
+        int rs = v.intArg(6);
+        int c0 = v.intArg(7);
+        int c1 = v.intArg(8);
+        int cs = v.intArg(9);
+        if (rs <= 0 || cs <= 0 || r0 < 0 || c0 < 0 || r1 > rows || c1 > cols || r0 >= r1 || c0 >= c1 || v.size(0) != rows * cols) {
+            return null;
+        }
+        int outRows = (r1 - r0 + rs - 1) / rs;
+        int outCols = (c1 - c0 + cs - 1) / cs;
+        return view(v, 0, 1, new int[] { outRows, outCols }, new long[] { (long) rs * cols, cs }, (long) r0 * cols + c0);
+    }
+
+    /** slice_update(x[rows, cols], update[ur, uc] at (r0, c0)): copy x, then write (or add / multiply) the update into its region. */
+    private static Encoder sliceUpdate(View v, String op) {
+        int t = pairType(v, 0, 2);
+        if (t < 0 || v.args() < 9 || !v.isArray(1) || v.dtype(1) != t) {
+            return null;
+        }
+        int rows = v.intArg(3);
+        int cols = v.intArg(4);
+        int r0 = v.intArg(5);
+        int c0 = v.intArg(6);
+        int ur = v.intArg(7);
+        int uc = v.intArg(8);
+        if (r0 < 0 || c0 < 0 || r0 + ur > rows || c0 + uc > cols || ur <= 0 || uc <= 0 || v.size(0) != rows * cols || v.size(2) != rows * cols || v.size(1) != ur * uc) {
+            return null;
+        }
+        long offset = (long) r0 * cols + c0;
+        return p -> {
+            p.copy(t, t, rows * cols, v.ref(0), v.ref(2));
+            if (op == null) {
+                block(p, t, v.ref(1), uc, 0, v.ref(2), cols, offset, ur, uc);
+            } else {
+                // out[region] = op(x[region], update), computed contiguously and written back.
+                Ref combined = p.scratch((long) ur * uc * MlxMetalKernels.itemSize(t));
+                p.generalBinary(op, t, new int[] { ur, uc }, new long[] { cols, 1 }, v.ref(0).plus(offset, t), new long[] { uc, 1 }, v.ref(1), combined);
+                block(p, t, combined, uc, 0, v.ref(2), cols, offset, ur, uc);
+            }
+        };
+    }
+
+    /** softmax over the last two axes of x[d0, d1, d2] (precise): MLX's composite with max, exp, sum and divide over float32. */
+    private static Encoder softmaxLastTwo(View v) {
+        int t = v.sameType(FLOATS, 0, 1);
+        if (t < 0 || v.args() < 5) {
+            return null;
+        }
+        int d0 = v.intArg(2);
+        int d1 = v.intArg(3);
+        int d2 = v.intArg(4);
+        if ((long) d0 * d1 * d2 != v.size(0)) {
+            return null;
+        }
+        if (d1 == 1) {
+            return softmax(v, d0, d2);
+        }
+        int len = d1 * d2;
+        int n = d0 * len;
+        int f = MLX_FLOAT32;
+        return p -> {
+            Ref in = v.ref(0);
+            if (t != f) {
+                Ref cast = p.scratch(4L * n);
+                p.copy(t, f, n, in, cast);
+                in = cast;
+            }
+            Ref max = p.scratch(4L * Math.max(1, d0));
+            Ref ex = p.scratch(4L * n);
+            Ref sum = p.scratch(4L * Math.max(1, d0));
+            rowReduce(p, "max", f, d0, len, in, max);
+            p.generalBinary("Subtract", f, new int[] { d0, len }, new long[] { len, 1 }, in, new long[] { 1, 0 }, max, ex);
+            p.unary("Exp", f, f, n, ex, ex);
+            rowReduce(p, "sum", f, d0, len, ex, sum);
+            Ref target = t == f ? v.ref(1) : ex;
+            p.generalBinary("Divide", f, new int[] { d0, len }, new long[] { len, 1 }, ex, new long[] { 1, 0 }, sum, target);
+            if (t != f) {
+                p.copy(f, t, n, ex, v.ref(1));
+            }
+        };
+    }
+
+    /** logsumexp over an inner axis (or two): max, exp(x - max), sum, log, add max, and max where it is infinite. */
+    private static Encoder logsumexpComposite(View v, String form) {
+        Extent e = extent(v, form);
+        int t = v.isArray(0) ? v.dtype(0) : -1;
+        if (e == null || !FLOATS.contains(t) || !v.is(1, t, (int) e.rows())) {
+            return null;
+        }
+        long rows = e.rows();
+        long len = e.len();
+        int n = v.size(0);
+        return p -> {
+            int item = MlxMetalKernels.itemSize(t);
+            Ref max = p.scratch(Math.max(4, rows * item));
+            Ref ex = p.scratch((long) n * item);
+            Ref mask = p.scratch(Math.max(4, rows));
+            Ref magnitude = p.scratch(Math.max(4, rows * item));
+            rowReduce(p, "max", t, rows, len, v.ref(0), max);
+            p.generalBinary("Subtract", t, new int[] { (int) rows, (int) len }, new long[] { len, 1 }, v.ref(0), new long[] { 1, 0 }, max, ex);
+            p.unary("Exp", t, t, n, ex, ex);
+            rowReduce(p, "sum", t, rows, len, ex, v.ref(1));
+            p.unary("Log", t, t, (int) rows, v.ref(1), v.ref(1));
+            p.binary("Add", t, (int) rows, v.ref(1), max, v.ref(1));
+            p.unary("Abs", t, t, (int) rows, max, magnitude);
+            p.binaryScalarRight("Equal", t, (int) rows, magnitude, INF, mask);
+            p.select(t, (int) rows, mask, max, v.ref(1), v.ref(1));
+        };
+    }
+
+    private static void registerCompositeRoutes() {
+        ROUTES.put("slice", MlxKernelRoutes::slice);
+        ROUTES.put("slice_update", v -> sliceUpdate(v, null));
+        ROUTES.put("slice_update_add", v -> sliceUpdate(v, "Add"));
+        ROUTES.put("slice_update_prod", v -> sliceUpdate(v, "Multiply"));
+        // trace(x[r, c], k): sum(astype(diagonal(x, k), dtype)) as an all-reduce of the contiguous diagonal.
+        ROUTES.put("trace", v -> {
+            if (v.args() < 5 || !v.isArray(0) || !v.isArray(1) || v.size(1) != 1 || !NUMBERS.contains(v.dtype(0)) || !NUMBERS.contains(v.dtype(1))) {
+                return null;
+            }
+            int r = v.intArg(2);
+            int c = v.intArg(3);
+            int k = v.intArg(4);
+            int length = Math.max(0, k >= 0 ? Math.min(r, c - k) : Math.min(r + k, c));
+            int in = v.dtype(0);
+            int out = v.dtype(1);
+            if (length == 0 || v.size(0) != r * c || reduceTypes(out, "sum")[1] != out) {
+                return null;
+            }
+            long start = k >= 0 ? k : (long) -k * c;
+            return p -> {
+                Ref diagonal = p.scratch((long) length * MlxMetalKernels.itemSize(out));
+                p.generalCopy(in, out, new int[] { length }, new long[] { c + 1L }, v.ref(0).plus(start, in), null, diagonal, null);
+                allReduce(p, "sum", out, length, diagonal, v.ref(1));
+            };
+        });
+        // allclose: all(isclose(...)) (float32, as isclose).
+        ROUTES.put("allclose", v -> {
+            if (v.args() < 6 || v.sameType(FLOAT32, 0, 1) < 0 || !v.is(2, MLX_UINT8, 1)) {
+                return null;
+            }
+            int n = v.size(0);
+            double rtol = v.floatArg(3);
+            double atol = v.floatArg(4);
+            boolean equalNan = v.boolArg(5);
+            return p -> {
+                Ref flags = p.scratch(n);
+                Ref result = p.scratch(4);
+                iscloseKernels(p, n, v.ref(0), v.ref(1), flags, rtol, atol, equalNan);
+                allReduce(p, "and", MLX_BOOL, n, flags, result);
+                p.copy(MLX_BOOL, MLX_BOOL, 1, result, v.ref(2));
+            };
+        });
+        // array_equal: all(equal(a, b)), with NaNEqual when equal_nan is set on floating types.
+        ROUTES.put("array_equal", v -> {
+            int t = v.sameType(NUMBERS, 0, 1);
+            if (t < 0 || v.args() < 4 || !v.is(2, MLX_UINT8, 1)) {
+                return null;
+            }
+            int n = v.size(0);
+            String op = v.boolArg(3) && FLOATS.contains(t) ? "NaNEqual" : "Equal";
+            return p -> {
+                Ref flags = p.scratch(n);
+                Ref result = p.scratch(4);
+                p.binary(op, t, n, v.ref(0), v.ref(1), flags);
+                allReduce(p, "and", MLX_BOOL, n, flags, result);
+                p.copy(MLX_BOOL, MLX_BOOL, 1, result, v.ref(2));
+            };
+        });
+        ROUTES.put("softmax_axes", MlxKernelRoutes::softmaxLastTwo);
+        ROUTES.put("logsumexp_axis", v -> logsumexpComposite(v, "axis"));
+        ROUTES.put("logsumexp_axes", v -> logsumexpComposite(v, "axes"));
+    }
+
     private static Encoder scaled(View v, double factor) {
         int t = v.sameType(FLOATS, 0, 1);
         return t < 0 ? null : p -> p.binaryScalarRight("Multiply", t, v.size(0), v.ref(0), factor, v.ref(1));
@@ -1311,42 +1496,43 @@ final class MlxKernelRoutes {
         double rtol = v.floatArg(3);
         double atol = v.floatArg(4);
         boolean equalNan = v.boolArg(5);
-        Ref a = v.ref(0);
-        Ref b = v.ref(1);
-        Ref out = v.ref(2);
-        return p -> {
-            Ref rhs = p.scratch(4L * n);
-            Ref lhs = p.scratch(4L * n);
-            Ref m1 = p.scratch(n);
-            Ref m2 = p.scratch(n);
-            Ref m3 = p.scratch(n);
-            p.unary("Abs", t, t, n, b, rhs);
-            p.binaryScalarLeft("Multiply", t, n, rtol, rhs, rhs);
-            p.binaryScalarLeft("Add", t, n, atol, rhs, rhs);
-            p.binary("Subtract", t, n, a, b, lhs);
-            p.unary("Abs", t, t, n, lhs, lhs);
-            p.binary("LessEqual", t, n, lhs, rhs, out);
-            // any_inf = |a| == inf or |b| == inf; out = out and not any_inf.
-            p.unary("Abs", t, t, n, a, lhs);
-            p.binaryScalarRight("Equal", t, n, lhs, INF, m1);
-            p.unary("Abs", t, t, n, b, lhs);
-            p.binaryScalarRight("Equal", t, n, lhs, INF, m2);
-            p.binary("LogicalOr", MLX_BOOL, n, m1, m2, m1);
-            p.unary("LogicalNot", MLX_BOOL, MLX_BOOL, n, m1, m1);
-            p.binary("LogicalAnd", MLX_BOOL, n, out, m1, out);
-            // both_inf with the same sign = a == b and |a| == inf.
-            p.binary("Equal", t, n, a, b, m2);
-            p.unary("Abs", t, t, n, a, lhs);
-            p.binaryScalarRight("Equal", t, n, lhs, INF, m3);
+        return p -> iscloseKernels(p, n, v.ref(0), v.ref(1), v.ref(2), rtol, atol, equalNan);
+    }
+
+    /** The kernels of isclose (float32) writing MLX bools to {@code out}. */
+    private static void iscloseKernels(Program p, int n, Ref a, Ref b, Ref out, double rtol, double atol, boolean equalNan) {
+        int t = MLX_FLOAT32;
+        Ref rhs = p.scratch(4L * n);
+        Ref lhs = p.scratch(4L * n);
+        Ref m1 = p.scratch(n);
+        Ref m2 = p.scratch(n);
+        Ref m3 = p.scratch(n);
+        p.unary("Abs", t, t, n, b, rhs);
+        p.binaryScalarLeft("Multiply", t, n, rtol, rhs, rhs);
+        p.binaryScalarLeft("Add", t, n, atol, rhs, rhs);
+        p.binary("Subtract", t, n, a, b, lhs);
+        p.unary("Abs", t, t, n, lhs, lhs);
+        p.binary("LessEqual", t, n, lhs, rhs, out);
+        // any_inf = |a| == inf or |b| == inf; out = out and not any_inf.
+        p.unary("Abs", t, t, n, a, lhs);
+        p.binaryScalarRight("Equal", t, n, lhs, INF, m1);
+        p.unary("Abs", t, t, n, b, lhs);
+        p.binaryScalarRight("Equal", t, n, lhs, INF, m2);
+        p.binary("LogicalOr", MLX_BOOL, n, m1, m2, m1);
+        p.unary("LogicalNot", MLX_BOOL, MLX_BOOL, n, m1, m1);
+        p.binary("LogicalAnd", MLX_BOOL, n, out, m1, out);
+        // both_inf with the same sign = a == b and |a| == inf.
+        p.binary("Equal", t, n, a, b, m2);
+        p.unary("Abs", t, t, n, a, lhs);
+        p.binaryScalarRight("Equal", t, n, lhs, INF, m3);
+        p.binary("LogicalAnd", MLX_BOOL, n, m2, m3, m2);
+        p.binary("LogicalOr", MLX_BOOL, n, out, m2, out);
+        if (equalNan) {
+            p.binary("NotEqual", t, n, a, a, m2);
+            p.binary("NotEqual", t, n, b, b, m3);
             p.binary("LogicalAnd", MLX_BOOL, n, m2, m3, m2);
             p.binary("LogicalOr", MLX_BOOL, n, out, m2, out);
-            if (equalNan) {
-                p.binary("NotEqual", t, n, a, a, m2);
-                p.binary("NotEqual", t, n, b, b, m3);
-                p.binary("LogicalAnd", MLX_BOOL, n, m2, m3, m2);
-                p.binary("LogicalOr", MLX_BOOL, n, out, m2, out);
-            }
-        };
+        }
     }
 
     /** How many calls ran as in-place MLX kernels. */

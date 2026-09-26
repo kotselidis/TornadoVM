@@ -42,6 +42,7 @@ import uk.ac.manchester.tornado.mlx.Mlx;
 import uk.ac.manchester.tornado.mlx.MlxLogic;
 import uk.ac.manchester.tornado.mlx.MlxMath;
 import uk.ac.manchester.tornado.mlx.MlxCreate;
+import uk.ac.manchester.tornado.mlx.MlxIndex;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
 import uk.ac.manchester.tornado.mlx.MlxReduce;
 import uk.ac.manchester.tornado.mlx.MlxShape;
@@ -716,5 +717,54 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
             case "var" -> MlxReduce.varAxis(a, b, rows, len, 1, 0);
             default -> MlxReduce.stdAxis(a, b, rows, len, 1, 2);
         };
+    }
+
+    // ---------------------------------------------------------------- slices and composites
+
+    @Test
+    public void testSlicesAndComposites() throws TornadoExecutionPlanException {
+        int rows = 57;
+        int cols = 83;
+        FloatArray x = FloatArray.fromArray(values(rows * cols, -3, 3, 110));
+        FloatArray upd = FloatArray.fromArray(values(20 * 30, -3, 3, 111));
+        same("slice", new Object[] { x }, floatsOut(((50 - 3 + 2) / 3) * ((80 - 5 + 1) / 2)),
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxIndex.slice(a, b, rows, cols, 3, 50, 3, 5, 80, 2), c), x, (FloatArray) o[0]));
+        same("sliceUpdate", new Object[] { x, upd }, floatsOut(rows * cols),
+                (g, id, c, o) -> g.libraryTask(id, (a, u, b) -> tune(MlxIndex.sliceUpdate(a, u, b, rows, cols, 7, 11, 20, 30), c), x, upd, (FloatArray) o[0]));
+        same("sliceUpdateAdd", new Object[] { x, upd }, floatsOut(rows * cols),
+                (g, id, c, o) -> g.libraryTask(id, (a, u, b) -> tune(MlxIndex.sliceUpdateAdd(a, u, b, rows, cols, 7, 11, 20, 30), c), x, upd, (FloatArray) o[0]));
+        same("sliceUpdateProd", new Object[] { x, upd }, floatsOut(rows * cols),
+                (g, id, c, o) -> g.libraryTask(id, (a, u, b) -> tune(MlxIndex.sliceUpdateProd(a, u, b, rows, cols, 0, 53, 20, 30), c), x, upd, (FloatArray) o[0]));
+        same("trace", new Object[] { x }, floatsOut(1), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxCreate.trace(a, b, rows, cols, 4), c), x, (FloatArray) o[0]));
+        FloatArray a = floats(112);
+        FloatArray b = floats(113);
+        for (int i = 0; i < N; i++) {
+            if (i % 5 != 0) {
+                b.set(i, a.get(i));
+            }
+        }
+        FloatArray a2 = new FloatArray(N);
+        for (int i = 0; i < N; i++) {
+            a2.set(i, a.get(i));
+        }
+        for (boolean equalNan : new boolean[] { false, true }) {
+            same("allclose equal_nan=" + equalNan, new Object[] { a, b }, () -> new TornadoNativeArray[] { new ByteArray(1) }, (g, id, c, o) -> g.libraryTask(id,
+                    (p, q, r, rt, at, e) -> tune(MlxLogic.allclose(p, q, r, rt, at, e), c), a, b, (ByteArray) o[0], 1e-5f, 1e-8f, equalNan));
+            same("arrayEqual equal_nan=" + equalNan, new Object[] { a, a2 }, () -> new TornadoNativeArray[] { new ByteArray(1) },
+                    (g, id, c, o) -> g.libraryTask(id, (p, q, r, e) -> tune(MlxLogic.arrayEqual(p, q, r, e), c), a, a2, (ByteArray) o[0], equalNan));
+        }
+        int d0 = 12;
+        int d1 = 30;
+        int d2 = 70;
+        FloatArray y = FloatArray.fromArray(values(d0 * d1 * d2, -5, 5, 114));
+        same("softmaxLastTwoAxes", new Object[] { y }, floatsOut(d0 * d1 * d2),
+                (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(Mlx.softmaxLastTwoAxes(p, q, d0, d1, d2), c), y, (FloatArray) o[0]));
+        HalfFloatArray yh = halfValues(d0 * d1 * d2, -5, 5, 115);
+        same("softmaxLastTwoAxes f16", new Object[] { yh }, halvesOut(d0 * d1 * d2),
+                (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(Mlx.softmaxLastTwoAxes(p, q, d0, d1, d2), c), yh, (HalfFloatArray) o[0]));
+        FloatArray z = FloatArray.fromArray(values(70000, -5, 5, 116));
+        same("logsumexpAxis", new Object[] { z }, floatsOut(7), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxReduce.logsumexpAxis(p, q, 7, 10000, 1), c), z, (FloatArray) o[0]));
+        same("logsumexpAxes", new Object[] { y }, floatsOut(d0),
+                (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxReduce.logsumexpAxes(p, q, d0, d1, d2, 1), c), y, (FloatArray) o[0]));
     }
 }

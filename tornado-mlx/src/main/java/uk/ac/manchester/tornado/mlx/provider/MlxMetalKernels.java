@@ -559,7 +559,7 @@ final class MlxMetalKernels {
 
     /** Scratch buffers by device and slot, grown on demand and kept for reuse. */
     private static final Map<Long, long[][]> SCRATCH = new ConcurrentHashMap<>();
-    private static final int SCRATCH_SLOTS = 8;
+    private static final int SCRATCH_SLOTS = 16;
 
     private static synchronized long scratchBuffer(long device, int slot, long bytes) {
         if (slot >= SCRATCH_SLOTS) {
