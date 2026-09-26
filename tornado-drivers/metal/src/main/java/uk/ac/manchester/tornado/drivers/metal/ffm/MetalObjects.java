@@ -595,12 +595,73 @@ public final class MetalObjects {
             MemorySegment group = mtlSize(arena, lx, ly, lz);
             MetalAPI.dispatchThreads(encoder, grid, group);
             MetalAPI.endEncoding(encoder);
-            MetalAPI.commit(commandBuffer);
-            MetalAPI.waitUntilCompleted(commandBuffer);
+            commitAndWait(queue, commandBuffer);
             // Retain across the pool so GPUStartTime/GPUEndTime can be read when the profiler asks.
             retainedCommandBuffer = ObjCRuntime.retain(commandBuffer);
         }
         return registerEvent(new TimingEvent(queuedNs, 0, 0, retainedCommandBuffer));
+    }
+
+    /**
+     * Wait for a committed command buffer by polling an {@code MTLSharedEvent} it signals, rather
+     * than with {@code waitUntilCompleted}. The event is set as soon as the GPU finishes the encoded
+     * work, while completion of the command buffer reaches the CPU some 60-90 us later on Apple
+     * silicon, so this takes that delay off every synchronous launch. Set
+     * {@code -Dtornado.metal.dispatch.spinWait=False} to wait with {@code waitUntilCompleted}.
+     */
+    private static final boolean SPIN_WAIT = Boolean.parseBoolean(System.getProperty("tornado.metal.dispatch.spinWait", "True"));
+
+    /** Command buffer status and the spin budget are checked every this many polls. */
+    private static final int STATUS_POLL_INTERVAL = 64;
+
+    /**
+     * How long to poll before blocking in {@code waitUntilCompleted}. Polling keeps a CPU core busy,
+     * which is worth it for the short kernels whose latency it cuts; past this, the completion delay
+     * it saves is a few percent of the kernel time at most.
+     */
+    private static final long SPIN_BUDGET_NS = 1_000_000;
+
+    /** One shared event per command queue, with the last value it was asked to signal. */
+    private static final class QueueEvent {
+        final long event;
+        long value;
+
+        QueueEvent(long event) {
+            this.event = event;
+        }
+    }
+
+    private static final Map<Long, QueueEvent> QUEUE_EVENTS = new ConcurrentHashMap<>();
+
+    /** Commits {@code commandBuffer} on {@code queue} and returns once the GPU has finished its work. */
+    private static void commitAndWait(long queue, long commandBuffer) {
+        QueueEvent queueEvent = SPIN_WAIT ? QUEUE_EVENTS.computeIfAbsent(queue, q -> new QueueEvent(MetalAPI.newSharedEvent(MetalAPI.queueDevice(q)))) : null;
+        if (queueEvent == null || queueEvent.event == 0) {
+            MetalAPI.commit(commandBuffer);
+            MetalAPI.waitUntilCompleted(commandBuffer);
+            return;
+        }
+        long value;
+        synchronized (queueEvent) {
+            value = ++queueEvent.value;
+        }
+        MetalAPI.encodeSignalEvent(commandBuffer, queueEvent.event, value);
+        MetalAPI.commit(commandBuffer);
+        long start = System.nanoTime();
+        int polls = 0;
+        while (MetalAPI.sharedEventSignaledValue(queueEvent.event) < value) {
+            if (++polls % STATUS_POLL_INTERVAL == 0) {
+                if (System.nanoTime() - start > SPIN_BUDGET_NS) {
+                    MetalAPI.waitUntilCompleted(commandBuffer);
+                    return;
+                }
+                if (MetalAPI.commandBufferStatus(commandBuffer) >= MetalAPI.MTL_COMMAND_BUFFER_STATUS_COMPLETED) {
+                    // Finished without signalling: the buffer failed, and its status says so.
+                    return;
+                }
+            }
+            Thread.yield();
+        }
     }
 
     private static MemorySegment mtlSize(Arena arena, long width, long height, long depth) {
@@ -679,6 +740,14 @@ public final class MetalObjects {
         if (queue == 0) {
             return;
         }
+        QueueEvent queueEvent = QUEUE_EVENTS.get(queue);
+        if (queueEvent != null && workFinished(queueEvent)) {
+            // Every command buffer on this queue signals the event when its work is done, and the
+            // event has reached the last value asked for, so there is nothing left to wait for. A
+            // committed empty buffer would instead wait for the completion notices of the earlier
+            // buffers, the delay that polling the event avoided.
+            return;
+        }
         try (ObjCRuntime.AutoreleasePool pool = new ObjCRuntime.AutoreleasePool()) {
             long commandBuffer = MetalAPI.commandBuffer(queue);
             if (commandBuffer != 0) {
@@ -686,6 +755,14 @@ public final class MetalObjects {
                 MetalAPI.waitUntilCompleted(commandBuffer);
             }
         }
+    }
+
+    private static boolean workFinished(QueueEvent queueEvent) {
+        long value;
+        synchronized (queueEvent) {
+            value = queueEvent.value;
+        }
+        return MetalAPI.sharedEventSignaledValue(queueEvent.event) >= value;
     }
 
     /** Barriers and markers reduce to waiting on the listed events, all of which already completed. */
@@ -733,6 +810,8 @@ public final class MetalObjects {
         }
         long time;
         if (state.commandBuffer != 0) {
+            // The GPU timestamps are set when the buffer completes, which can trail the wait by tens of us.
+            MetalAPI.waitUntilCompleted(state.commandBuffer);
             if (param == METAL_PROFILING_COMMAND_QUEUED || param == METAL_PROFILING_COMMAND_SUBMIT) {
                 time = state.queuedNs;
             } else if (param == METAL_PROFILING_COMMAND_START) {
@@ -785,8 +864,7 @@ public final class MetalObjects {
             long blit = MetalAPI.blitCommandEncoder(commandBuffer);
             MetalAPI.blitCopy(blit, source, sourceOffset, destination, headerBytes, copySize);
             MetalAPI.endEncoding(blit);
-            MetalAPI.commit(commandBuffer);
-            MetalAPI.waitUntilCompleted(commandBuffer);
+            commitAndWait(queue, commandBuffer);
         }
         return destination;
     }
