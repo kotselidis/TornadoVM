@@ -23,10 +23,12 @@ import static org.junit.Assert.assertTrue;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.junit.Test;
 
 import uk.ac.manchester.tornado.api.TaskGraph;
+import uk.ac.manchester.tornado.api.common.LibraryTaskDescriptor;
 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
 import uk.ac.manchester.tornado.api.types.HalfFloat;
@@ -39,7 +41,9 @@ import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 import uk.ac.manchester.tornado.mlx.Mlx;
 import uk.ac.manchester.tornado.mlx.MlxLogic;
 import uk.ac.manchester.tornado.mlx.MlxMath;
+import uk.ac.manchester.tornado.mlx.MlxCreate;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
+import uk.ac.manchester.tornado.mlx.MlxShape;
 import uk.ac.manchester.tornado.mlx.provider.MlxLibraryProvider;
 
 /**
@@ -238,7 +242,10 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
      */
     private static void compare(String name, Object[] inputs, TornadoNativeArray[] inPlaceOut, TornadoNativeArray[] cApiOut, Function<TaskGraph, TaskGraph> tasks)
             throws TornadoExecutionPlanException {
-        TaskGraph g = new TaskGraph("cmp").transferToDevice(DataTransferMode.EVERY_EXECUTION, inputs);
+        TaskGraph g = new TaskGraph("cmp");
+        if (inputs.length > 0) {
+            g = g.transferToDevice(DataTransferMode.EVERY_EXECUTION, inputs);
+        }
         g = tasks.apply(g);
         Object[] outs = new Object[inPlaceOut.length + cApiOut.length];
         System.arraycopy(inPlaceOut, 0, outs, 0, inPlaceOut.length);
@@ -340,7 +347,7 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         }
     }
 
-    private static uk.ac.manchester.tornado.api.common.LibraryTaskDescriptor predicate(String name, FloatArray a, ByteArray out) {
+    private static LibraryTaskDescriptor predicate(String name, FloatArray a, ByteArray out) {
         return switch (name) {
             case "isnan" -> MlxLogic.isnan(a, out);
             case "isinf" -> MlxLogic.isinf(a, out);
@@ -350,7 +357,7 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         };
     }
 
-    private static uk.ac.manchester.tornado.api.common.LibraryTaskDescriptor predicate(String name, BFloat16Array a, ByteArray out) {
+    private static LibraryTaskDescriptor predicate(String name, BFloat16Array a, ByteArray out) {
         return switch (name) {
             case "isnan" -> MlxLogic.isnan(a, out);
             case "isinf" -> MlxLogic.isinf(a, out);
@@ -421,5 +428,157 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         FloatArray cj2 = new FloatArray(N - 1);
         compare("conjugate", new Object[] { zc }, new TornadoNativeArray[] { cj1 }, new TornadoNativeArray[] { cj2 }, g -> g //
                 .libraryTask("i", MlxLogic::conjugate, zc, cj1).libraryTask("c", (x, y) -> MlxLogic.conjugate(x, y).withTuning(C_API), zc, cj2));
+    }
+
+    // ---------------------------------------------------------------- shape and construction
+
+    /** Adds one task, in place or through the C API, writing {@code outs}. */
+    interface Builder {
+        TaskGraph add(TaskGraph g, String id, boolean cApi, TornadoNativeArray[] outs);
+    }
+
+    private static LibraryTaskDescriptor tune(LibraryTaskDescriptor task, boolean cApi) {
+        return cApi ? task.withTuning(C_API) : task;
+    }
+
+    /** Runs the task both ways in one graph and compares every output byte for byte. */
+    private static void same(String name, Object[] inputs, Supplier<TornadoNativeArray[]> outputs, Builder builder) throws TornadoExecutionPlanException {
+        TornadoNativeArray[] inPlace = outputs.get();
+        TornadoNativeArray[] cApi = outputs.get();
+        compare(name, inputs, inPlace, cApi, g -> builder.add(builder.add(g, "i", false, inPlace), "c", true, cApi));
+    }
+
+    private static Supplier<TornadoNativeArray[]> floatsOut(int... sizes) {
+        return () -> {
+            TornadoNativeArray[] outs = new TornadoNativeArray[sizes.length];
+            for (int i = 0; i < sizes.length; i++) {
+                outs[i] = new FloatArray(sizes[i]);
+            }
+            return outs;
+        };
+    }
+
+    @Test
+    public void testReshapeFamily() throws TornadoExecutionPlanException {
+        int d0 = 5;
+        int d1 = 6;
+        int d2 = 7;
+        int n = d0 * d1 * d2;
+        FloatArray x = FloatArray.fromArray(values(n, -3, 3, 71));
+        Object[] in = { x };
+        same("reshape", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.reshape(a, b, d0 * d1, d2), c), x, (FloatArray) o[0]));
+        same("flatten", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.flatten(a, b, d0, d1, d2), c), x, (FloatArray) o[0]));
+        same("squeeze", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.squeeze(a, b, d0 * d1, d2), c), x, (FloatArray) o[0]));
+        same("expandDims", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.expandDims(a, b, d0 * d1, d2), c), x, (FloatArray) o[0]));
+        same("atleast3d", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.atleast3d(a, b), c), x, (FloatArray) o[0]));
+        same("copy", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.copy(a, b), c), x, (FloatArray) o[0]));
+        same("astype f32->f16", in, () -> new TornadoNativeArray[] { new HalfFloatArray(n) },
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.astype(a, b), c), x, (HalfFloatArray) o[0]));
+        same("astype f32->i32", in, () -> new TornadoNativeArray[] { new IntArray(n) }, (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.astype(a, b), c), x, (IntArray) o[0]));
+        same("view f32->i32", in, () -> new TornadoNativeArray[] { new IntArray(n) }, (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.view(a, b), c), x, (IntArray) o[0]));
+        same("numberOfElements", in, () -> new TornadoNativeArray[] { new IntArray(1) },
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.numberOfElements(a, b, d0, d1, d2), c), x, (IntArray) o[0]));
+    }
+
+    @Test
+    public void testPermutations() throws TornadoExecutionPlanException {
+        int d0 = 33;
+        int d1 = 17;
+        int d2 = 65;
+        int n = d0 * d1 * d2;
+        FloatArray x = FloatArray.fromArray(values(n, -3, 3, 72));
+        Object[] in = { x };
+        int[][] perms = { { 2, 0, 1 }, { 1, 2, 0 }, { 0, 2, 1 }, { 2, 1, 0 } };
+        for (int[] q : perms) {
+            same("transpose " + java.util.Arrays.toString(q), in, floatsOut(n),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.transposeAxes(a, b, d0, d1, d2, q[0], q[1], q[2]), c), x, (FloatArray) o[0]));
+        }
+        same("swapaxes 0,2", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.swapaxes(a, b, d0, d1, d2, 0, 2), c), x, (FloatArray) o[0]));
+        same("moveaxis 2->0", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.moveaxis(a, b, d0, d1, d2, 2, 0), c), x, (FloatArray) o[0]));
+        same("moveaxis 0->2", in, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.moveaxis(a, b, d0, d1, d2, 0, 2), c), x, (FloatArray) o[0]));
+    }
+
+    @Test
+    public void testBroadcastsAndStrides() throws TornadoExecutionPlanException {
+        int rows = 129;
+        int cols = 67;
+        FloatArray row = FloatArray.fromArray(values(cols, -3, 3, 73));
+        FloatArray col = FloatArray.fromArray(values(rows, -3, 3, 74));
+        same("broadcastTo", new Object[] { row }, floatsOut(rows * cols),
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.broadcastTo(a, b, rows, cols), c), row, (FloatArray) o[0]));
+        same("broadcastArrays", new Object[] { row, col }, floatsOut(rows * cols, rows * cols), (g, id, c, o) -> g.libraryTask(id,
+                (a, b, p, q) -> tune(MlxShape.broadcastArrays(a, b, p, q, rows, cols), c), row, col, (FloatArray) o[0], (FloatArray) o[1]));
+        FloatArray x = FloatArray.fromArray(values(rows * cols, -3, 3, 75));
+        same("asStrided", new Object[] { x }, floatsOut(40 * 30),
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.asStrided(a, b, 40, 30, 2 * cols, 2, 5), c), x, (FloatArray) o[0]));
+        same("repeat", new Object[] { row }, floatsOut(cols * 3), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.repeat(a, b, 3), c), row, (FloatArray) o[0]));
+        same("repeatAxis", new Object[] { x }, floatsOut(rows * cols * 2),
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.repeatAxis(a, b, rows, cols, 2), c), x, (FloatArray) o[0]));
+        same("tile", new Object[] { x }, floatsOut(rows * cols * 6), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxShape.tile(a, b, rows, cols, 2, 3), c), x, (FloatArray) o[0]));
+        same("diagonal", new Object[] { x }, floatsOut(cols - 5), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxCreate.diagonal(a, b, rows, cols, 5), c), x, (FloatArray) o[0]));
+        same("meshgrid xy", new Object[] { row, col }, floatsOut(rows * cols, rows * cols), (g, id, c, o) -> g.libraryTask(id,
+                (a, b, p, q) -> tune(MlxCreate.meshgrid(a, b, p, q, false), c), row, col, (FloatArray) o[0], (FloatArray) o[1]));
+    }
+
+    @Test
+    public void testJoinsSplitsRollsAndPads() throws TornadoExecutionPlanException {
+        int rows = 37;
+        int ca = 19;
+        int cb = 23;
+        FloatArray a = FloatArray.fromArray(values(rows * ca, -3, 3, 76));
+        FloatArray b = FloatArray.fromArray(values(rows * cb, -3, 3, 77));
+        FloatArray b2 = FloatArray.fromArray(values(rows * ca, -3, 3, 78));
+        same("concatenate", new Object[] { a, b }, floatsOut(rows * (ca + cb)), (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(MlxShape.concatenate(p, q, r), c), a, b, (FloatArray) o[0]));
+        same("concatenateAxis", new Object[] { a, b }, floatsOut(rows * (ca + cb)),
+                (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(MlxShape.concatenateAxis(p, q, r, rows, ca, cb), c), a, b, (FloatArray) o[0]));
+        same("stack", new Object[] { a, b2 }, floatsOut(2 * rows * ca), (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(MlxShape.stack(p, q, r), c), a, b2, (FloatArray) o[0]));
+        same("stackAxis", new Object[] { a, b2 }, floatsOut(2 * rows * ca), (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(MlxShape.stackAxis(p, q, r), c), a, b2, (FloatArray) o[0]));
+        FloatArray x = FloatArray.fromArray(values(rows * 2 * ca, -3, 3, 79));
+        same("split", new Object[] { x }, floatsOut(rows * ca, rows * ca),
+                (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(MlxShape.split(p, q, r, rows, 2 * ca), c), x, (FloatArray) o[0], (FloatArray) o[1]));
+        same("splitSections", new Object[] { x }, floatsOut(rows * 7, rows * (2 * ca - 7)),
+                (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(MlxShape.splitSections(p, q, r, rows, 2 * ca, 7), c), x, (FloatArray) o[0], (FloatArray) o[1]));
+        same("roll", new Object[] { a }, floatsOut(rows * ca), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxShape.roll(p, q, -45), c), a, (FloatArray) o[0]));
+        same("rollAxis", new Object[] { a }, floatsOut(rows * ca), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxShape.rollAxis(p, q, rows, ca, 5), c), a, (FloatArray) o[0]));
+        same("rollAxes", new Object[] { a }, floatsOut(rows * ca), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxShape.rollAxes(p, q, rows, ca, 40, -3), c), a, (FloatArray) o[0]));
+        same("pad", new Object[] { a }, floatsOut((rows + 3) * (ca + 5)),
+                (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxShape.pad(p, q, rows, ca, 1, 2, 3, 2, 1.5f), c), a, (FloatArray) o[0]));
+        same("padSymmetric", new Object[] { a }, floatsOut((rows + 4) * (ca + 4)),
+                (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxShape.padSymmetric(p, q, rows, ca, 2, -7.0f), c), a, (FloatArray) o[0]));
+    }
+
+    @Test
+    public void testConstruction() throws TornadoExecutionPlanException {
+        Object[] none = {};
+        same("full", none, floatsOut(1001), (g, id, c, o) -> g.libraryTask(id, (p, v) -> tune(MlxCreate.full(p, v), c), (FloatArray) o[0], 3.25f));
+        same("full i32", none, () -> new TornadoNativeArray[] { new IntArray(1001) }, (g, id, c, o) -> g.libraryTask(id, (p, v) -> tune(MlxCreate.full(p, v), c), (IntArray) o[0], -7.9f));
+        same("zeros", none, floatsOut(70001), (g, id, c, o) -> g.libraryTask(id, p -> tune(MlxCreate.zeros(p), c), (FloatArray) o[0]));
+        same("ones", none, floatsOut(70001), (g, id, c, o) -> g.libraryTask(id, p -> tune(MlxCreate.ones(p), c), (FloatArray) o[0]));
+        same("arange", none, floatsOut(494), (g, id, c, o) -> g.libraryTask(id, (p, s0, s1, st) -> tune(MlxCreate.arange(p, s0, s1, st), c), (FloatArray) o[0], -3.0f, 120.5f, 0.25f));
+        same("arange i32", none, () -> new TornadoNativeArray[] { new IntArray(40) },
+                (g, id, c, o) -> g.libraryTask(id, (p, s0, s1, st) -> tune(MlxCreate.arange(p, s0, s1, st), c), (IntArray) o[0], 5f, 125f, 3f));
+        same("linspace", none, floatsOut(1001), (g, id, c, o) -> g.libraryTask(id, (p, s0, s1) -> tune(MlxCreate.linspace(p, s0, s1), c), (FloatArray) o[0], -2.5f, 7.75f));
+        same("eye", none, floatsOut(37 * 53), (g, id, c, o) -> g.libraryTask(id, (p, n, m, k) -> tune(MlxCreate.eye(p, n, m, k), c), (FloatArray) o[0], 37, 53, -4));
+        same("identity", none, floatsOut(64 * 64), (g, id, c, o) -> g.libraryTask(id, (p, n) -> tune(MlxCreate.identity(p, n), c), (FloatArray) o[0], 64));
+        same("tri", none, floatsOut(37 * 53), (g, id, c, o) -> g.libraryTask(id, (p, n, m, k) -> tune(MlxCreate.tri(p, n, m, k), c), (FloatArray) o[0], 37, 53, 3));
+        for (String w : new String[] { "hanning", "hamming", "blackman", "bartlett" }) {
+            same(w, none, floatsOut(4097), (g, id, c, o) -> g.libraryTask(id, p -> tune(window(w, p), c), (FloatArray) o[0]));
+        }
+        FloatArray v = FloatArray.fromArray(values(50, -3, 3, 81));
+        same("diag", new Object[] { v }, floatsOut(53 * 53), (g, id, c, o) -> g.libraryTask(id, (p, q, k) -> tune(MlxCreate.diag(p, q, k), c), v, (FloatArray) o[0], -3));
+        FloatArray x = FloatArray.fromArray(values(37 * 53, -3, 3, 82));
+        same("tril", new Object[] { x }, floatsOut(37 * 53), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxCreate.tril(p, q, 37, 53, 2), c), x, (FloatArray) o[0]));
+        same("triu", new Object[] { x }, floatsOut(37 * 53), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxCreate.triu(p, q, 37, 53, -1), c), x, (FloatArray) o[0]));
+        same("fullLike", new Object[] { x }, floatsOut(37 * 53), (g, id, c, o) -> g.libraryTask(id, (p, q, f) -> tune(MlxCreate.fullLike(p, q, f), c), x, (FloatArray) o[0], 0.3f));
+        same("onesLike", new Object[] { x }, floatsOut(37 * 53), (g, id, c, o) -> g.libraryTask(id, (p, q) -> tune(MlxCreate.onesLike(p, q), c), x, (FloatArray) o[0]));
+    }
+
+    private static LibraryTaskDescriptor window(String name, FloatArray out) {
+        return switch (name) {
+            case "hanning" -> MlxCreate.hanning(out);
+            case "hamming" -> MlxCreate.hamming(out);
+            case "blackman" -> MlxCreate.blackman(out);
+            default -> MlxCreate.bartlett(out);
+        };
     }
 }

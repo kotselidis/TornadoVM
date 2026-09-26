@@ -122,6 +122,101 @@ final class MlxMetalKernels {
 
     /** A kernel argument: a buffer with the byte offset of its first element. */
     record Ref(long buffer, long offset) {
+        /** The same buffer, {@code elements} elements of {@code dtype} further on. */
+        Ref plus(long elements, int dtype) {
+            return new Ref(buffer, offset + elements * itemSize(dtype));
+        }
+    }
+
+    /**
+     * A shape with one or two stride vectors, with size-1 dimensions dropped and neighbouring
+     * dimensions merged where every stride vector is contiguous across them, as MLX's
+     * {@code collapse_contiguous_dims} does before choosing a kernel.
+     */
+    record Layout(int[] shape, long[] a, long[] b) {
+        static Layout collapse(int[] shape, long[] a, long[] b) {
+            int[] sh = new int[shape.length];
+            long[] sa = new long[shape.length];
+            long[] sb = new long[shape.length];
+            int nd = 0;
+            for (int i = 0; i < shape.length; i++) {
+                if (shape[i] == 1) {
+                    continue;
+                }
+                if (nd > 0 && sa[nd - 1] == a[i] * shape[i] && (b == null || sb[nd - 1] == b[i] * shape[i])) {
+                    sh[nd - 1] *= shape[i];
+                    sa[nd - 1] = a[i];
+                    if (b != null) {
+                        sb[nd - 1] = b[i];
+                    }
+                    continue;
+                }
+                sh[nd] = shape[i];
+                sa[nd] = a[i];
+                if (b != null) {
+                    sb[nd] = b[i];
+                }
+                nd++;
+            }
+            if (nd == 0) {
+                return new Layout(new int[] { 1 }, new long[] { 0 }, b == null ? null : new long[] { 0 });
+            }
+            return new Layout(java.util.Arrays.copyOf(sh, nd), java.util.Arrays.copyOf(sa, nd), b == null ? null : java.util.Arrays.copyOf(sb, nd));
+        }
+
+        int ndim() {
+            return shape.length;
+        }
+
+        long size() {
+            long n = 1;
+            for (int d : shape) {
+                n *= d;
+            }
+            return n;
+        }
+    }
+
+    /** Row-major strides of {@code shape}. */
+    static long[] contiguousStrides(int... shape) {
+        long[] strides = new long[shape.length];
+        long stride = 1;
+        for (int i = shape.length - 1; i >= 0; i--) {
+            strides[i] = stride;
+            stride *= shape[i];
+        }
+        return strides;
+    }
+
+    /** MLX's {@code get_block_dims}: a power-of-two threadgroup of up to 1024 threads over a 3D grid. */
+    private static long[] blockDims(long dim0, long dim1, long dim2) {
+        int[] pows = new int[3];
+        int sum = 0;
+        while (true) {
+            int presum = sum;
+            if (dim0 >= (1L << (pows[0] + 1))) {
+                pows[0]++;
+                sum++;
+            }
+            if (sum == 10) {
+                break;
+            }
+            if (dim1 >= (1L << (pows[1] + 1))) {
+                pows[1]++;
+                sum++;
+            }
+            if (sum == 10) {
+                break;
+            }
+            if (dim2 >= (1L << (pows[2] + 1))) {
+                pows[2]++;
+                sum++;
+            }
+            if (sum == presum || sum == 10) {
+                break;
+            }
+        }
+        return new long[] { 1L << pows[0], 1L << pows[1], 1L << pows[2] };
     }
 
     /**
@@ -205,6 +300,113 @@ final class MlxMetalKernels {
             dispatch((wpt > 1 ? "svn_Select" : "sv_Select") + typeName(type), size, wpt, new Ref[] { condition, null, y, out }, scalarBytes(type, scalar));
         }
 
+        /** {@code out = condition ? x : scalar}: MLX's {@code vs} Select kernel. */
+        void selectScalarRight(int type, int size, Ref condition, Ref x, double scalar, Ref out) {
+            int wpt = workPerThread(type, size);
+            dispatch((wpt > 1 ? "vsn_Select" : "vs_Select") + typeName(type), size, wpt, new Ref[] { condition, x, null, out }, scalarBytes(type, scalar));
+        }
+
+        /** {@code out[i] = start + i * step} for {@code size} elements: MLX's arange kernel. */
+        void arange(int type, int size, double start, double step, Ref out) {
+            long[] pipeline = pipeline(device, "arange" + typeName(type));
+            sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
+            // MLX sets the step to T(start + step) - T(start), computed in the output type.
+            bytes(scalarBytes(type, start), 0);
+            bytes(arangeStep(type, start, step), 1);
+            sendVoid(encoder, "setBuffer:offset:atIndex:", out.buffer(), out.offset(), 2);
+            dispatchThreads(arena, encoder, size, Math.min(size, pipeline[1]), 1, 1, 1, 1);
+        }
+
+        /**
+         * {@code dst[layout] = src[layout]}: MLX's general copy, reading {@code src} with
+         * {@code srcStrides} and writing {@code dst} contiguously ({@code dstStrides} null) or with
+         * {@code dstStrides}. A null {@code src} copies {@code scalar}, with zero strides.
+         */
+        void generalCopy(int inType, int outType, int[] shape, long[] srcStrides, Ref src, long[] dstStrides, Ref dst, byte[] scalar) {
+            boolean contiguousDst = dstStrides == null;
+            Layout layout = Layout.collapse(shape, srcStrides, contiguousDst ? contiguousStrides(shape) : dstStrides);
+            int nd = layout.ndim();
+            if (src != null && nd == 1 && layout.a()[0] == 1 && layout.b()[0] == 1) {
+                copy(inType, outType, (int) layout.size(), src, dst);
+                return;
+            }
+            if (src == null && nd == 1 && layout.b()[0] == 1) {
+                dispatch((workPerThread(outType, layout.size()) > 1 ? "sn_copy" : "s_copy") + typeName(inType) + typeName(outType), layout.size(),
+                        workPerThread(outType, layout.size()), new Ref[] { null, dst }, scalar);
+                return;
+            }
+            boolean gg = !contiguousDst || src == null;
+            if (!gg) {
+                // A contiguous destination only needs the source strides.
+                layout = Layout.collapse(shape, srcStrides, null);
+                nd = layout.ndim();
+            }
+            int wpt = nd > 3 ? 2 : 1;
+            String name = (gg ? "gg" : "g") + (nd > 3 ? "n2" : Integer.toString(nd)) + "_copy" + typeName(inType) + typeName(outType);
+            long[] pipeline = pipeline(device, name);
+            sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
+            if (src == null) {
+                bytes(scalar, 0);
+            } else {
+                sendVoid(encoder, "setBuffer:offset:atIndex:", src.buffer(), src.offset(), 0);
+            }
+            sendVoid(encoder, "setBuffer:offset:atIndex:", dst.buffer(), dst.offset(), 1);
+            if (nd > 3) {
+                bytes(intBytes(layout.shape()), 2);
+            }
+            bytes(longBytes(src == null ? new long[nd] : layout.a()), 3);
+            if (gg) {
+                bytes(longBytes(layout.b()), 4);
+            }
+            if (nd > 3) {
+                bytes(intBytes(new int[] { nd }), 5);
+            }
+            gridDispatch(layout, wpt);
+        }
+
+        /**
+         * {@code out = op(a, b)} over {@code shape} with broadcasting strides: MLX's general binary
+         * kernel, or the {@code vv} kernel when both operands turn out contiguous. Up to 3 dimensions.
+         */
+        void generalBinary(String op, int inType, int[] shape, long[] stridesA, Ref a, long[] stridesB, Ref b, Ref out) {
+            Layout layout = Layout.collapse(shape, stridesA, stridesB);
+            int nd = layout.ndim();
+            if (nd == 1 && layout.a()[0] == 1 && layout.b()[0] == 1) {
+                binary(op, inType, (int) layout.size(), a, b, out);
+                return;
+            }
+            if (nd > 3) {
+                throw new TornadoRuntimeException("[ERROR] General MLX binary kernels over more than 3 dimensions are not routed");
+            }
+            long[] pipeline = pipeline(device, "g" + nd + "_" + op + typeName(inType));
+            sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
+            sendVoid(encoder, "setBuffer:offset:atIndex:", a.buffer(), a.offset(), 0);
+            sendVoid(encoder, "setBuffer:offset:atIndex:", b.buffer(), b.offset(), 1);
+            sendVoid(encoder, "setBuffer:offset:atIndex:", out.buffer(), out.offset(), 2);
+            bytes(longBytes(layout.a()), 3);
+            bytes(longBytes(layout.b()), 4);
+            gridDispatch(layout, 1);
+        }
+
+        /** The 3D grid MLX uses for general kernels: (last dim / wpt, second-to-last dim, the rest). */
+        private void gridDispatch(Layout layout, int wpt) {
+            int nd = layout.ndim();
+            long dim0 = layout.shape()[nd - 1];
+            long dim1 = nd > 1 ? layout.shape()[nd - 2] : 1;
+            long rest = layout.size() / (dim0 * dim1);
+            if (nd > 3) {
+                dim0 = (dim0 + wpt - 1) / wpt;
+            }
+            long[] group = blockDims(dim0, dim1, rest);
+            dispatchThreads(arena, encoder, dim0, group[0], dim1, group[1], rest, group[2]);
+        }
+
+        private void bytes(byte[] value, int index) {
+            MemorySegment segment = arena.allocate(Math.max(1, value.length));
+            MemorySegment.copy(value, 0, segment, FFMSupport.C_CHAR, 0, value.length);
+            sendVoid(encoder, "setBytes:length:atIndex:", segment.address(), value.length, index);
+        }
+
         /**
          * Encodes one element-wise dispatch: {@code refs} bound at indices 0.., where a null entry is
          * the scalar operand {@code scalar} (bound with {@code setBytes}), and the element count after
@@ -258,6 +460,36 @@ final class MlxMetalKernels {
         byte[] out = new byte[itemSize(dtype)];
         System.arraycopy(b.array(), 0, out, 0, out.length);
         return out;
+    }
+
+    static byte[] intBytes(int[] values) {
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(4 * values.length).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        for (int v : values) {
+            b.putInt(v);
+        }
+        return b.array();
+    }
+
+    static byte[] longBytes(long[] values) {
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(8 * values.length).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        for (long v : values) {
+            b.putLong(v);
+        }
+        return b.array();
+    }
+
+    /** MLX's arange step, {@code T(start + step) - T(start)} evaluated in type {@code T}. */
+    static byte[] arangeStep(int dtype, double start, double step) {
+        return switch (dtype) {
+            case MlxNativeLib.MLX_FLOAT32 -> scalarBytes(dtype, (float) (start + step) - (float) start);
+            case MlxNativeLib.MLX_FLOAT16 -> scalarBytes(dtype, Float.float16ToFloat(Float.floatToFloat16((float) (start + step))) - Float.float16ToFloat(Float.floatToFloat16((float) start)));
+            case MlxNativeLib.MLX_BFLOAT16 -> scalarBytes(dtype, bf16ToFloat(floatToBFloat16((float) (start + step))) - bf16ToFloat(floatToBFloat16((float) start)));
+            default -> scalarBytes(dtype, (long) (start + step) - (long) start);
+        };
+    }
+
+    private static float bf16ToFloat(short bits) {
+        return Float.intBitsToFloat((bits & 0xffff) << 16);
     }
 
     /** Round-to-nearest-even float to bfloat16, as MLX's {@code bfloat16_t} conversion does. */
@@ -440,14 +672,18 @@ final class MlxMetalKernels {
 
     /** {@code dispatchThreads:threadsPerThreadgroup:}, whose two {@code MTLSize} arguments go by value. */
     private static void dispatchThreads(Arena arena, long encoder, long threads, long group) {
+        dispatchThreads(arena, encoder, threads, group, 1, 1, 1, 1);
+    }
+
+    private static void dispatchThreads(Arena arena, long encoder, long x, long gx, long y, long gy, long z, long gz) {
         MemorySegment grid = arena.allocate(MTL_SIZE);
-        grid.set(C_LONG, 0, threads);
-        grid.set(C_LONG, 8, 1);
-        grid.set(C_LONG, 16, 1);
+        grid.set(C_LONG, 0, x);
+        grid.set(C_LONG, 8, y);
+        grid.set(C_LONG, 16, z);
         MemorySegment tg = arena.allocate(MTL_SIZE);
-        tg.set(C_LONG, 0, group);
-        tg.set(C_LONG, 8, 1);
-        tg.set(C_LONG, 16, 1);
+        tg.set(C_LONG, 0, gx);
+        tg.set(C_LONG, 8, gy);
+        tg.set(C_LONG, 16, gz);
         try {
             msgSend(FunctionDescriptor.ofVoid(C_LONG, C_LONG, MTL_SIZE, MTL_SIZE)).invokeExact(encoder, sel("dispatchThreads:threadsPerThreadgroup:"), grid, tg);
         } catch (Throwable t) {

@@ -18,6 +18,8 @@
 package uk.ac.manchester.tornado.mlx.provider;
 
 import static java.util.Map.entry;
+import static uk.ac.manchester.tornado.mlx.provider.MlxMetalKernels.contiguousStrides;
+import static uk.ac.manchester.tornado.mlx.provider.MlxMetalKernels.scalarBytes;
 import static uk.ac.manchester.tornado.mlx.provider.MlxNativeLib.MLX_BOOL;
 import static uk.ac.manchester.tornado.mlx.provider.MlxNativeLib.MLX_COMPLEX64;
 import static uk.ac.manchester.tornado.mlx.provider.MlxNativeLib.MLX_FLOAT32;
@@ -309,9 +311,539 @@ final class MlxKernelRoutes {
         ROUTES.put("real", v -> complexPart(v, "Real", false));
         ROUTES.put("imag", v -> complexPart(v, "Imag", false));
         ROUTES.put("conjugate", v -> complexPart(v, "Conjugate", true));
+
+        registerShapeRoutes();
+        registerConstructionRoutes();
     }
 
     private MlxKernelRoutes() {
+    }
+
+    // ---------------------------------------------------------------- shape and layout
+
+    /** Arrays {@code in} and {@code out} exist and share a type MLX's kernels take; returns it or -1. */
+    private static int pairType(View v, int in, int out) {
+        if (!v.isArray(in) || !v.isArray(out) || v.dtype(in) != v.dtype(out) || MlxMetalKernels.typeName(v.dtype(in)) == null) {
+            return -1;
+        }
+        return v.dtype(in);
+    }
+
+    /** A same-size, same-type copy: the result of any reshape-like view made contiguous. */
+    private static Encoder contiguousCopy(View v) {
+        int t = pairType(v, 0, 1);
+        if (t < 0 || v.size(0) != v.size(1)) {
+            return null;
+        }
+        return p -> p.copy(t, t, v.size(0), v.ref(0), v.ref(1));
+    }
+
+    /** {@code out} (contiguous) = {@code in} read as {@code shape} with {@code strides} from element {@code offset}. */
+    private static Encoder view(View v, int in, int out, int[] shape, long[] strides, long offset) {
+        int t = pairType(v, in, out);
+        long n = 1;
+        for (int d : shape) {
+            n *= d;
+        }
+        if (t < 0 || n != v.size(out)) {
+            return null;
+        }
+        return p -> p.generalCopy(t, t, shape, strides, v.ref(in).plus(offset, t), null, v.ref(out), null);
+    }
+
+    /** The permutation of a 3D contiguous array {@code dims}: the output shape and the input strides it reads with. */
+    private static Encoder permute3(View v, int[] dims, int[] perm) {
+        long[] strides = contiguousStrides(dims);
+        int[] shape = new int[3];
+        long[] permuted = new long[3];
+        for (int i = 0; i < 3; i++) {
+            if (perm[i] < 0 || perm[i] > 2) {
+                return null;
+            }
+            shape[i] = dims[perm[i]];
+            permuted[i] = strides[perm[i]];
+        }
+        return view(v, 0, 1, shape, permuted, 0);
+    }
+
+    private static int[] dims3(View v, int first) {
+        return new int[] { v.intArg(first), v.intArg(first + 1), v.intArg(first + 2) };
+    }
+
+    /** Normalises an axis of a 3D array (negative axes count from the end). */
+    private static int axis3(int axis) {
+        return axis < 0 ? axis + 3 : axis;
+    }
+
+    /** Copies block {@code rows x cols} of {@code src} (row stride {@code srcCols}) to {@code dst} (row stride {@code dstCols}). */
+    private static void block(Program p, int t, Ref src, int srcCols, long srcOffset, Ref dst, int dstCols, long dstOffset, int rows, int cols) {
+        if (rows <= 0 || cols <= 0) {
+            return;
+        }
+        p.generalCopy(t, t, new int[] { rows, cols }, new long[] { srcCols, 1 }, src.plus(srcOffset, t), new long[] { dstCols, 1 }, dst.plus(dstOffset, t), null);
+    }
+
+    /** Rolls a {@code rows x cols} array by {@code s0} rows and {@code s1} columns (non-negative, reduced), as four block copies. */
+    private static Encoder roll2(View v, int rows, int cols, int shiftRows, int shiftCols) {
+        int t = pairType(v, 0, 1);
+        if (t < 0 || rows <= 0 || cols <= 0 || v.size(0) != rows * cols || v.size(1) != rows * cols) {
+            return null;
+        }
+        int s0 = Math.floorMod(shiftRows, rows);
+        int s1 = Math.floorMod(shiftCols, cols);
+        return p -> {
+            Ref x = v.ref(0);
+            Ref out = v.ref(1);
+            int[][] rowParts = { { 0, s0, rows - s0 }, { rows - s0, 0, s0 } };
+            int[][] colParts = { { 0, s1, cols - s1 }, { cols - s1, 0, s1 } };
+            for (int[] r : rowParts) {
+                for (int[] c : colParts) {
+                    block(p, t, x, cols, (long) r[0] * cols + c[0], out, cols, (long) r[1] * cols + c[1], r[2], c[2]);
+                }
+            }
+        };
+    }
+
+    private static void registerShapeRoutes() {
+        for (String name : new String[] { "reshape", "flatten", "unflatten", "squeeze", "squeeze_axis", "squeeze_axes", "expand_dims", "expand_dims_axes", "atleast_1d",
+                "atleast_2d", "atleast_3d", "contiguous", "copy" }) {
+            ROUTES.put(name, MlxKernelRoutes::contiguousCopy);
+        }
+        ROUTES.put("astype", v -> {
+            if (!v.isArray(0) || !v.isArray(1) || v.size(0) != v.size(1) || !ANY.contains(v.dtype(0)) || !ANY.contains(v.dtype(1))) {
+                return null;
+            }
+            int from = v.dtype(0);
+            int to = v.dtype(1);
+            return p -> p.copy(from, to, v.size(0), v.ref(0), v.ref(1));
+        });
+        // view: the same bytes under another type.
+        ROUTES.put("view", v -> {
+            if (!v.isArray(0) || !v.isArray(1) || !ANY.contains(v.dtype(0)) || !ANY.contains(v.dtype(1))) {
+                return null;
+            }
+            long bytes = (long) v.size(0) * MlxMetalKernels.itemSize(v.dtype(0));
+            if (bytes != (long) v.size(1) * MlxMetalKernels.itemSize(v.dtype(1)) || bytes > Integer.MAX_VALUE) {
+                return null;
+            }
+            return p -> p.copy(MLX_UINT8, MLX_UINT8, (int) bytes, v.ref(0), v.ref(1));
+        });
+        // number_of_elements(x[d0, d1, d2], axes (1, 2)) as int32.
+        ROUTES.put("number_of_elements", v -> {
+            if (!v.is(1, MLX_INT32, 1) || v.args() < 5) {
+                return null;
+            }
+            long count = (long) v.intArg(3) * v.intArg(4);
+            return p -> p.fill(MLX_INT32, 1, count, v.ref(1));
+        });
+        ROUTES.put("transpose_axes", v -> v.args() < 8 ? null : permute3(v, dims3(v, 2), new int[] { axis3(v.intArg(5)), axis3(v.intArg(6)), axis3(v.intArg(7)) }));
+        ROUTES.put("swapaxes", v -> {
+            if (v.args() < 7) {
+                return null;
+            }
+            int[] perm = { 0, 1, 2 };
+            int a = axis3(v.intArg(5));
+            int b = axis3(v.intArg(6));
+            if (a < 0 || a > 2 || b < 0 || b > 2) {
+                return null;
+            }
+            perm[a] = b;
+            perm[b] = a;
+            return permute3(v, dims3(v, 2), perm);
+        });
+        ROUTES.put("moveaxis", v -> {
+            if (v.args() < 7) {
+                return null;
+            }
+            int source = axis3(v.intArg(5));
+            int destination = axis3(v.intArg(6));
+            if (source < 0 || source > 2 || destination < 0 || destination > 2) {
+                return null;
+            }
+            java.util.List<Integer> order = new java.util.ArrayList<>(java.util.List.of(0, 1, 2));
+            order.remove(Integer.valueOf(source));
+            order.add(destination, source);
+            return permute3(v, dims3(v, 2), new int[] { order.get(0), order.get(1), order.get(2) });
+        });
+        // broadcast_to(x[L], (s0, s1)): L == s1 or L == 1.
+        ROUTES.put("broadcast_to", v -> {
+            if (!v.isArray(0) || v.args() < 4) {
+                return null;
+            }
+            int n = v.size(0);
+            int s0 = v.intArg(2);
+            int s1 = v.intArg(3);
+            if (n != s1 && n != 1) {
+                return null;
+            }
+            return view(v, 0, 1, new int[] { s0, s1 }, new long[] { 0, n == 1 ? 0 : 1 }, 0);
+        });
+        // broadcast_arrays(a[1, cols], b[rows, 1]) -> two [rows, cols] arrays.
+        ROUTES.put("broadcast_arrays", v -> {
+            if (v.args() < 6) {
+                return null;
+            }
+            int rows = v.intArg(4);
+            int cols = v.intArg(5);
+            if (!v.isArray(0) || !v.isArray(1) || v.size(0) != cols || v.size(1) != rows) {
+                return null;
+            }
+            Encoder first = view(v, 0, 2, new int[] { rows, cols }, new long[] { 0, 1 }, 0);
+            Encoder second = view(v, 1, 3, new int[] { rows, cols }, new long[] { 1, 0 }, 0);
+            return first == null || second == null ? null : p -> {
+                first.encode(p);
+                second.encode(p);
+            };
+        });
+        ROUTES.put("as_strided", v -> {
+            if (v.args() < 7 || !v.isArray(0)) {
+                return null;
+            }
+            int[] shape = { v.intArg(2), v.intArg(3) };
+            long[] strides = { v.intArg(4), v.intArg(5) };
+            long offset = v.intArg(6);
+            long last = offset + (shape[0] - 1L) * strides[0] + (shape[1] - 1L) * strides[1];
+            if (offset < 0 || last >= v.size(0) || strides[0] < 0 || strides[1] < 0) {
+                return null;
+            }
+            return view(v, 0, 1, shape, strides, offset);
+        });
+        ROUTES.put("concatenate", v -> {
+            int t = pairType(v, 0, 2);
+            if (t < 0 || !v.isArray(1) || v.dtype(1) != t || v.size(0) + v.size(1) != v.size(2)) {
+                return null;
+            }
+            return p -> {
+                p.copy(t, t, v.size(0), v.ref(0), v.ref(2));
+                p.copy(t, t, v.size(1), v.ref(1), v.ref(2).plus(v.size(0), t));
+            };
+        });
+        // concatenate_axis(a[r, ca], b[r, cb]) along axis 1.
+        ROUTES.put("concatenate_axis", v -> {
+            int t = pairType(v, 0, 2);
+            if (t < 0 || v.args() < 6 || !v.isArray(1) || v.dtype(1) != t) {
+                return null;
+            }
+            int r = v.intArg(3);
+            int ca = v.intArg(4);
+            int cb = v.intArg(5);
+            if (v.size(0) != r * ca || v.size(1) != r * cb || v.size(2) != r * (ca + cb)) {
+                return null;
+            }
+            return p -> {
+                block(p, t, v.ref(0), ca, 0, v.ref(2), ca + cb, 0, r, ca);
+                block(p, t, v.ref(1), cb, 0, v.ref(2), ca + cb, ca, r, cb);
+            };
+        });
+        ROUTES.put("stack", v -> {
+            int t = pairType(v, 0, 2);
+            if (t < 0 || !v.isArray(1) || v.dtype(1) != t || v.size(0) != v.size(1) || v.size(2) != 2 * v.size(0)) {
+                return null;
+            }
+            return p -> {
+                p.copy(t, t, v.size(0), v.ref(0), v.ref(2));
+                p.copy(t, t, v.size(1), v.ref(1), v.ref(2).plus(v.size(0), t));
+            };
+        });
+        // stack_axis(a[n], b[n], axis 1) -> [n, 2].
+        ROUTES.put("stack_axis", v -> {
+            int t = pairType(v, 0, 2);
+            if (t < 0 || !v.isArray(1) || v.dtype(1) != t || v.size(0) != v.size(1) || v.size(2) != 2 * v.size(0)) {
+                return null;
+            }
+            int n = v.size(0);
+            return p -> {
+                p.generalCopy(t, t, new int[] { n }, new long[] { 1 }, v.ref(0), new long[] { 2 }, v.ref(2), null);
+                p.generalCopy(t, t, new int[] { n }, new long[] { 1 }, v.ref(1), new long[] { 2 }, v.ref(2).plus(1, t), null);
+            };
+        });
+        // split(x[r, c]) into two halves along axis 1; split_sections at column k.
+        ROUTES.put("split", v -> v.args() < 5 ? null : splitColumns(v, v.intArg(3), v.intArg(4), v.intArg(4) / 2));
+        ROUTES.put("split_sections", v -> v.args() < 6 ? null : splitColumns(v, v.intArg(3), v.intArg(4), v.intArg(5)));
+        // repeat(x[n], reps): x read as [n, reps] with strides [1, 0].
+        ROUTES.put("repeat", v -> !v.isArray(0) || v.args() < 3 ? null : view(v, 0, 1, new int[] { v.size(0), v.intArg(2) }, new long[] { 1, 0 }, 0));
+        // repeat_axis(x[d0, d1], reps, axis 0): x read as [d0, reps, d1] with strides [d1, 0, 1].
+        ROUTES.put("repeat_axis", v -> {
+            if (v.args() < 5) {
+                return null;
+            }
+            int d0 = v.intArg(2);
+            int d1 = v.intArg(3);
+            return view(v, 0, 1, new int[] { d0, v.intArg(4), d1 }, new long[] { d1, 0, 1 }, 0);
+        });
+        // tile(x[d0, d1], (r0, r1)): x read as [r0, d0, r1, d1] with strides [0, d1, 0, 1].
+        ROUTES.put("tile", v -> {
+            if (v.args() < 6) {
+                return null;
+            }
+            int d0 = v.intArg(2);
+            int d1 = v.intArg(3);
+            return view(v, 0, 1, new int[] { v.intArg(4), d0, v.intArg(5), d1 }, new long[] { 0, d1, 0, 1 }, 0);
+        });
+        ROUTES.put("roll", v -> !v.isArray(0) || v.args() < 3 ? null : roll2(v, 1, v.size(0), 0, v.intArg(2)));
+        ROUTES.put("roll_axis", v -> v.args() < 5 ? null : roll2(v, v.intArg(2), v.intArg(3), 0, v.intArg(4)));
+        ROUTES.put("roll_axes", v -> v.args() < 6 ? null : roll2(v, v.intArg(2), v.intArg(3), v.intArg(4), v.intArg(5)));
+        // pad(x[r, c], low (b0, b1), high (a0, a1), value): fill, then copy x into the interior.
+        ROUTES.put("pad", v -> v.args() < 9 ? null : pad(v, v.intArg(2), v.intArg(3), v.intArg(4), v.intArg(5), v.intArg(6), v.intArg(7), v.floatArg(8)));
+        ROUTES.put("pad_symmetric", v -> v.args() < 6 ? null : pad(v, v.intArg(2), v.intArg(3), v.intArg(4), v.intArg(4), v.intArg(4), v.intArg(4), v.floatArg(5)));
+    }
+
+    private static Encoder splitColumns(View v, int rows, int cols, int k) {
+        int t = pairType(v, 0, 1);
+        if (t < 0 || !v.isArray(2) || v.dtype(2) != t || k < 0 || k > cols || v.size(0) != rows * cols || v.size(1) != rows * k || v.size(2) != rows * (cols - k)) {
+            return null;
+        }
+        return p -> {
+            block(p, t, v.ref(0), cols, 0, v.ref(1), k, 0, rows, k);
+            block(p, t, v.ref(0), cols, k, v.ref(2), cols - k, 0, rows, cols - k);
+        };
+    }
+
+    private static Encoder pad(View v, int rows, int cols, int before0, int after0, int before1, int after1, double value) {
+        int t = pairType(v, 0, 1);
+        int outCols = cols + before1 + after1;
+        int outRows = rows + before0 + after0;
+        if (t < 0 || before0 < 0 || after0 < 0 || before1 < 0 || after1 < 0 || v.size(0) != rows * cols || v.size(1) != outRows * outCols) {
+            return null;
+        }
+        return p -> {
+            p.fill(t, outRows * outCols, value, v.ref(1));
+            block(p, t, v.ref(0), cols, 0, v.ref(1), outCols, (long) before0 * outCols + before1, rows, cols);
+        };
+    }
+
+    // ---------------------------------------------------------------- construction
+
+    /** The single output array {@code out} (argument {@code index}) if its type is routable; -1 otherwise. */
+    private static int outType(View v, int index, TypeSet allowed) {
+        return v.isArray(index) && allowed.contains(v.dtype(index)) && v.size(index) > 0 ? v.dtype(index) : -1;
+    }
+
+    /** Fills a {@code rows x cols} matrix with zeros and its {@code k}-th diagonal from {@code src} (stride {@code srcStride}), or ones. */
+    private static void diagonalFill(Program p, int t, Ref out, int rows, int cols, int k, Ref src, long srcStride) {
+        p.fill(t, rows * cols, 0, out);
+        int length = k >= 0 ? Math.min(rows, cols - k) : Math.min(rows + k, cols);
+        if (length <= 0) {
+            return;
+        }
+        long start = k >= 0 ? k : (long) -k * cols;
+        Ref dst = out.plus(start, t);
+        if (src == null) {
+            p.generalCopy(t, t, new int[] { length }, new long[] { 0 }, null, new long[] { cols + 1 }, dst, scalarBytes(t, 1));
+        } else {
+            p.generalCopy(t, t, new int[] { length }, new long[] { srcStride }, src, new long[] { cols + 1 }, dst, null);
+        }
+    }
+
+    /** MLX's tri(n, m, k) as a bool mask: arange(n)[:, None] >= arange(-k, m - k)[None, :]. */
+    private static void triMask(Program p, int n, int m, int k, Ref mask) {
+        Ref rows = p.scratch(4L * n);
+        Ref cols = p.scratch(4L * m);
+        p.arange(MLX_INT32, n, 0, 1, rows);
+        p.arange(MLX_INT32, m, -k, 1, cols);
+        p.generalBinary("GreaterEqual", MLX_INT32, new int[] { n, m }, new long[] { 1, 0 }, rows, new long[] { 0, 1 }, cols, mask);
+    }
+
+    /** A float32 window over arange(0, M): the kernel steps MLX's {@code ops.cpp} uses for it. */
+    interface Window {
+        void encode(Program p, int m, Ref n, Ref out);
+    }
+
+    private static Encoder window(View v, Window steps) {
+        if (outType(v, 0, FLOAT32) < 0) {
+            return null;
+        }
+        int m = v.size(0);
+        return p -> {
+            if (m == 1) {
+                p.fill(MLX_FLOAT32, 1, 1, v.ref(0));
+                return;
+            }
+            p.arange(MLX_FLOAT32, m, 0, 1, v.ref(0));
+            steps.encode(p, m, v.ref(0), v.ref(0));
+        };
+    }
+
+    private static void registerConstructionRoutes() {
+        ROUTES.put("full", v -> {
+            int t = outType(v, 0, NUMBERS);
+            return t < 0 || v.args() < 2 ? null : p -> p.fill(t, v.size(0), v.floatArg(1), v.ref(0));
+        });
+        ROUTES.put("full_like", v -> {
+            int t = outType(v, 1, NUMBERS);
+            return t < 0 || v.args() < 3 || !v.isArray(0) || v.size(0) != v.size(1) ? null : p -> p.fill(t, v.size(1), v.floatArg(2), v.ref(1));
+        });
+        ROUTES.put("zeros", v -> fillRoute(v, 0, 0));
+        ROUTES.put("ones", v -> fillRoute(v, 0, 1));
+        ROUTES.put("zeros_like", v -> !v.isArray(0) || !v.isArray(1) || v.size(0) != v.size(1) ? null : fillRoute(v, 1, 0));
+        ROUTES.put("ones_like", v -> !v.isArray(0) || !v.isArray(1) || v.size(0) != v.size(1) ? null : fillRoute(v, 1, 1));
+        // arange(start, stop, step): MLX's arange kernel when the element count matches.
+        ROUTES.put("arange", v -> {
+            int t = outType(v, 0, NUMBERS);
+            if (t < 0 || v.args() < 4) {
+                return null;
+            }
+            double start = v.floatArg(1);
+            double stop = v.floatArg(2);
+            double step = v.floatArg(3);
+            if (step == 0 || Double.isInfinite(step) || Math.max((int) Math.ceil((stop - start) / step), 0) != v.size(0)) {
+                return null;
+            }
+            return p -> p.arange(t, v.size(0), start, step, v.ref(0));
+        });
+        // linspace(start, stop, num): t = arange(0, num) / (num - 1); (1 - t) * start + t * stop in float32.
+        ROUTES.put("linspace", v -> {
+            if (outType(v, 0, FLOATS) < 0 || v.args() < 3) {
+                return null;
+            }
+            int t = v.dtype(0);
+            int num = v.size(0);
+            double start = v.floatArg(1);
+            double stop = v.floatArg(2);
+            return p -> {
+                if (num == 1) {
+                    p.fill(t, 1, (float) start, v.ref(0));
+                    return;
+                }
+                Ref steps = p.scratch(4L * num);
+                Ref complement = p.scratch(4L * num);
+                p.arange(MLX_FLOAT32, num, 0, 1, steps);
+                p.binaryScalarRight("Divide", MLX_FLOAT32, num, steps, num - 1, steps);
+                p.binaryScalarLeft("Subtract", MLX_FLOAT32, num, 1, steps, complement);
+                p.binaryScalarRight("Multiply", MLX_FLOAT32, num, complement, start, complement);
+                p.binaryScalarRight("Multiply", MLX_FLOAT32, num, steps, stop, steps);
+                if (t == MLX_FLOAT32) {
+                    p.binary("Add", MLX_FLOAT32, num, complement, steps, v.ref(0));
+                } else {
+                    p.binary("Add", MLX_FLOAT32, num, complement, steps, complement);
+                    p.copy(MLX_FLOAT32, t, num, complement, v.ref(0));
+                }
+            };
+        });
+        ROUTES.put("eye", v -> {
+            int t = outType(v, 0, NUMBERS);
+            if (t < 0 || v.args() < 4 || v.size(0) != v.intArg(1) * v.intArg(2)) {
+                return null;
+            }
+            return p -> diagonalFill(p, t, v.ref(0), v.intArg(1), v.intArg(2), v.intArg(3), null, 0);
+        });
+        ROUTES.put("identity", v -> {
+            int t = outType(v, 0, NUMBERS);
+            if (t < 0 || v.args() < 2 || v.size(0) != v.intArg(1) * v.intArg(1)) {
+                return null;
+            }
+            return p -> diagonalFill(p, t, v.ref(0), v.intArg(1), v.intArg(1), 0, null, 0);
+        });
+        ROUTES.put("tri", v -> {
+            int t = outType(v, 0, NUMBERS);
+            if (t < 0 || v.args() < 4 || v.size(0) != v.intArg(1) * v.intArg(2)) {
+                return null;
+            }
+            int n = v.intArg(1);
+            int m = v.intArg(2);
+            int k = v.intArg(3);
+            return p -> {
+                Ref mask = p.scratch((long) n * m);
+                triMask(p, n, m, k, mask);
+                p.copy(MLX_BOOL, t, n * m, mask, v.ref(0));
+            };
+        });
+        // tril: where(tri(r, c, k), x, 0); triu: where(tri(r, c, k - 1), 0, x).
+        ROUTES.put("tril", v -> triangle(v, true));
+        ROUTES.put("triu", v -> triangle(v, false));
+        // diag(x[n], k): an (n + |k|)^2 zero matrix with x on its k-th diagonal.
+        ROUTES.put("diag", v -> {
+            int t = pairType(v, 0, 1);
+            if (t < 0 || v.args() < 3) {
+                return null;
+            }
+            int k = v.intArg(2);
+            int n = v.size(0) + Math.abs(k);
+            return v.size(1) != n * n ? null : p -> diagonalFill(p, t, v.ref(1), n, n, k, v.ref(0), 1);
+        });
+        // diagonal(x[r, c], k): x read along stride c + 1.
+        ROUTES.put("diagonal", v -> {
+            if (v.args() < 5) {
+                return null;
+            }
+            int r = v.intArg(2);
+            int c = v.intArg(3);
+            int k = v.intArg(4);
+            int length = Math.max(0, k >= 0 ? Math.min(r, c - k) : Math.min(r + k, c));
+            long start = k >= 0 ? k : (long) -k * c;
+            return length == 0 || !v.isArray(0) || v.size(0) != r * c ? null : view(v, 0, 1, new int[] { length }, new long[] { c + 1L }, start);
+        });
+        // meshgrid(x[nx], y[ny]): "xy" gives [ny, nx] grids, "ij" gives [nx, ny].
+        ROUTES.put("meshgrid", v -> {
+            if (!v.isArray(0) || !v.isArray(1) || v.args() < 5) {
+                return null;
+            }
+            int nx = v.size(0);
+            int ny = v.size(1);
+            boolean ij = v.boolArg(4);
+            int[] shape = ij ? new int[] { nx, ny } : new int[] { ny, nx };
+            Encoder first = view(v, 0, 2, shape, ij ? new long[] { 1, 0 } : new long[] { 0, 1 }, 0);
+            Encoder second = view(v, 1, 3, shape, ij ? new long[] { 0, 1 } : new long[] { 1, 0 }, 0);
+            return first == null || second == null ? null : p -> {
+                first.encode(p);
+                second.encode(p);
+            };
+        });
+        // Windows over n = arange(0, M) in float32, step by step as MLX's ops.cpp builds them.
+        ROUTES.put("hanning", v -> window(v, (p, m, n, out) -> {
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, (float) (Math.PI / (m - 1)), n, out);
+            p.unary("Sin", MLX_FLOAT32, MLX_FLOAT32, m, out, out);
+            p.unary("Square", MLX_FLOAT32, MLX_FLOAT32, m, out, out);
+        }));
+        ROUTES.put("hamming", v -> window(v, (p, m, n, out) -> {
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, (float) ((2.0 * Math.PI) / (m - 1)), n, out);
+            p.unary("Cos", MLX_FLOAT32, MLX_FLOAT32, m, out, out);
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, 0.46f, out, out);
+            p.binaryScalarLeft("Subtract", MLX_FLOAT32, m, 0.54f, out, out);
+        }));
+        ROUTES.put("blackman", v -> window(v, (p, m, n, out) -> {
+            Ref term2 = p.scratch(4L * m);
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, (float) ((2.0 * Math.PI) / (m - 1)), n, out);
+            p.unary("Cos", MLX_FLOAT32, MLX_FLOAT32, m, out, out);
+            p.unary("Square", MLX_FLOAT32, MLX_FLOAT32, m, out, term2);
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, 0.16f, term2, term2);
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, 0.5f, out, out);
+            p.binaryScalarLeft("Subtract", MLX_FLOAT32, m, 0.34f, out, out);
+            p.binary("Add", MLX_FLOAT32, m, out, term2, out);
+        }));
+        ROUTES.put("bartlett", v -> window(v, (p, m, n, out) -> {
+            p.binaryScalarLeft("Multiply", MLX_FLOAT32, m, 2.0f / (m - 1), n, out);
+            p.binaryScalarRight("Subtract", MLX_FLOAT32, m, out, 1.0f, out);
+            p.unary("Abs", MLX_FLOAT32, MLX_FLOAT32, m, out, out);
+            p.binaryScalarLeft("Subtract", MLX_FLOAT32, m, 1.0f, out, out);
+        }));
+    }
+
+    private static Encoder fillRoute(View v, int index, double value) {
+        int t = outType(v, index, NUMBERS);
+        return t < 0 ? null : p -> p.fill(t, v.size(index), value, v.ref(index));
+    }
+
+    private static Encoder triangle(View v, boolean lower) {
+        int t = pairType(v, 0, 1);
+        if (t < 0 || v.args() < 5 || !NUMBERS.contains(t)) {
+            return null;
+        }
+        int r = v.intArg(2);
+        int c = v.intArg(3);
+        int k = v.intArg(4);
+        if (v.size(0) != r * c || v.size(1) != r * c) {
+            return null;
+        }
+        return p -> {
+            Ref mask = p.scratch((long) r * c);
+            triMask(p, r, c, lower ? k : k - 1, mask);
+            if (lower) {
+                p.selectScalarRight(t, r * c, mask, v.ref(0), 0, v.ref(1));
+            } else {
+                p.selectScalar(t, r * c, mask, 0, v.ref(0), v.ref(1));
+            }
+        };
     }
 
     private static Encoder scaled(View v, double factor) {
