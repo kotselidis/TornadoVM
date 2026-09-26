@@ -43,6 +43,7 @@ import uk.ac.manchester.tornado.mlx.MlxLogic;
 import uk.ac.manchester.tornado.mlx.MlxMath;
 import uk.ac.manchester.tornado.mlx.MlxCreate;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
+import uk.ac.manchester.tornado.mlx.MlxReduce;
 import uk.ac.manchester.tornado.mlx.MlxShape;
 import uk.ac.manchester.tornado.mlx.provider.MlxLibraryProvider;
 
@@ -645,5 +646,75 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                         (a, q, b) -> tune(Mlx.ropeDynamic(a, q, b, sh[0], sh[1], sh[2], sh[3], sh[4], traditional, 500000f, 0.5f), c), xh, offset, (HalfFloatArray) o[0]));
             }
         }
+    }
+
+    // ---------------------------------------------------------------- reductions
+
+    @Test
+    public void testReductions() throws TornadoExecutionPlanException {
+        String[] names = { "sum", "prod", "max", "min", "mean", "var", "std" };
+        int[] wholes = { 1000, 4096, 4097, 70001, 1 << 22 };
+        for (int n : wholes) {
+            FloatArray x = FloatArray.fromArray(values(n, n > 5000 ? 0.999f : -2, n > 5000 ? 1.001f : 2, 100 + n));
+            for (String name : names) {
+                same(name + " whole " + n, new Object[] { x }, floatsOut(1), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(reduceWhole(name, a, b), c), x, (FloatArray) o[0]));
+            }
+            same("logsumexp " + n, new Object[] { x }, floatsOut(1), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.logsumexp(a, b), c), x, (FloatArray) o[0]));
+            same("argmax " + n, new Object[] { x }, () -> new TornadoNativeArray[] { new IntArray(1) }, (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(Mlx.argmax(a, b), c), x, (IntArray) o[0]));
+        }
+        int[][] rowShapes = { { 7, 50 }, { 40, 60 }, { 20, 3000 }, { 64, 4096 }, { 3, 100000 } };
+        for (int[] rs : rowShapes) {
+            int rows = rs[0];
+            int len = rs[1];
+            FloatArray x = FloatArray.fromArray(values(rows * len, -2, 2, 101 + len));
+            for (String name : names) {
+                same(name + " axis " + rows + "x" + len, new Object[] { x }, floatsOut(rows),
+                        (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(reduceAxis(name, a, b, rows, len), c), x, (FloatArray) o[0]));
+            }
+            same("argmax rows " + rows + "x" + len, new Object[] { x }, () -> new TornadoNativeArray[] { new IntArray(rows) },
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(Mlx.argmaxRows(a, b, rows, len), c), x, (IntArray) o[0]));
+            same("argmin axis " + rows + "x" + len, new Object[] { x }, () -> new TornadoNativeArray[] { new IntArray(rows) },
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.argminAxis(a, b, rows, len, 1), c), x, (IntArray) o[0]));
+        }
+        FloatArray x = FloatArray.fromArray(values(12 * 30 * 5, -2, 2, 102));
+        same("argmin inner axis", new Object[] { x }, () -> new TornadoNativeArray[] { new IntArray(12 * 5) },
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.argminAxis(a, b, 12, 30, 5), c), x, (IntArray) o[0]));
+        same("sum axes", new Object[] { x }, floatsOut(12), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.sumAxes(a, b, 12, 30, 5, 1), c), x, (FloatArray) o[0]));
+        IntArray ints = ints(103, -1000, 1000);
+        same("sum i32", new Object[] { ints }, () -> new TornadoNativeArray[] { new IntArray(1) }, (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.sum(a, b), c), ints, (IntArray) o[0]));
+        FloatArray mostlyNonZero = floats(104);
+        same("all", new Object[] { mostlyNonZero }, () -> new TornadoNativeArray[] { new ByteArray(1) },
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.all(a, b), c), mostlyNonZero, (ByteArray) o[0]));
+        same("any", new Object[] { mostlyNonZero }, () -> new TornadoNativeArray[] { new ByteArray(1) },
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.any(a, b), c), mostlyNonZero, (ByteArray) o[0]));
+        same("all rows", new Object[] { x }, () -> new TornadoNativeArray[] { new ByteArray(12) },
+                (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.allAxes(a, b, 12, 30, 5, 1), c), x, (ByteArray) o[0]));
+        HalfFloatArray h = halfValues(33 * 4096, -2, 2, 105);
+        same("mean f16 rows", new Object[] { h }, halvesOut(33), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxReduce.meanAxis(a, b, 33, 4096, 1), c), h, (HalfFloatArray) o[0]));
+        same("var ddof=1", new Object[] { x }, floatsOut(1), (g, id, c, o) -> g.libraryTask(id, (a, b, d) -> tune(MlxReduce.var(a, b, d), c), x, (FloatArray) o[0], 1));
+    }
+
+    private static LibraryTaskDescriptor reduceWhole(String name, FloatArray a, FloatArray b) {
+        return switch (name) {
+            case "sum" -> MlxReduce.sum(a, b);
+            case "prod" -> MlxReduce.prod(a, b);
+            case "max" -> MlxReduce.max(a, b);
+            case "min" -> MlxReduce.min(a, b);
+            case "mean" -> MlxReduce.mean(a, b);
+            case "var" -> MlxReduce.var(a, b, 0);
+            default -> MlxReduce.std(a, b, 0);
+        };
+    }
+
+    private static LibraryTaskDescriptor reduceAxis(String name, FloatArray a, FloatArray b, int rows, int len) {
+        return switch (name) {
+            case "sum" -> MlxReduce.sumAxis(a, b, rows, len, 1);
+            case "prod" -> MlxReduce.prodAxis(a, b, rows, len, 1);
+            case "max" -> MlxReduce.maxAxis(a, b, rows, len, 1);
+            case "min" -> MlxReduce.minAxis(a, b, rows, len, 1);
+            case "mean" -> MlxReduce.meanAxis(a, b, rows, len, 1);
+            case "var" -> MlxReduce.varAxis(a, b, rows, len, 1, 0);
+            default -> MlxReduce.stdAxis(a, b, rows, len, 1, 2);
+        };
     }
 }

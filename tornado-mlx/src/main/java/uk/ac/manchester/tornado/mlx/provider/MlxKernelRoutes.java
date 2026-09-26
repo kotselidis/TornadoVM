@@ -315,6 +315,7 @@ final class MlxKernelRoutes {
         registerShapeRoutes();
         registerConstructionRoutes();
         registerRowRoutes();
+        registerReductionRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -964,6 +965,287 @@ final class MlxKernelRoutes {
         // rope(x, out, B, H, T, D, dims, traditional, base, scale, offset); rope_dynamic(x, offset[1], out, B, H, T, D, dims, traditional, base, scale).
         ROUTES.put("fast_rope", v -> rope(v, 0, 1, -1, 2));
         ROUTES.put("fast_rope_dynamic", v -> rope(v, 0, 2, 1, 3));
+    }
+
+    // ---------------------------------------------------------------- reductions
+
+    private static final int REDUCE_N_READS = 4;
+    private static final int REDUCE_N_WRITES = 4;
+
+    /** MLX's remap_reduce_types: the type the kernel reads and the type it accumulates into. */
+    private static int[] reduceTypes(int in, String op) {
+        boolean integer = INTEGERS.contains(in);
+        if (op.equals("sum") || op.equals("prod")) {
+            if (in == MLX_BOOL) {
+                return new int[] { MlxNativeLib.MLX_INT8, MLX_INT32 };
+            }
+            if (integer) {
+                return switch (in) {
+                    case MLX_UINT8, MlxNativeLib.MLX_UINT16, MlxNativeLib.MLX_UINT32 -> new int[] { in, MlxNativeLib.MLX_UINT32 };
+                    case MlxNativeLib.MLX_INT64 -> new int[] { in, in };
+                    default -> new int[] { in, MLX_INT32 };
+                };
+            }
+            return new int[] { in, in };
+        }
+        if (op.equals("and") || op.equals("or")) {
+            if (FLOATS.contains(in)) {
+                return new int[] { in, MLX_BOOL };
+            }
+            return switch (MlxMetalKernels.itemSize(in)) {
+                case 1 -> new int[] { MLX_BOOL, MLX_BOOL };
+                case 2 -> new int[] { MlxNativeLib.MLX_INT16, MLX_BOOL };
+                case 4 -> new int[] { MLX_INT32, MLX_BOOL };
+                default -> new int[] { MlxNativeLib.MLX_INT64, MLX_BOOL };
+            };
+        }
+        return new int[] { in, in };
+    }
+
+    private static long roundUp32(long n) {
+        return (n + 31) / 32 * 32;
+    }
+
+    /** MLX's all_reduce over {@code n} contiguous elements into {@code out[0]}. */
+    private static void allReduce(Program p, String op, int in, long n, Ref x, Ref out) {
+        int[] types = reduceTypes(in, op);
+        String name = "all_reduce_" + op + MlxMetalKernels.typeName(types[0]);
+        if (n <= REDUCE_N_READS * 1024L) {
+            long group = roundUp32((n + REDUCE_N_READS - 1) / REDUCE_N_READS);
+            p.launch(name).buffer(0, x).buffer(1, out).i64(2, n).i64(3, n).threads(group, group, 1, 1, 1, 1);
+            return;
+        }
+        boolean huge = n * MlxMetalKernels.itemSize(in) > (1L << 26);
+        int rows = huge ? 1024 * REDUCE_N_READS : 32 * REDUCE_N_READS;
+        long secondGroup = huge ? 1024 : 32;
+        Ref partial = p.scratch((long) rows * MlxMetalKernels.itemSize(types[1]));
+        long rowSize = (n + rows - 1) / rows;
+        long group = roundUp32(Math.min((rowSize + REDUCE_N_READS - 1) / REDUCE_N_READS, 1024));
+        p.launch(name).buffer(0, x).buffer(1, partial).i64(2, n).i64(3, rowSize).threads(group, group, rows, 1, 1, 1);
+        p.launch("all_reduce_" + op + MlxMetalKernels.typeName(types[1])).buffer(0, partial).buffer(1, out).i64(2, rows).i64(3, rows).threads(secondGroup, secondGroup, 1, 1, 1, 1);
+    }
+
+    /** MLX's threadgroup_size_from_row_size. */
+    private static long rowReduceGroup(long rowSize) {
+        if (rowSize <= 512) {
+            return 32;
+        }
+        if (rowSize <= 1024) {
+            return 128;
+        }
+        return Math.min(1024, roundUp32((rowSize + REDUCE_N_READS - 1) / REDUCE_N_READS));
+    }
+
+    /** MLX's row reduce over {@code rows} contiguous rows of {@code rowSize}, with no other reduced axes, into {@code out[rows]}. */
+    private static void rowReduce(Program p, String op, int in, long rows, long rowSize, Ref x, Ref out) {
+        int[] types = reduceTypes(in, op);
+        String type = MlxMetalKernels.typeName(types[0]);
+        if (rowSize <= 64) {
+            // row_reduce_small with no non-row reductions: one thread per output.
+            Program.Launch k = p.launch("row_reduce_small_1_reduce_" + op + type).buffer(0, x).buffer(1, out);
+            rowArgs(k, rows, rowSize);
+            k.threads(rows, Math.min(rows, 1024), 1, 1, 1, 1);
+        } else if (rows >= 32) {
+            long group = rowReduceGroup(rowSize);
+            if (MlxMetalKernels.itemSize(types[0]) == 8) {
+                group = Math.min(group, 512);
+            }
+            long width = (rows + REDUCE_N_WRITES - 1) / REDUCE_N_WRITES;
+            p.launch("row_reduce_simple_" + op + type).buffer(0, x).buffer(1, out).i64(2, rowSize).i64(3, rows).threads(group, group, width, 1, 1, 1);
+        } else {
+            long group = rowReduceGroup(rowSize);
+            Program.Launch k = p.launch("row_reduce_looped_1_reduce_" + op + type).buffer(0, x).buffer(1, out);
+            rowArgs(k, rows, rowSize);
+            k.threads(group, group, rows, 1, 1, 1);
+        }
+    }
+
+    /** RowReduceArgs.encode for contiguous rows: one non-reduced dimension, no extra reduced axes. */
+    private static void rowArgs(Program.Launch k, long rows, long rowSize) {
+        k.i64(2, rowSize).i64(3, 1).i32(4, (int) rows).i64(5, rowSize).i32(6, 1).i32(7, 0).i64(8, 0).i32(9, 0);
+    }
+
+    /** The reduced extent of a reduce call: whole array (null), or rows x len when the reduced axes are trailing and contiguous. */
+    private record Extent(long rows, long len, boolean whole) {
+    }
+
+    /** reduce(x, out): whole; reduce_axis(x, out, outer, len, inner); reduce_axes(x, out, outer, l1, l2, inner). Only inner == 1 routes. */
+    private static Extent extent(View v, String form) {
+        if (!v.isArray(0)) {
+            return null;
+        }
+        long n = v.size(0);
+        switch (form) {
+            case "whole":
+                return new Extent(1, n, true);
+            case "axis":
+                if (v.args() < 5 || v.intArg(4) != 1 || (long) v.intArg(2) * v.intArg(3) != n) {
+                    return null;
+                }
+                return new Extent(v.intArg(2), v.intArg(3), false);
+            default:
+                if (v.args() < 6 || v.intArg(5) != 1 || (long) v.intArg(2) * v.intArg(3) * v.intArg(4) != n) {
+                    return null;
+                }
+                return new Extent(v.intArg(2), (long) v.intArg(3) * v.intArg(4), false);
+        }
+    }
+
+    /** The reduction itself: all_reduce for a whole array, row reduce otherwise. */
+    private static void reduceInto(Program p, String op, int in, Extent e, Ref x, Ref out) {
+        if (e.whole()) {
+            allReduce(p, op, in, e.len(), x, out);
+        } else {
+            rowReduce(p, op, in, e.rows(), e.len(), x, out);
+        }
+    }
+
+    /** sum, prod, max, min, all (and), any (or): output type as MLX gives it. */
+    private static Encoder plainReduce(View v, String op, String form) {
+        Extent e = extent(v, form);
+        if (e == null || !v.isArray(1) || v.size(1) != e.rows() || !ANY.contains(v.dtype(0)) || v.dtype(0) == MLX_COMPLEX64) {
+            return null;
+        }
+        int in = v.dtype(0);
+        boolean logical = op.equals("and") || op.equals("or");
+        String kernelOp = !logical && in == MLX_BOOL ? (op.equals("min") ? "and" : op.equals("max") ? "or" : op) : op;
+        int accumulated = reduceTypes(in, kernelOp)[1];
+        int outType = v.dtype(1);
+        boolean boolOut = accumulated == MLX_BOOL;
+        if (boolOut ? outType != MLX_UINT8 : outType != accumulated) {
+            return null;
+        }
+        return p -> {
+            if (boolOut) {
+                // MLX's reduce kernels need at least 4 bytes of output; reduce into scratch and copy the bools.
+                Ref bools = p.scratch(Math.max(4, e.rows()));
+                reduceInto(p, kernelOp, in, e, v.ref(0), bools);
+                p.copy(MLX_BOOL, MLX_BOOL, (int) e.rows(), bools, v.ref(1));
+            } else {
+                reduceInto(p, kernelOp, in, e, v.ref(0), v.ref(1));
+            }
+        };
+    }
+
+    /** static_cast of a double into MLX dtype {@code t}, as NumberOfElements stores it, read back as a double. */
+    private static double castTo(int t, double value) {
+        return switch (t) {
+            case MLX_FLOAT32 -> (float) value;
+            case MlxNativeLib.MLX_FLOAT16 -> Float.float16ToFloat(Float.floatToFloat16((float) value));
+            default -> Float.intBitsToFloat((Float.floatToRawIntBits((float) value) + 0x7fff + ((Float.floatToRawIntBits((float) value) >>> 16) & 1)) & 0xffff0000);
+        };
+    }
+
+    /** mean: sum, then multiply by number_of_elements(inverted) as a scalar of the output type (floating inputs). */
+    private static Encoder mean(View v, String form) {
+        Extent e = extent(v, form);
+        int t = v.isArray(0) ? v.dtype(0) : -1;
+        if (e == null || !FLOATS.contains(t) || !v.is(1, t, (int) e.rows())) {
+            return null;
+        }
+        double inverse = 1.0 / e.len();
+        return p -> {
+            reduceInto(p, "sum", t, e, v.ref(0), v.ref(1));
+            p.binaryScalarRight("Multiply", t, (int) e.rows(), v.ref(1), inverse, v.ref(1));
+        };
+    }
+
+    /** var(ddof) and std: mean with keepdims, broadcast subtract, square, sum, and the normaliser MLX uses. */
+    private static Encoder variance(View v, String form, int ddofIndex, boolean std) {
+        Extent e = extent(v, form);
+        int t = v.isArray(0) ? v.dtype(0) : -1;
+        if (e == null || !FLOATS.contains(t) || !v.is(1, t, (int) e.rows()) || v.args() <= ddofIndex) {
+            return null;
+        }
+        int ddof = v.intArg(ddofIndex);
+        long rows = e.rows();
+        long len = e.len();
+        int n = v.size(0);
+        return p -> {
+            int item = MlxMetalKernels.itemSize(t);
+            Ref mu = p.scratch(Math.max(4, rows * item));
+            Ref d = p.scratch((long) n * item);
+            reduceInto(p, "sum", t, e, v.ref(0), mu);
+            p.binaryScalarRight("Multiply", t, (int) rows, mu, 1.0 / len, mu);
+            if (e.whole()) {
+                p.binaryScalarRight("Subtract", t, n, v.ref(0), mu, d);
+            } else {
+                p.generalBinary("Subtract", t, new int[] { (int) rows, (int) len }, new long[] { len, 1 }, v.ref(0), new long[] { 1, 0 }, mu, d);
+            }
+            p.unary("Square", t, t, n, d, d);
+            reduceInto(p, "sum", t, e, d, v.ref(1));
+            if (ddof == 0) {
+                p.binaryScalarRight("Multiply", t, (int) rows, v.ref(1), 1.0 / len, v.ref(1));
+            } else {
+                // maximum(number_of_elements - ddof, 0), each step rounded to the output type.
+                double normaliser = Math.max(castTo(t, castTo(t, len) - castTo(t, ddof)), 0.0);
+                p.binaryScalarRight("Divide", t, (int) rows, v.ref(1), normaliser, v.ref(1));
+            }
+            if (std) {
+                p.unary("Sqrt", t, t, (int) rows, v.ref(1), v.ref(1));
+            }
+        };
+    }
+
+    /**
+     * logsumexp of a whole array: MLX's fused LogSumExp kernel. (The axis forms reduce an inner axis
+     * of [outer, len, inner], for which MLX builds a composite instead, so they stay on the C API.)
+     */
+    private static Encoder logsumexp(View v, String form) {
+        Extent e = extent(v, form);
+        int t = v.isArray(0) ? v.dtype(0) : -1;
+        if (e == null || !FLOATS.contains(t) || !v.is(1, t, (int) e.rows())) {
+            return null;
+        }
+        int axis = (int) e.len();
+        String name = (axis > 4096 ? "looped_" : "block_") + "logsumexp_" + MlxMetalKernels.typeName(t);
+        return p -> {
+            Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1)).i32(2, axis);
+            long group = rowGroup(axis, 4, 4096, k.maxThreads);
+            k.threads(e.rows() * group, group, 1, 1, 1, 1);
+        };
+    }
+
+    /** argmin/argmax over an axis of x viewed as [outer, len, inner] (uint32 indices into an int array). */
+    private static Encoder argReduce(View v, String op, long outer, long len, long inner) {
+        if (!v.isArray(0) || !v.is(1, MLX_INT32, (int) (outer * inner)) || outer * len * inner != v.size(0) || !NUMBERS.contains(v.dtype(0))) {
+            return null;
+        }
+        String name = op + "_" + MlxMetalKernels.typeName(v.dtype(0));
+        return p -> {
+            Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1));
+            long group = roundUp32(Math.min((len + 3) / 4, k.maxThreads));
+            boolean scalar = outer * inner == 1;
+            if (scalar) {
+                k.i32(2, 0).i64(3, 0).i64(4, 0).i64(5, 0);
+            } else {
+                k.bytes(2, MlxMetalKernels.intBytes(new int[] { (int) outer, (int) inner })).i64(3, len * inner, 1).i64(4, inner, 1).i64(5, 2);
+            }
+            k.i64(6, inner).i64(7, len).threads(group, group, outer * inner, 1, 1, 1);
+        };
+    }
+
+    private static void registerReductionRoutes() {
+        String[][] plain = { { "sum", "sum" }, { "prod", "prod" }, { "max", "max" }, { "min", "min" }, { "all", "and" }, { "any", "or" } };
+        for (String[] r : plain) {
+            ROUTES.put(r[0], v -> plainReduce(v, r[1], "whole"));
+            ROUTES.put(r[0] + "_axis", v -> plainReduce(v, r[1], "axis"));
+            ROUTES.put(r[0] + "_axes", v -> plainReduce(v, r[1], "axes"));
+        }
+        ROUTES.put("mean", v -> mean(v, "whole"));
+        ROUTES.put("mean_axis", v -> mean(v, "axis"));
+        ROUTES.put("mean_axes", v -> mean(v, "axes"));
+        ROUTES.put("var", v -> variance(v, "whole", 2, false));
+        ROUTES.put("var_axis", v -> variance(v, "axis", 5, false));
+        ROUTES.put("var_axes", v -> variance(v, "axes", 6, false));
+        ROUTES.put("std", v -> variance(v, "whole", 2, true));
+        ROUTES.put("std_axis", v -> variance(v, "axis", 5, true));
+        ROUTES.put("std_axes", v -> variance(v, "axes", 6, true));
+        ROUTES.put("logsumexp", v -> logsumexp(v, "whole"));
+        ROUTES.put("argmin", v -> v.isArray(0) ? argReduce(v, "argmin", 1, v.size(0), 1) : null);
+        ROUTES.put("argmin_axis", v -> v.args() < 5 ? null : argReduce(v, "argmin", v.intArg(2), v.intArg(3), v.intArg(4)));
+        ROUTES.put("argmax", v -> v.isArray(0) ? argReduce(v, "argmax", 1, v.size(0), 1) : null);
+        ROUTES.put("argmax_axis", v -> v.args() < 4 ? null : argReduce(v, "argmax", v.intArg(2), v.intArg(3), 1));
     }
 
     private static Encoder scaled(View v, double factor) {

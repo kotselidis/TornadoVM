@@ -282,6 +282,12 @@ final class MlxMetalKernels {
             dispatch((wpt > 1 ? "svn_" : "sv_") + op + typeName(inType), size, wpt, new Ref[] { null, b, out }, scalarBytes(inType, scalar));
         }
 
+        /** {@code out = op(a, b[0])} with the scalar {@code b} read from a buffer: MLX's {@code vs} binary kernel. */
+        void binaryScalarRight(String op, int inType, int size, Ref a, Ref scalar, Ref out) {
+            int wpt = workPerThread(inType, size);
+            dispatch((wpt > 1 ? "vsn_" : "vs_") + op + typeName(inType), size, wpt, new Ref[] { a, scalar, out }, null);
+        }
+
         /** {@code out1, out2 = op(a, b)}: MLX's two-output binary kernel (divmod). */
         void binaryTwo(String op, int inType, int size, Ref a, Ref b, Ref out1, Ref out2) {
             int wpt = workPerThread(inType, size);
