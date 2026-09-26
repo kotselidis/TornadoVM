@@ -54,7 +54,7 @@ public final class JitBlas {
     }
 
     /** c[m, n] = a[m, k] @ b[k, n]. */
-    @JitBaseline(value = "mlx_matmul", source = "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled")
+    @JitBaseline(value = { "mlx_matmul", "mlx_tensordot", "mlx_tensordot_axis" }, source = "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled")
     public static void gemm(KernelContext ctx, FloatArray a, FloatArray b, FloatArray c, int m, int n, int k) {
         float[] as = ctx.allocateFloatLocalArray(256);
         float[] bs = ctx.allocateFloatLocalArray(256);

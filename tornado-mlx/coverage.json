@@ -5,11 +5,11 @@
     "operations": 332,
     "excluded": 40,
     "inScope": 292,
-    "bound": 265,
-    "tested": 265,
+    "bound": 277,
+    "tested": 277,
     "benchmarked": 181,
-    "jitBaselines": 265,
-    "remaining": 27,
+    "jitBaselines": 277,
+    "remaining": 15,
     "byTier": {
       "1": {
         "inScope": 32,
@@ -21,7 +21,7 @@
       },
       "3": {
         "inScope": 112,
-        "bound": 85
+        "bound": 97
       }
     }
   },
@@ -1054,9 +1054,27 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.blockMaskedGemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (block-masked)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_broadcast_arrays",
@@ -1819,9 +1837,26 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.batchedGemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (batched)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_equal",
@@ -2121,9 +2156,25 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.fromFp8"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_full",
@@ -2348,9 +2399,26 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.hadamard"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_hamming",
@@ -2456,9 +2524,26 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.dotPartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_isclose",
@@ -2627,9 +2712,26 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.kron"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_left_shift",
@@ -3686,9 +3788,26 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.outer"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_pad",
@@ -3947,9 +4066,26 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.qqmm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_quantize",
@@ -3972,10 +4108,12 @@
         "bfloat16",
         "float16",
         "float32",
-        "int32"
+        "int32",
+        "uint8"
       ],
       "factories": [
-        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java",
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
       ]
     },
     {
@@ -4659,9 +4797,27 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.segmentedGemm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_sigmoid",
@@ -5736,18 +5892,52 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_tensordot_axis",
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_tile",
@@ -5781,9 +5971,25 @@
       "header": "ops.h",
       "tier": 3,
       "device": "gpu",
-      "bound": false,
-      "tested": false,
-      "benchmarked": false
+      "bound": true,
+      "tested": true,
+      "benchmarked": false,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.toFp8"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
     },
     {
       "name": "mlx_topk_axis",

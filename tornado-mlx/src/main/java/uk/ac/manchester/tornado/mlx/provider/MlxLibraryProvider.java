@@ -393,6 +393,24 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
                     c.ints(c.intArg(5), c.intArg(7)), 2, c.scalar(c.floatArg(8)), c.cString("constant"), c.stream())), 1)), //
             entry("pad_symmetric", c -> c.store(c.op("mlx_pad_symmetric", res -> MlxC.mlx_pad_symmetric(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.scalar(c.floatArg(5)),
                     c.cString("constant"), c.stream())), 1)), //
+            // Tensor and special products (MlxProducts).
+            entry("einsum_bmm", c -> c.store(c.op("mlx_einsum", res -> MlxC.mlx_einsum(res, c.cString("bij,bjk->bik"), c.vector(c.input(0, c.intArg(3), c.intArg(4), c.intArg(5)),
+                    c.input(1, c.intArg(3), c.intArg(5), c.intArg(6))), c.stream())), 2)), //
+            entry("inner", c -> c.store(c.op("mlx_inner", res -> MlxC.mlx_inner(res, c.input(0, c.length(0)), c.input(1, c.length(1)), c.stream())), 2)), //
+            entry("outer", c -> c.store(c.op("mlx_outer", res -> MlxC.mlx_outer(res, c.input(0, c.length(0)), c.input(1, c.length(1)), c.stream())), 2)), //
+            entry("kron", c -> c.store(c.op("mlx_kron", res -> MlxC.mlx_kron(res, c.input(0, c.intArg(3), c.intArg(4)), c.input(1, c.intArg(5), c.intArg(6)), c.stream())), 2)), //
+            entry("tensordot", c -> c.store(c.op("mlx_tensordot", res -> MlxC.mlx_tensordot(res, c.input(0, c.intArg(3), c.intArg(4), c.intArg(5)),
+                    c.input(1, c.intArg(4), c.intArg(5), c.intArg(6)), c.ints(1, 2), 2, c.ints(0, 1), 2, c.stream())), 2)), //
+            entry("tensordot_axis", c -> c.store(c.op("mlx_tensordot_axis", res -> MlxC.mlx_tensordot_axis(res, c.input(0, c.intArg(3), c.intArg(4)), c.input(1, c.intArg(4), c.intArg(5)), 1,
+                    c.stream())), 2)), //
+            entry("block_masked_mm", MlxLibraryProvider::blockMaskedMm), //
+            entry("segmented_mm", MlxLibraryProvider::segmentedMm), //
+            entry("hadamard_transform", c -> c.store(c.op("mlx_hadamard_transform", res -> MlxC.mlx_hadamard_transform(res, c.input(0, c.intArg(2), c.intArg(3)), c.optionalFloat(c.floatArg(4)),
+                    c.stream())), 1)), //
+            entry("to_fp8", c -> c.storeRaw(c.op("mlx_to_fp8", res -> MlxC.mlx_to_fp8(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("from_fp8", c -> c.store(c.op("mlx_from_fp8", res -> MlxC.mlx_from_fp8(res, c.input(0, c.length(0)), MlxNativeLib.MLX_FLOAT32, c.stream())), 1)), //
+            entry("qqmm", MlxLibraryProvider::qqmm), //
+            entry("quantize_mx", MlxLibraryProvider::quantizeMx), //
             // Linear algebra.
             entry("matmul", MlxLibraryProvider::matmul), //
             entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
@@ -559,6 +577,60 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     }
 
     // ---------------------------------------------------------------- operation families
+
+    // block_masked_mm(a, b, maskOut, maskLhs, maskRhs, out, m, k, n, blockSize): byte masks at block granularity
+    private static void blockMaskedMm(MlxCall c) {
+        int m = c.intArg(6);
+        int k = c.intArg(7);
+        int n = c.intArg(8);
+        int bs = c.intArg(9);
+        MemorySegment a = c.input(0, m, k);
+        MemorySegment b = c.input(1, k, n);
+        MemorySegment maskOut = asBool(c, c.input(2, m / bs, n / bs));
+        MemorySegment maskLhs = asBool(c, c.input(3, m / bs, k / bs));
+        MemorySegment maskRhs = asBool(c, c.input(4, k / bs, n / bs));
+        c.store(c.op("mlx_block_masked_mm", res -> MlxC.mlx_block_masked_mm(res, a, b, bs, maskOut, maskLhs, maskRhs, c.stream())), 5);
+    }
+
+    // segmented_mm(a, b, segments, out, m, k, n): segments holds (k0, k1) pairs
+    private static void segmentedMm(MlxCall c) {
+        int m = c.intArg(4);
+        int k = c.intArg(5);
+        int n = c.intArg(6);
+        MemorySegment a = c.input(0, m, k);
+        MemorySegment b = c.input(1, k, n);
+        MemorySegment segments = c.input(2, c.length(2) / 2, 2);
+        c.store(c.op("mlx_segmented_mm", res -> MlxC.mlx_segmented_mm(res, a, b, segments, c.stream())), 3);
+    }
+
+    private static String mxMode(int mode) {
+        return switch (mode) {
+            case 0 -> "mxfp8";
+            case 1 -> "nvfp4";
+            default -> "mxfp4";
+        };
+    }
+
+    // quantize_mx(w, wq, scales, rows, cols, mode): MX modes produce codes and scales, no biases
+    private static void quantizeMx(MlxCall c) {
+        MemorySegment w = c.input(0, c.intArg(3), c.intArg(4));
+        String mode = mxMode(c.intArg(5));
+        MemorySegment[] q = c.vectorOp("mlx_quantize", 2, vec -> MlxC.mlx_quantize(vec, w, c.noInt(), c.noInt(), c.cString(mode), MlxCall.none(), c.stream()));
+        c.storeRaw(q[0], 1);
+        c.storeRaw(q[1], 2);
+    }
+
+    // qqmm(x, w, wScales, out, m, k, n, mode)
+    private static void qqmm(MlxCall c) {
+        int m = c.intArg(4);
+        int k = c.intArg(5);
+        int n = c.intArg(6);
+        String mode = mxMode(c.intArg(7));
+        MemorySegment x = c.input(0, m, k);
+        MemorySegment w = c.inputAs(1, MlxNativeLib.MLX_UINT32, n, c.length(1) / n);
+        MemorySegment scales = c.input(2, n, c.length(2) / n);
+        c.store(c.op("mlx_qqmm", res -> MlxC.mlx_qqmm(res, x, w, scales, c.noInt(), c.noInt(), c.cString(mode), MlxCall.none(), MlxCall.none(), c.stream())), 3);
+    }
 
     // broadcast_arrays(a, b, outA, outB, rows, cols): a row [1, cols] and a column [rows, 1]
     private static void broadcastArrays(MlxCall c) {

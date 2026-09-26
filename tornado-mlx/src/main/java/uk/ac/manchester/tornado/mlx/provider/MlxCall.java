@@ -227,6 +227,11 @@ final class MlxCall implements AutoCloseable {
         return opt;
     }
 
+    /** An empty {@code mlx_optional_int}. */
+    MemorySegment noInt() {
+        return arena.allocate(MlxC.OPT_INT);
+    }
+
     /** An empty {@code mlx_optional_dtype}. */
     MemorySegment noDtype() {
         return arena.allocate(MlxC.OPT_DTYPE);
