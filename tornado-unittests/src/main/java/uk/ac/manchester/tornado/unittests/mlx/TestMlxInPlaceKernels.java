@@ -1157,4 +1157,29 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                 (a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16) -> tune(MlxConv.convGeneral2d(a, b, r, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14,
                         i15, i16), c), x, wt, (FloatArray) o[0], n, h, w, cin, cout, 3, 3, 1, 1, 2, 2, 1, 1, true));
     }
+
+    // ---------------------------------------------------------------- gather and segmented matmul
+
+    @Test
+    public void testGatherAndSegmentedMm() throws TornadoExecutionPlanException {
+        int ba = 3;
+        int bb = 4;
+        for (int[] sh : new int[][] { { 64, 128, 96 }, { 50, 70, 33 } }) {
+            int m = sh[0];
+            int k = sh[1];
+            int n = sh[2];
+            FloatArray a = FloatArray.fromArray(values(ba * m * k, -1, 1, 250 + m));
+            FloatArray b = FloatArray.fromArray(values(bb * k * n, -1, 1, 251 + n));
+            IntArray lhs = IntArray.fromElements(0, 2, 1, 2, 0);
+            IntArray rhs = IntArray.fromElements(3, 0, 1, 1, 2);
+            same("gatherMm " + java.util.Arrays.toString(sh), new Object[] { a, b, lhs, rhs }, floatsOut(5 * m * n), (g, id, c, o) -> g.libraryTask(id,
+                    (x1, x2, x3, x4, x5, i5, i6, i7, i8, i9) -> tune(MlxIndex.gatherMm(x1, x2, x3, x4, x5, i5, i6, i7, i8, i9), c), a, b, lhs, rhs, (FloatArray) o[0], ba, bb, m, k,
+                    n));
+            FloatArray a2 = FloatArray.fromArray(values(m * k, -1, 1, 252 + m));
+            FloatArray b2 = FloatArray.fromArray(values(k * n, -1, 1, 253 + n));
+            IntArray segments = IntArray.fromElements(0, k / 4, k / 4, k / 2, k / 2, k, 0, k);
+            same("segmentedMm " + java.util.Arrays.toString(sh), new Object[] { a2, b2, segments }, floatsOut(4 * m * n), (g, id, c, o) -> g.libraryTask(id,
+                    (x1, x2, x3, x4, i4, i5, i6) -> tune(MlxProducts.segmentedMm(x1, x2, x3, x4, i4, i5, i6), c), a2, b2, segments, (FloatArray) o[0], m, k, n));
+        }
+    }
 }

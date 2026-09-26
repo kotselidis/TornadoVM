@@ -1687,6 +1687,8 @@ final class MlxKernelRoutes {
         ROUTES.put("matmul", v -> v.args() < 6 ? null : matmulRoute(v, false));
         ROUTES.put("matmul_transposed", v -> v.args() < 6 ? null : matmulRoute(v, true));
         ROUTES.put("quantized_matmul", MlxKernelRoutes::quantizedMatmul);
+        ROUTES.put("gather_mm", MlxKernelRoutes::gatherMm);
+        ROUTES.put("segmented_mm", MlxKernelRoutes::segmentedMm);
         // addmm(c, a, b, out, m, k, n, alpha, beta) = alpha * a @ b + beta * c.
         ROUTES.put("addmm", v -> {
             if (v.args() < 9) {
@@ -1883,6 +1885,87 @@ final class MlxKernelRoutes {
         byte[] paramBytes = params.array();
         return p -> p.launchIndexed(kernel, new int[] { 200, 201, 300, 301, 302 }, new boolean[] { alignQ, alignK, false, causal, false }).buffer(0, v.ref(0)).buffer(1, v.ref(1))
                 .buffer(2, v.ref(2)).buffer(3, v.ref(3)).bytes(4, paramBytes).threadgroups(nq, hq, b, 32, 4, 1);
+    }
+
+    /**
+     * gather_mm(a[Ba, m, k], b[Bb, k, n], lhs[L], rhs[L], out[L, m, n], Ba, Bb, m, k, n): MLX's steel gather
+     * GEMM (the path for contiguous b with m and n above one); null for the gather_mv cases.
+     */
+    private static Encoder gatherMm(View v) {
+        if (v.args() < 10 || !v.isArray(2) || !v.isArray(3) || v.dtype(2) != MLX_INT32 || v.dtype(3) != MLX_INT32) {
+            return null;
+        }
+        int t = floatType(v, 0, 1, 4);
+        int ba = v.intArg(5);
+        int bb = v.intArg(6);
+        int m = v.intArg(7);
+        int k = v.intArg(8);
+        int n = v.intArg(9);
+        int batches = v.size(2);
+        String architecture = v.architecture();
+        if (t < 0 || architecture == null || architecture.isEmpty() || m == 1 || n == 1 || v.size(3) != batches || v.size(0) != ba * m * k || v.size(1) != bb * k * n
+                || v.size(4) != batches * m * n || MlxMetalKernels.architectureGeneration(architecture) >= 17) {
+            return null;
+        }
+        int[] tiles = gemmTiles(architecture.charAt(architecture.length() - 1), t, m, n, k, false, batches);
+        int bm = tiles[0];
+        int bn = tiles[1];
+        int bk = tiles[2];
+        int wm = tiles[3];
+        int wn = tiles[4];
+        String type = MlxMetalKernels.typeName(t);
+        String kernel = "steel_gather_mm_nn_" + type + "_" + type + "_bm" + bm + "_bn" + bn + "_bk" + bk + "_wm" + wm + "_wn" + wn;
+        if (!v.hasKernel(kernel)) {
+            return null;
+        }
+        int tilesN = (n + bn - 1) / bn;
+        int tilesM = (m + bm - 1) / bm;
+        java.nio.ByteBuffer params = java.nio.ByteBuffer.allocate(72).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        params.putInt(m).putInt(n).putInt(k).putInt(k).putInt(n).putInt(n).putInt(tilesN).putInt(tilesM).putLong(1).putLong(1).putLong((long) m * n).putInt(0).putInt(k / bk)
+                .putInt(1);
+        byte[] paramBytes = params.array();
+        boolean[] constants = { false, m % bm == 0, n % bn == 0, k % bk == 0 };
+        int gy = wn;
+        int gz = wm;
+        return p -> p.launchIndexed(kernel, new int[] { 10, 200, 201, 202 }, constants).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).buffer(3, v.ref(3))
+                .buffer(4, v.ref(4)).bytes(5, paramBytes).bytes(6, MlxMetalKernels.intBytes(new int[] { batches })).i64(7, 1).i64(8, 1).i32(9, 1)
+                .bytes(10, MlxMetalKernels.intBytes(new int[] { ba, m, k })).i64(11, (long) m * k, k, 1).i32(12, 1).bytes(13, MlxMetalKernels.intBytes(new int[] { bb, k, n }))
+                .i64(14, (long) k * n, n, 1).threadgroups(tilesN, tilesM, batches, 32, gy, gz);
+    }
+
+    /** segmented_mm(a[m, k], b[k, n], segments[S, 2], out[S, m, n], m, k, n): MLX's steel segmented GEMM. */
+    private static Encoder segmentedMm(View v) {
+        if (v.args() < 7 || !v.isArray(2) || v.dtype(2) != MLX_INT32 || v.size(2) % 2 != 0) {
+            return null;
+        }
+        int t = floatType(v, 0, 1, 3);
+        int m = v.intArg(4);
+        int k = v.intArg(5);
+        int n = v.intArg(6);
+        int segments = v.size(2) / 2;
+        String architecture = v.architecture();
+        if (t < 0 || architecture == null || architecture.isEmpty() || v.size(0) != m * k || v.size(1) != k * n || v.size(3) != segments * m * n
+                || MlxMetalKernels.architectureGeneration(architecture) >= 17) {
+            return null;
+        }
+        int[] tiles = gemmTiles(architecture.charAt(architecture.length() - 1), t, m, n, k, false, segments);
+        int bm = tiles[0];
+        int bn = tiles[1];
+        String type = MlxMetalKernels.typeName(t);
+        String kernel = "steel_segmented_mm_nn_" + type + "_" + type + "_bm" + bm + "_bn" + bn + "_bk" + tiles[2] + "_wm" + tiles[3] + "_wn" + tiles[4];
+        if (!v.hasKernel(kernel)) {
+            return null;
+        }
+        int tilesN = (n + bn - 1) / bn;
+        int tilesM = (m + bm - 1) / bm;
+        java.nio.ByteBuffer params = java.nio.ByteBuffer.allocate(72).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        params.putInt(m).putInt(n).putInt(k).putInt(k).putInt(n).putInt(n).putInt(tilesN).putInt(tilesM).putLong(0).putLong(0).putLong((long) m * n).putInt(0).putInt(0).putInt(0);
+        byte[] paramBytes = params.array();
+        boolean[] constants = { true, m % bm == 0, n % bn == 0 };
+        int gy = tiles[4];
+        int gz = tiles[3];
+        return p -> p.launchIndexed(kernel, new int[] { 199, 200, 201 }, constants).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).buffer(3, v.ref(3))
+                .bytes(4, paramBytes).threadgroups(tilesN, tilesM, segments, 32, gy, gz);
     }
 
     /** MLX's C type names, as its quantized kernel names use them. */
