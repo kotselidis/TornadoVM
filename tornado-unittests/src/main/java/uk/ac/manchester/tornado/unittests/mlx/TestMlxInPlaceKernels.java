@@ -791,4 +791,53 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     (g, id, c, o) -> g.libraryTask(id, (p, q, r) -> tune(Mlx.matmul(p, q, r, m, k, n), c), ah, bh, (HalfFloatArray) o[0]));
         }
     }
+
+    // ---------------------------------------------------------------- quantized
+
+    @Test
+    public void testQuantized() throws TornadoExecutionPlanException {
+        // {m, k, n, group, bits}: qmv_fast, qmv (unaligned k), qmv_quad (k = 128), a small batch, 8-bit.
+        int[][] shapes = { { 1, 4096, 4096, 64, 4 }, { 1, 576, 1000, 64, 4 }, { 1, 128, 512, 64, 4 }, { 5, 2048, 1024, 32, 4 }, { 1, 2048, 2048, 64, 8 } };
+        for (int[] sh : shapes) {
+            int m = sh[0];
+            int k = sh[1];
+            int n = sh[2];
+            int gs = sh[3];
+            int bits = sh[4];
+            FloatArray x = FloatArray.fromArray(values(m * k, -1, 1, 130 + k));
+            IntArray wq = ints(131 + n, -1000000000, 1000000000);
+            IntArray w = new IntArray(n * k * bits / 32);
+            for (int i = 0; i < w.getSize(); i++) {
+                w.set(i, wq.get(i % wq.getSize()) * 31 + i);
+            }
+            FloatArray scales = FloatArray.fromArray(values(n * (k / gs), 0.001f, 0.02f, 132 + n));
+            FloatArray biases = FloatArray.fromArray(values(n * (k / gs), -0.1f, 0.1f, 133 + n));
+            same("quantizedMatmul " + java.util.Arrays.toString(sh), new Object[] { x, w, scales, biases }, floatsOut(m * n), (g, id, c, o) -> g.libraryTask(id,
+                    (p, q, r, t, y) -> tune(Mlx.quantizedMatmul(p, q, r, t, y, m, k, n, gs, bits), c), x, w, scales, biases, (FloatArray) o[0]));
+            HalfFloatArray xh = halfValues(m * k, -1, 1, 134 + k);
+            HalfFloatArray sh16 = halfValues(n * (k / gs), 0.001f, 0.02f, 135 + n);
+            HalfFloatArray bh16 = halfValues(n * (k / gs), -0.1f, 0.1f, 136 + n);
+            same("quantizedMatmul f16 " + java.util.Arrays.toString(sh), new Object[] { xh, w, sh16, bh16 }, halvesOut(m * n), (g, id, c, o) -> g.libraryTask(id,
+                    (p, q, r, t, y) -> tune(Mlx.quantizedMatmul(p, q, r, t, y, m, k, n, gs, bits), c), xh, w, sh16, bh16, (HalfFloatArray) o[0]));
+        }
+        int rows = 96;
+        int cols = 1024;
+        FloatArray weights = FloatArray.fromArray(values(rows * cols, -1, 1, 137));
+        for (int bits : new int[] { 4, 8 }) {
+            int gs = 64;
+            same("quantize " + bits, new Object[] { weights },
+                    () -> new TornadoNativeArray[] { new IntArray(rows * cols * bits / 32), new FloatArray(rows * cols / gs), new FloatArray(rows * cols / gs) },
+                    (g, id, c, o) -> g.libraryTask(id, (p, q, r, t) -> tune(Mlx.quantize(p, q, r, t, rows, cols, gs, bits), c), weights, (IntArray) o[0], (FloatArray) o[1],
+                            (FloatArray) o[2]));
+            IntArray packed = ints(138 + bits, -1000000000, 1000000000);
+            IntArray pw = new IntArray(rows * cols * bits / 32);
+            for (int i = 0; i < pw.getSize(); i++) {
+                pw.set(i, packed.get(i % packed.getSize()) ^ (i * 2654435761L > 0 ? i : -i));
+            }
+            FloatArray s1 = FloatArray.fromArray(values(rows * cols / gs, 0.001f, 0.02f, 139));
+            FloatArray b1 = FloatArray.fromArray(values(rows * cols / gs, -0.1f, 0.1f, 140));
+            same("dequantize " + bits, new Object[] { pw, s1, b1 }, floatsOut(rows * cols),
+                    (g, id, c, o) -> g.libraryTask(id, (p, q, r, t) -> tune(Mlx.dequantize(p, q, r, t, rows, cols, gs, bits), c), pw, s1, b1, (FloatArray) o[0]));
+        }
+    }
 }

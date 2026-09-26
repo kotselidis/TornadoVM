@@ -1653,6 +1653,121 @@ final class MlxKernelRoutes {
         // matmul(a, b, out, m, k, n); matmul_transposed(a, w[n, k], out, m, k, n) = a @ w^T.
         ROUTES.put("matmul", v -> v.args() < 6 ? null : matmulRoute(v, false));
         ROUTES.put("matmul_transposed", v -> v.args() < 6 ? null : matmulRoute(v, true));
+        ROUTES.put("quantized_matmul", MlxKernelRoutes::quantizedMatmul);
+        ROUTES.put("quantize", v -> quantize(v, false));
+        ROUTES.put("dequantize", v -> quantize(v, true));
+    }
+
+    /** MLX's C type names, as its quantized kernel names use them. */
+    private static String cType(int dtype) {
+        return switch (dtype) {
+            case MLX_FLOAT32 -> "float";
+            case MlxNativeLib.MLX_FLOAT16 -> "float16_t";
+            case MlxNativeLib.MLX_BFLOAT16 -> "bfloat16_t";
+            default -> null;
+        };
+    }
+
+    private static boolean powerOfTwoBits(int bits) {
+        return bits == 2 || bits == 4 || bits == 8;
+    }
+
+    /** MLX's get_qmv_batch_limit: below it, a transposed quantized matmul runs as matrix-vector products. */
+    private static int qmvBatchLimit(int d, int o, String architecture) {
+        char size = architecture.charAt(architecture.length() - 1);
+        int gen = MlxMetalKernels.architectureGeneration(architecture);
+        boolean small = d <= 2048 && o <= 2048;
+        boolean medium = d <= 4096 && o <= 4096;
+        if (gen >= 17 && size != 'd') {
+            return small ? 33 : medium ? 25 : 13;
+        }
+        if (gen >= 15 && size != 'd') {
+            return small ? 13 : medium ? 15 : 13;
+        }
+        if (size == 'd') {
+            return small ? 32 : medium ? 18 : 12;
+        }
+        if (gen >= 13) {
+            return small ? 14 : medium ? 10 : 6;
+        }
+        return small ? 18 : medium ? 12 : 10;
+    }
+
+    /**
+     * quantized_matmul(x[m, k], wq[n, k * bits / 32], scales, biases, out, m, k, n, group_size, bits), affine,
+     * transposed weights: MLX's qmv_quad / qmv_fast / qmv kernels when m is below the batch limit.
+     */
+    private static Encoder quantizedMatmul(View v) {
+        if (v.args() < 10 || !v.isArray(0) || !v.isArray(1) || !v.isArray(2) || !v.isArray(3) || !v.isArray(4)) {
+            return null;
+        }
+        int t = v.dtype(0);
+        int m = v.intArg(5);
+        int k = v.intArg(6);
+        int n = v.intArg(7);
+        int gs = v.intArg(8);
+        int bits = v.intArg(9);
+        String architecture = v.architecture();
+        String type = cType(t);
+        if (type == null || architecture == null || architecture.isEmpty() || !powerOfTwoBits(bits) || v.dtype(2) != t || v.dtype(3) != t || v.dtype(4) != t
+                || v.size(0) != m * k || v.size(4) != m * n || (long) v.size(1) * 32 != (long) n * k * bits || gs <= 0 || v.size(2) != n * (k / gs)) {
+            return null;
+        }
+        int gen = MlxMetalKernels.architectureGeneration(architecture);
+        if (m >= qmvBatchLimit(k, n, architecture) || (gen >= 15 && m >= 2)) {
+            return null;
+        }
+        Ref w = v.ref(1);
+        Ref scales = v.ref(2);
+        Ref biases = v.ref(3);
+        Ref x = v.ref(0);
+        Ref out = v.ref(4);
+        if (k == 64 || k == 128) {
+            String kernel = "affine_qmv_quad_" + type + "_gs_" + gs + "_b_" + bits + "_d_" + k + "_batch_0";
+            return p -> p.launch(kernel).buffer(0, w).buffer(1, scales).buffer(2, biases).buffer(3, x).buffer(4, out).i32(5, k).i32(6, n).threadgroups(m, (n + 63) / 64, 1, 32, 1, 1);
+        }
+        int alignment = (32 / bits) * (bits == 2 ? 1 : 2) * 32;
+        boolean fast = n % 8 == 0 && k % alignment == 0;
+        String kernel = "affine_qmv" + (fast ? "_fast_" : "_") + type + "_gs_" + gs + "_b_" + bits + "_batch_0";
+        return p -> p.launch(kernel).buffer(0, w).buffer(1, scales).buffer(2, biases).buffer(3, x).buffer(4, out).i32(5, k).i32(6, n).threadgroups(m, (n + 7) / 8, 1, 32, 2, 1);
+    }
+
+    /**
+     * quantize(w[rows, cols], wq, scales, biases, rows, cols, group_size, bits) and
+     * dequantize(wq, scales, biases, out, rows, cols, group_size, bits), affine.
+     */
+    private static Encoder quantize(View v, boolean dequantize) {
+        if (v.args() < 8 || !v.isArray(0) || !v.isArray(1) || !v.isArray(2) || !v.isArray(3)) {
+            return null;
+        }
+        int rows = v.intArg(4);
+        int cols = v.intArg(5);
+        int gs = v.intArg(6);
+        int bits = v.intArg(7);
+        int t = dequantize ? v.dtype(3) : v.dtype(0);
+        String type = cType(t);
+        if (type == null || !powerOfTwoBits(bits) || gs <= 0 || cols % gs != 0) {
+            return null;
+        }
+        long elements = (long) rows * cols;
+        long packedBytes = elements * bits / 8;
+        int groups = rows * (cols / gs);
+        int wqIndex = dequantize ? 0 : 1;
+        int valuesIndex = dequantize ? 3 : 0;
+        int scalesIndex = dequantize ? 1 : 2;
+        int biasesIndex = dequantize ? 2 : 3;
+        if ((long) v.size(wqIndex) * MlxMetalKernels.itemSize(v.dtype(wqIndex)) != packedBytes || v.size(valuesIndex) != elements || !v.is(scalesIndex, t, groups)
+                || !v.is(biasesIndex, t, groups)) {
+            return null;
+        }
+        String kernel = "affine_" + (dequantize ? "dequantize" : "quantize") + "_" + type + "_gs_" + gs + "_b_" + bits;
+        int packsPerInt = 8 / bits;
+        long threads = dequantize ? elements / packsPerInt : elements / Math.max(gs / 32, 1);
+        return p -> {
+            // Both kernels take their four arrays in argument order: (w, wq, scales, biases) or (wq, scales, biases, w).
+            Program.Launch k = p.launch(kernel).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).buffer(3, v.ref(3));
+            k.threads(threads, Math.min(threads, k.maxThreads), 1, 1, 1, 1);
+        };
     }
 
     private static Encoder matmulRoute(View v, boolean transposed) {
