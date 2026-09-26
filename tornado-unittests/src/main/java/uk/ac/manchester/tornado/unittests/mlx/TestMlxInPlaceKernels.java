@@ -44,6 +44,7 @@ import uk.ac.manchester.tornado.mlx.MlxMath;
 import uk.ac.manchester.tornado.mlx.MlxCreate;
 import uk.ac.manchester.tornado.mlx.MlxIndex;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
+import uk.ac.manchester.tornado.mlx.MlxProducts;
 import uk.ac.manchester.tornado.mlx.MlxReduce;
 import uk.ac.manchester.tornado.mlx.MlxSort;
 import uk.ac.manchester.tornado.mlx.MlxShape;
@@ -928,5 +929,50 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         }
         FloatArray rows = FloatArray.fromArray(values(32 * 32000, -10, 10, 172));
         same("topkRows", new Object[] { rows }, floatsOut(32 * 40), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(Mlx.topkRows(a, b, 32, 32000, 40), c), rows, (FloatArray) o[0]));
+    }
+
+    // ---------------------------------------------------------------- products
+
+    @Test
+    public void testProducts() throws TornadoExecutionPlanException {
+        int[][] shapes = { { 1, 2048, 1000 }, { 32, 4096, 32 }, { 100, 300, 70 }, { 128, 512, 256 } };
+        float[][] ab = { { 1.0f, 0.0f }, { 0.5f, 2.0f }, { 1.0f, 1.0f }, { 0.0f, 3.0f } };
+        for (int[] sh : shapes) {
+            int m = sh[0];
+            int k = sh[1];
+            int n = sh[2];
+            FloatArray a = FloatArray.fromArray(values(m * k, -1, 1, 180 + m));
+            FloatArray b = FloatArray.fromArray(values(k * n, -1, 1, 181 + n));
+            FloatArray cIn = FloatArray.fromArray(values(m * n, -1, 1, 182 + k));
+            for (float[] coefficients : ab) {
+                same("addmm " + java.util.Arrays.toString(sh) + " alpha=" + coefficients[0] + " beta=" + coefficients[1], new Object[] { cIn, a, b }, floatsOut(m * n),
+                        (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3, x4) -> tune(Mlx.addmm(x1, x2, x3, x4, m, k, n, coefficients[0], coefficients[1]), c), cIn, a, b,
+                                (FloatArray) o[0]));
+            }
+            same("tensordotAxis " + java.util.Arrays.toString(sh), new Object[] { a, b }, floatsOut(m * n),
+                    (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.tensordotAxis(x1, x2, x3, m, k, n), c), a, b, (FloatArray) o[0]));
+        }
+        FloatArray t1 = FloatArray.fromArray(values(20 * 16 * 32, -1, 1, 183));
+        FloatArray t2 = FloatArray.fromArray(values(16 * 32 * 50, -1, 1, 184));
+        same("tensordot", new Object[] { t1, t2 }, floatsOut(20 * 50),
+                (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.tensordot(x1, x2, x3, 20, 16, 32, 50), c), t1, t2, (FloatArray) o[0]));
+        for (int[] bs : new int[][] { { 8, 64, 128, 96 }, { 4, 1, 256, 300 }, { 3, 50, 70, 1 } }) {
+            FloatArray e1 = FloatArray.fromArray(values(bs[0] * bs[1] * bs[2], -1, 1, 185 + bs[1]));
+            FloatArray e2 = FloatArray.fromArray(values(bs[0] * bs[2] * bs[3], -1, 1, 186 + bs[3]));
+            same("einsumBmm " + java.util.Arrays.toString(bs), new Object[] { e1, e2 }, floatsOut(bs[0] * bs[1] * bs[3]), (g, id, c, o) -> g.libraryTask(id,
+                    (x1, x2, x3) -> tune(MlxProducts.einsumBatchedMatmul(x1, x2, x3, bs[0], bs[1], bs[2], bs[3]), c), e1, e2, (FloatArray) o[0]));
+        }
+        FloatArray u = FloatArray.fromArray(values(333, -1, 1, 187));
+        FloatArray w = FloatArray.fromArray(values(257, -1, 1, 188));
+        same("outer", new Object[] { u, w }, floatsOut(333 * 257), (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.outer(x1, x2, x3), c), u, w, (FloatArray) o[0]));
+        FloatArray w2 = FloatArray.fromArray(values(333, -1, 1, 189));
+        FloatArray big = FloatArray.fromArray(values(100000, -1, 1, 190));
+        FloatArray big2 = FloatArray.fromArray(values(100000, -1, 1, 191));
+        same("inner", new Object[] { u, w2 }, floatsOut(1), (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.inner(x1, x2, x3), c), u, w2, (FloatArray) o[0]));
+        same("inner large", new Object[] { big, big2 }, floatsOut(1), (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.inner(x1, x2, x3), c), big, big2, (FloatArray) o[0]));
+        FloatArray ka = FloatArray.fromArray(values(9 * 7, -1, 1, 192));
+        FloatArray kb = FloatArray.fromArray(values(13 * 5, -1, 1, 193));
+        same("kron", new Object[] { ka, kb }, floatsOut(9 * 7 * 13 * 5),
+                (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.kron(x1, x2, x3, 9, 7, 13, 5), c), ka, kb, (FloatArray) o[0]));
     }
 }

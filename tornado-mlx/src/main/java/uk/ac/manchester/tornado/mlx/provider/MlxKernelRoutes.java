@@ -1464,32 +1464,43 @@ final class MlxKernelRoutes {
         return p;
     }
 
+    /** One (batched) matmul as MLX's Matmul / AddMM sees it: out[b] = alpha * a[b] @ op(b[b]) + beta * c. */
+    private record Mm(int type, int batch, int m, int k, int n, boolean bTransposed, Ref a, Ref b, Ref out, Ref c, float alpha, float beta) {
+    }
+
     /**
-     * a[m, k] @ b for contiguous a, with b either [k, n] contiguous ({@code bTransposed} false, ldb = n)
-     * or the transpose of w[n, k] ({@code bTransposed} true, ldb = k): MLX's GEMV, split-K or regular
-     * steel GEMM exactly as Matmul::eval_gpu picks them on GPUs before generation 15.
+     * a[batch, m, k] @ b for contiguous a, with b [batch, k, n] contiguous ({@code bTransposed} false,
+     * ldb = n) or the transpose of w[n, k] ({@code bTransposed} true, ldb = k), optionally with an
+     * addmm source c [m, n]: MLX's GEMV, split-K or regular steel GEMM exactly as Matmul::eval_gpu and
+     * AddMM::eval_gpu pick them on GPUs before generation 15. Returns null where MLX would do otherwise.
      */
-    private static Encoder matmul(View v, int ai, int bi, int oi, int m, int k, int n, boolean bTransposed, String architecture) {
-        int t = v.isArray(ai) ? v.dtype(ai) : -1;
-        boolean types = FLOATS.contains(t) && v.isArray(oi) && v.dtype(oi) == t && v.isArray(bi) && v.dtype(bi) == t;
-        if (!types || v.size(ai) != m * k || v.size(bi) != k * n || v.size(oi) != m * n || m <= 0 || k <= 0 || n <= 0) {
-            return null;
-        }
-        if (MlxMetalKernels.architectureGeneration(architecture) >= 15 || architecture.isEmpty() || (m == 1 && n == 1)) {
+    private static Encoder matmulKernels(Mm mm, String architecture) {
+        int t = mm.type();
+        int batch = mm.batch();
+        int m = mm.m();
+        int k = mm.k();
+        int n = mm.n();
+        boolean addmm = mm.c() != null;
+        if (architecture == null || architecture.isEmpty() || MlxMetalKernels.architectureGeneration(architecture) >= 15 || (m == 1 && n == 1) || m <= 0 || k <= 0 || n <= 0
+                || (addmm && batch != 1) || (mm.bTransposed() && batch != 1)) {
             return null;
         }
         char devc = architecture.charAt(architecture.length() - 1);
         String type = MlxMetalKernels.typeName(t);
         int lda = k;
-        int ldb = bTransposed ? k : n;
-        Ref a = v.ref(ai);
-        Ref b = v.ref(bi);
-        Ref out = v.ref(oi);
+        int ldb = mm.bTransposed() ? k : n;
+        long strideA = batch > 1 ? (long) m * k : 0;
+        long strideB = batch > 1 ? (long) k * n : 0;
+        Ref a = mm.a();
+        Ref b = mm.b();
+        Ref out = mm.out();
+        Ref c = mm.c();
+        float alpha = mm.alpha();
+        float beta = mm.beta();
         if (Math.min(m, n) == 1) {
             // gemv_axbpy: the matrix is b when n != 1.
             boolean bMatrix = n != 1;
-            boolean transposeMat = bMatrix ? !bTransposed : false;
-            int inLen = k;
+            boolean transposeMat = bMatrix && !mm.bTransposed();
             int outLen = bMatrix ? n : m;
             int matLd = bMatrix ? ldb : lda;
             int tm = 4;
@@ -1501,7 +1512,7 @@ final class MlxKernelRoutes {
             int perGroup;
             String name;
             if (transposeMat) {
-                if (inLen >= 8192 && outLen >= 2048) {
+                if (k >= 8192 && outLen >= 2048) {
                     sm = 4;
                     sn = 8;
                 } else {
@@ -1527,22 +1538,29 @@ final class MlxKernelRoutes {
                 perGroup = bm * sm * tm;
                 name = "gemv_" + type;
             }
-            String kernel = name + "_bm" + bm + "_bn" + bn + "_sm" + sm + "_sn" + sn + "_tm" + tm + "_tn" + tn + "_nc0_axpby0";
+            boolean axpby = addmm && (alpha != 1.0f || beta != 0.0f);
+            String kernel = name + "_bm" + bm + "_bn" + bn + "_sm" + sm + "_sn" + sn + "_tm" + tm + "_tn" + tn + "_nc0_axpby" + (axpby ? 1 : 0);
             Ref mat = bMatrix ? b : a;
             Ref vec = bMatrix ? a : b;
+            long matStride = bMatrix ? strideB : strideA;
+            long vecStride = bMatrix ? strideA : strideB;
             int groups = (outLen + perGroup - 1) / perGroup;
             int gy = bn;
             int gz = bm;
-            return p -> p.launch(kernel).buffer(0, mat).buffer(1, vec).buffer(3, out).i32(4, inLen).i32(5, outLen).i32(6, matLd).i32(9, 1)
-                    .bytes(10, MlxMetalKernels.intBytes(new int[] { 1 })).i64(11, 0).i64(12, 0).threadgroups(groups, 1, 1, 32, gy, gz);
+            return p -> {
+                Program.Launch l = p.launch(kernel).buffer(0, mat).buffer(1, vec).buffer(3, out).i32(4, k).i32(5, outLen).i32(6, matLd).i32(9, 1)
+                        .bytes(10, MlxMetalKernels.intBytes(new int[] { batch })).i64(11, vecStride).i64(12, matStride);
+                if (axpby) {
+                    l.buffer(2, c).f32(7, alpha).f32(8, beta).i64(13, 0).i32(14, 1);
+                }
+                l.threadgroups(groups, 1, batch, 32, gy, gz);
+            };
         }
-        int tmTiles = (m + 15) / 16;
-        int tnTiles = (n + 15) / 16;
         int tk = k / 16;
         int threshold = (devc == 's' || devc == 'd') ? 2048 : 1024;
         char ta = 'n';
-        char tb = bTransposed ? 't' : 'n';
-        if (tmTiles * tnTiles <= threshold && tk >= 8 && k >= Math.max(m, n)) {
+        char tb = mm.bTransposed() ? 't' : 'n';
+        if (batch == 1 && ((m + 15) / 16) * ((n + 15) / 16) <= threshold && tk >= 8 && k >= Math.max(m, n)) {
             // steel_gemm_splitk: float32 partial products, then an accumulate pass.
             int bm = m < 40 ? 16 : 32;
             int bn = n < 40 ? 16 : 32;
@@ -1559,96 +1577,93 @@ final class MlxKernelRoutes {
             params.putInt(m).putInt(n).putInt(k).putInt(lda).putInt(ldb).putInt(n).putInt(tilesN).putInt(tilesM).putInt(partitions).putInt(m * n).putInt(kIterations * bk).putInt(0)
                     .putInt(kIterations);
             byte[] paramBytes = params.array();
+            boolean axpby = addmm && (alpha != 1.0f || beta != 0.0f);
+            String accumulate = "steel_gemm_splitk_accum_" + type + "_float32" + (axpby ? "_axbpy" : "");
             return p -> {
                 Ref split = p.scratch(4L * partitions * m * n);
                 p.launch(kernel).buffer(0, a).buffer(1, b).buffer(2, split).bytes(3, paramBytes).threadgroups(tilesN, tilesM, partitions, 32, 2, 2);
-                p.launch("steel_gemm_splitk_accum_" + type + "_float32").buffer(0, split).buffer(1, out).i32(2, partitions).i32(3, m * n).i32(4, n).blocks(n, m, 1);
+                Program.Launch l = p.launch(accumulate).buffer(0, split).buffer(1, out).i32(2, partitions).i32(3, m * n).i32(4, n);
+                if (axpby) {
+                    l.buffer(5, c).i32(6, n).i32(7, 1).f32(8, alpha).f32(9, beta);
+                }
+                l.blocks(n, m, 1);
             };
         }
         // steel_matmul_regular with the device's tile parameters.
-        int bm = 64;
-        int bn = 64;
-        int bk = 16;
-        int wm = 2;
-        int wn = 2;
-        if (devc == 'g' || devc == 'p') {
-            if (bTransposed) {
-                bm = 64;
-                bn = 32;
-                bk = 32;
-                wm = 2;
-                wn = 2;
-            } else if (t != MLX_FLOAT32) {
-                bm = 64;
-                bn = 64;
-                bk = 16;
-                wm = 1;
-                wn = 2;
-            }
-        } else if (devc == 'd') {
-            boolean nt = bTransposed;
-            if ((long) m * n >= 1L << 20) {
-                if (t != MLX_FLOAT32) {
-                    if (2 * Math.max(m, n) > k) {
-                        bm = 64;
-                        bn = 64;
-                        bk = 16;
-                        wm = 1;
-                        wn = 2;
-                    } else if (nt) {
-                        bm = 64;
-                        bn = 32;
-                        bk = 32;
-                        wm = 2;
-                        wn = 2;
-                    } else {
-                        bm = 32;
-                        bn = 64;
-                        bk = 16;
-                        wm = 1;
-                        wn = 2;
-                    }
-                }
-            } else if (t != MLX_FLOAT32) {
-                if (nt) {
-                    bm = 64;
-                    bn = 32;
-                    bk = 32;
-                    wm = 2;
-                    wn = 2;
-                } else {
-                    bm = 64;
-                    bn = 64;
-                    bk = 16;
-                    wm = 1;
-                    wn = 2;
-                }
-            } else if (nt) {
-                bm = 32;
-                bn = 64;
-                bk = 16;
-                wm = 1;
-                wn = 2;
-            } else {
-                bm = 64;
-                bn = 32;
-                bk = 32;
-                wm = 2;
-                wn = 2;
-            }
-        }
+        int[] tiles = gemmTiles(devc, t, m, n, k, mm.bTransposed(), batch);
+        int bm = tiles[0];
+        int bn = tiles[1];
+        int bk = tiles[2];
+        int wm = tiles[3];
+        int wn = tiles[4];
         String kernel = "steel_gemm_fused_" + ta + tb + "_" + type + "_" + type + "_bm" + bm + "_bn" + bn + "_bk" + bk + "_wm" + wm + "_wn" + wn;
-        // Function constants 10 has_batch, 100 use_out_source, 110 do_axpby, 200/201/202 align_M/N/K.
+        boolean useOutSource = addmm && (alpha != 0.0f || beta != 1.0f);
+        boolean doAxpby = useOutSource && (alpha != 1.0f || beta != 1.0f);
         boolean alignM = m % bm == 0;
         boolean alignN = n % bn == 0;
         boolean alignK = k % bk == 0;
         int tilesN = (n + bn - 1) / bn;
         int tilesM = (m + bm - 1) / bm;
-        byte[] params = gemmParams(m, n, k, lda, ldb, n, tilesN, tilesM, 0, 0, (long) m * n, k / bk);
+        byte[] params = gemmParams(m, n, k, lda, ldb, n, tilesN, tilesM, strideA, strideB, (long) m * n, k / bk);
+        java.nio.ByteBuffer addParams = java.nio.ByteBuffer.allocate(24).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        addParams.putInt(n).putInt(1).putLong(0).putFloat(alpha).putFloat(beta);
+        byte[] addBytes = addParams.array();
         int gy = wn;
         int gz = wm;
-        return p -> p.launchIndexed(kernel, new int[] { 10, 100, 110, 200, 201, 202 }, new boolean[] { false, false, false, alignM, alignN, alignK }).buffer(0, a).buffer(1, b)
-                .buffer(3, out).bytes(4, params).threadgroups(tilesN, tilesM, 1, 32, gy, gz);
+        return p -> {
+            Program.Launch l = p.launchIndexed(kernel, new int[] { 10, 100, 110, 200, 201, 202 }, new boolean[] { false, useOutSource, doAxpby, alignM, alignN, alignK })
+                    .buffer(0, a).buffer(1, b).buffer(3, out).bytes(4, params);
+            if (useOutSource) {
+                l.buffer(2, c).bytes(5, addBytes);
+            }
+            l.threadgroups(tilesN, tilesM, batch, 32, gy, gz);
+        };
+    }
+
+    /** GEMM_TPARAM_MACRO: {bm, bn, bk, wm, wn} for the device class. */
+    private static int[] gemmTiles(char devc, int t, int m, int n, int k, boolean nt, int batch) {
+        if (devc == 'g' || devc == 'p') {
+            if (nt) {
+                return new int[] { 64, 32, 32, 2, 2 };
+            }
+            return t != MLX_FLOAT32 ? new int[] { 64, 64, 16, 1, 2 } : new int[] { 64, 64, 16, 2, 2 };
+        }
+        if (devc == 'd') {
+            if ((long) batch * m * n >= 1L << 20) {
+                if (t != MLX_FLOAT32) {
+                    if (2 * Math.max(m, n) > k) {
+                        return new int[] { 64, 64, 16, 1, 2 };
+                    }
+                    return nt ? new int[] { 64, 32, 32, 2, 2 } : new int[] { 32, 64, 16, 1, 2 };
+                }
+                return new int[] { 64, 64, 16, 2, 2 };
+            }
+            if (t != MLX_FLOAT32) {
+                return nt ? new int[] { 64, 32, 32, 2, 2 } : new int[] { 64, 64, 16, 1, 2 };
+            }
+            return nt ? new int[] { 32, 64, 16, 1, 2 } : new int[] { 64, 32, 32, 2, 2 };
+        }
+        return new int[] { 64, 64, 16, 2, 2 };
+    }
+
+    /** Arrays {@code indices} exist and share floating type {@code t}; returns t or -1. */
+    private static int floatType(View v, int... indices) {
+        int t = v.isArray(indices[0]) ? v.dtype(indices[0]) : -1;
+        for (int i : indices) {
+            if (!v.isArray(i) || v.dtype(i) != t) {
+                return -1;
+            }
+        }
+        return FLOATS.contains(t) ? t : -1;
+    }
+
+    /** a[m, k] @ b, with b [k, n] or the transpose of w[n, k]. */
+    private static Encoder matmul(View v, int ai, int bi, int oi, int m, int k, int n, boolean bTransposed, String architecture) {
+        int t = floatType(v, ai, bi, oi);
+        if (t < 0 || v.size(ai) != m * k || v.size(bi) != k * n || v.size(oi) != m * n) {
+            return null;
+        }
+        return matmulKernels(new Mm(t, 1, m, k, n, bTransposed, v.ref(ai), v.ref(bi), v.ref(oi), null, 1.0f, 0.0f), architecture);
     }
 
     private static void registerMatmulRoutes() {
@@ -1656,6 +1671,81 @@ final class MlxKernelRoutes {
         ROUTES.put("matmul", v -> v.args() < 6 ? null : matmulRoute(v, false));
         ROUTES.put("matmul_transposed", v -> v.args() < 6 ? null : matmulRoute(v, true));
         ROUTES.put("quantized_matmul", MlxKernelRoutes::quantizedMatmul);
+        // addmm(c, a, b, out, m, k, n, alpha, beta) = alpha * a @ b + beta * c.
+        ROUTES.put("addmm", v -> {
+            if (v.args() < 9) {
+                return null;
+            }
+            int m = v.intArg(4);
+            int k = v.intArg(5);
+            int n = v.intArg(6);
+            int t = floatType(v, 0, 1, 2, 3);
+            if (t < 0 || v.size(0) != m * n || v.size(1) != m * k || v.size(2) != k * n || v.size(3) != m * n) {
+                return null;
+            }
+            return matmulKernels(new Mm(t, 1, m, k, n, false, v.ref(1), v.ref(2), v.ref(3), v.ref(0), v.floatArg(7), v.floatArg(8)), v.architecture());
+        });
+        // einsum("bij,bjk->bik"): a batched matmul of contiguous [B, i, j] and [B, j, k].
+        ROUTES.put("einsum_bmm", v -> {
+            if (v.args() < 7) {
+                return null;
+            }
+            int batch = v.intArg(3);
+            int i = v.intArg(4);
+            int j = v.intArg(5);
+            int k = v.intArg(6);
+            int t = floatType(v, 0, 1, 2);
+            if (t < 0 || batch <= 1 || v.size(0) != batch * i * j || v.size(1) != batch * j * k || v.size(2) != batch * i * k) {
+                return null;
+            }
+            return matmulKernels(new Mm(t, batch, i, j, k, false, v.ref(0), v.ref(1), v.ref(2), null, 1.0f, 0.0f), v.architecture());
+        });
+        // tensordot(a[d0, d1, d2], b[d1, d2, d3], axes (1, 2) / (0, 1)) and tensordot_axis(a[m, k], b[k, n], 1): reshapes and a matmul.
+        ROUTES.put("tensordot", v -> v.args() < 7 ? null : matmul(v, 0, 1, 2, v.intArg(3), v.intArg(4) * v.intArg(5), v.intArg(6), false, v.architecture()));
+        ROUTES.put("tensordot_axis", v -> v.args() < 6 ? null : matmul(v, 0, 1, 2, v.intArg(3), v.intArg(4), v.intArg(5), false, v.architecture()));
+        // outer(a[n], b[m]): a[:, None] * b[None, :].
+        ROUTES.put("outer", v -> {
+            int t = floatType(v, 0, 1, 2);
+            if (t < 0 || v.size(2) != v.size(0) * v.size(1)) {
+                return null;
+            }
+            int n = v.size(0);
+            int m = v.size(1);
+            return p -> p.generalBinary("Multiply", t, new int[] { n, m }, new long[] { 1, 0 }, v.ref(0), new long[] { 0, 1 }, v.ref(1), v.ref(2));
+        });
+        // kron(a[r1, c1], b[r2, c2]): a[r1, 1, c1, 1] * b[1, r2, 1, c2], as [r1, r2, c1, c2].
+        ROUTES.put("kron", v -> {
+            if (v.args() < 7) {
+                return null;
+            }
+            int t = floatType(v, 0, 1, 2);
+            int r1 = v.intArg(3);
+            int c1 = v.intArg(4);
+            int r2 = v.intArg(5);
+            int c2 = v.intArg(6);
+            if (t < 0 || v.size(0) != r1 * c1 || v.size(1) != r2 * c2 || v.size(2) != r1 * c1 * r2 * c2) {
+                return null;
+            }
+            return p -> p.generalBinary("Multiply", t, new int[] { r1, r2, c1, c2 }, new long[] { c1, 0, 1, 0 }, v.ref(0), new long[] { 0, c2, 0, 1 }, v.ref(1), v.ref(2));
+        });
+        // inner(a[n], b[n]): tensordot over the last axis, a 1 x n by n x 1 matmul, i.e. MLX's dot_product.
+        ROUTES.put("inner", v -> {
+            int t = floatType(v, 0, 1, 2);
+            if (t < 0 || v.size(0) != v.size(1) || v.size(2) != 1 || v.architecture() == null) {
+                return null;
+            }
+            int n = v.size(0);
+            String name = "dot_product_" + MlxMetalKernels.typeName(t) + "_it32_tg512_sg16";
+            return p -> {
+                long threads = (n + 31) / 32;
+                long blocks = (threads + 511) / 512;
+                Ref partials = p.scratch(4 * blocks);
+                Ref total = p.scratch(4);
+                p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, partials).i32(3, n).threads(blocks * 512, 512, 1, 1, 1, 1);
+                allReduce(p, "sum", MLX_FLOAT32, blocks, partials, total);
+                p.copy(MLX_FLOAT32, t, 1, total, v.ref(2));
+            };
+        });
         ROUTES.put("fast_scaled_dot_product_attention", MlxKernelRoutes::attention);
         ROUTES.put("quantize", v -> quantize(v, false));
         ROUTES.put("dequantize", v -> quantize(v, true));

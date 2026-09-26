@@ -372,7 +372,7 @@ final class MlxMetalKernels {
 
         /**
          * {@code out = op(a, b)} over {@code shape} with broadcasting strides: MLX's general binary
-         * kernel, or the {@code vv} kernel when both operands turn out contiguous. Up to 3 dimensions.
+         * kernel, or the {@code vv} kernel when both operands turn out contiguous.
          */
         void generalBinary(String op, int inType, int[] shape, long[] stridesA, Ref a, long[] stridesB, Ref b, Ref out) {
             Layout layout = Layout.collapse(shape, stridesA, stridesB);
@@ -381,17 +381,23 @@ final class MlxMetalKernels {
                 binary(op, inType, (int) layout.size(), a, b, out);
                 return;
             }
-            if (nd > 3) {
-                throw new TornadoRuntimeException("[ERROR] General MLX binary kernels over more than 3 dimensions are not routed");
-            }
-            long[] pipeline = pipeline(device, "g" + nd + "_" + op + typeName(inType));
+            long[] pipeline = pipeline(device, (nd > 3 ? "gn2" : "g" + nd) + "_" + op + typeName(inType));
             sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
             sendVoid(encoder, "setBuffer:offset:atIndex:", a.buffer(), a.offset(), 0);
             sendVoid(encoder, "setBuffer:offset:atIndex:", b.buffer(), b.offset(), 1);
             sendVoid(encoder, "setBuffer:offset:atIndex:", out.buffer(), out.offset(), 2);
-            bytes(longBytes(layout.a()), 3);
-            bytes(longBytes(layout.b()), 4);
-            gridDispatch(layout, 1);
+            if (nd > 3) {
+                // Beyond three dimensions the shape, both stride vectors and ndim follow the arrays.
+                bytes(intBytes(layout.shape()), 3);
+                bytes(longBytes(layout.a()), 4);
+                bytes(longBytes(layout.b()), 5);
+                bytes(intBytes(new int[] { nd }), 6);
+                gridDispatch(layout, 2);
+            } else {
+                bytes(longBytes(layout.a()), 3);
+                bytes(longBytes(layout.b()), 4);
+                gridDispatch(layout, 1);
+            }
         }
 
         /** Starts a hand-bound launch of kernel {@code name}, optionally specialised with boolean function constants 1... */
