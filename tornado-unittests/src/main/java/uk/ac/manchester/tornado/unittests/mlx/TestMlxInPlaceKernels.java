@@ -581,4 +581,69 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
             default -> MlxCreate.bartlett(out);
         };
     }
+
+    // ---------------------------------------------------------------- row kernels
+
+    private static Supplier<TornadoNativeArray[]> halvesOut(int... sizes) {
+        return () -> {
+            TornadoNativeArray[] outs = new TornadoNativeArray[sizes.length];
+            for (int i = 0; i < sizes.length; i++) {
+                outs[i] = new HalfFloatArray(sizes[i]);
+            }
+            return outs;
+        };
+    }
+
+    private static HalfFloatArray halfValues(int n, float lo, float hi, long seed) {
+        float[] v = values(n, lo, hi, seed);
+        HalfFloatArray a = new HalfFloatArray(n);
+        for (int i = 0; i < n; i++) {
+            a.set(i, new HalfFloat(v[i]));
+        }
+        return a;
+    }
+
+    @Test
+    public void testSoftmaxAndNorms() throws TornadoExecutionPlanException {
+        for (int n : new int[] { 1000, 4096, 151936 }) {
+            FloatArray x = FloatArray.fromArray(values(n, -8, 8, 90 + n));
+            same("softmax " + n, new Object[] { x }, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(Mlx.softmax(a, b), c), x, (FloatArray) o[0]));
+        }
+        int rows = 33;
+        for (int cols : new int[] { 100, 4096, 8192 }) {
+            HalfFloatArray x = halfValues(rows * cols, -6, 6, 91 + cols);
+            same("softmaxRows f16 " + cols, new Object[] { x }, halvesOut(rows * cols),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(Mlx.softmaxRows(a, b, rows, cols), c), x, (HalfFloatArray) o[0]));
+        }
+        for (int dim : new int[] { 2048, 4096, 8192 }) {
+            FloatArray x = FloatArray.fromArray(values(rows * dim, -3, 3, 92 + dim));
+            FloatArray w = FloatArray.fromArray(values(dim, 0.5f, 1.5f, 93 + dim));
+            FloatArray bias = FloatArray.fromArray(values(dim, -0.5f, 0.5f, 94 + dim));
+            same("rmsNorm " + dim, new Object[] { x, w }, floatsOut(rows * dim),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b, q) -> tune(Mlx.rmsNorm(a, b, q, rows, dim, 1e-5f), c), x, w, (FloatArray) o[0]));
+            same("layerNorm " + dim, new Object[] { x, w, bias }, floatsOut(rows * dim),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b, q, r) -> tune(Mlx.layerNorm(a, b, q, r, rows, dim, 1e-5f), c), x, w, bias, (FloatArray) o[0]));
+        }
+        HalfFloatArray xh = halfValues(rows * 4096, -3, 3, 95);
+        HalfFloatArray wh = halfValues(4096, 0.5f, 1.5f, 96);
+        same("rmsNorm f16", new Object[] { xh, wh }, halvesOut(rows * 4096),
+                (g, id, c, o) -> g.libraryTask(id, (a, b, q) -> tune(Mlx.rmsNorm(a, b, q, rows, 4096, 1e-6f), c), xh, wh, (HalfFloatArray) o[0]));
+    }
+
+    @Test
+    public void testRope() throws TornadoExecutionPlanException {
+        int[][] shapes = { { 1, 32, 1, 128, 128 }, { 2, 8, 5, 64, 64 }, { 1, 4, 7, 128, 64 } };
+        for (int[] sh : shapes) {
+            int n = sh[0] * sh[1] * sh[2] * sh[3];
+            for (boolean traditional : new boolean[] { false, true }) {
+                FloatArray x = FloatArray.fromArray(values(n, -2, 2, 97 + n));
+                same("rope " + java.util.Arrays.toString(sh) + " traditional=" + traditional, new Object[] { x }, floatsOut(n), (g, id, c, o) -> g.libraryTask(id,
+                        (a, b) -> tune(Mlx.rope(a, b, sh[0], sh[1], sh[2], sh[3], sh[4], traditional, 10000f, 1.0f, 17), c), x, (FloatArray) o[0]));
+                HalfFloatArray xh = halfValues(n, -2, 2, 98 + n);
+                IntArray offset = IntArray.fromElements(42);
+                same("ropeDynamic f16 " + java.util.Arrays.toString(sh) + " traditional=" + traditional, new Object[] { xh, offset }, halvesOut(n), (g, id, c, o) -> g.libraryTask(id,
+                        (a, q, b) -> tune(Mlx.ropeDynamic(a, q, b, sh[0], sh[1], sh[2], sh[3], sh[4], traditional, 500000f, 0.5f), c), xh, offset, (HalfFloatArray) o[0]));
+            }
+        }
+    }
 }

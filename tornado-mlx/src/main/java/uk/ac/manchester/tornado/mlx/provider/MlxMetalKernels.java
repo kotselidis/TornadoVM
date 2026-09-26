@@ -388,6 +388,55 @@ final class MlxMetalKernels {
             gridDispatch(layout, 1);
         }
 
+        /** Starts a hand-bound launch of kernel {@code name}, optionally specialised with boolean function constants 1... */
+        Launch launch(String name, boolean... constants) {
+            long[] pipeline = pipeline(device, name, constants.length == 0 ? null : constants);
+            sendVoid(encoder, "setComputePipelineState:", pipeline[0]);
+            return new Launch(pipeline[1]);
+        }
+
+        /** A kernel launch whose arguments are bound one by one, for kernels with their own argument layout. */
+        final class Launch {
+            final long maxThreads;
+
+            private Launch(long maxThreads) {
+                this.maxThreads = maxThreads;
+            }
+
+            Launch buffer(int index, Ref ref) {
+                sendVoid(encoder, "setBuffer:offset:atIndex:", ref.buffer(), ref.offset(), index);
+                return this;
+            }
+
+            Launch bytes(int index, byte[] value) {
+                Program.this.bytes(value, index);
+                return this;
+            }
+
+            Launch i32(int index, int value) {
+                return bytes(index, intBytes(new int[] { value }));
+            }
+
+            Launch i64(int index, long... values) {
+                return bytes(index, longBytes(values));
+            }
+
+            Launch f32(int index, float value) {
+                return bytes(index, scalarBytes(MlxNativeLib.MLX_FLOAT32, value));
+            }
+
+            /** {@code dispatchThreads} over (x, y, z) threads in groups of (gx, gy, gz). */
+            void threads(long x, long gx, long y, long gy, long z, long gz) {
+                dispatchThreads(arena, encoder, x, gx, y, gy, z, gz);
+            }
+
+            /** {@code dispatchThreads} over (x, y, z) threads in MLX's {@code get_block_dims} groups. */
+            void blocks(long x, long y, long z) {
+                long[] group = blockDims(x, y, z);
+                dispatchThreads(arena, encoder, x, group[0], y, group[1], z, group[2]);
+            }
+        }
+
         /** The 3D grid MLX uses for general kernels: (last dim / wpt, second-to-last dim, the rest). */
         private void gridDispatch(Layout layout, int wpt) {
             int nd = layout.ndim();
@@ -524,9 +573,37 @@ final class MlxMetalKernels {
     }
 
     private static long[] pipeline(long device, String name) {
-        return PIPELINES.computeIfAbsent(device + ":" + name, key -> {
+        return pipeline(device, name, null);
+    }
+
+    /** MTLDataTypeBool, for boolean function constants. */
+    private static final long MTL_DATA_TYPE_BOOL = 53;
+
+    /**
+     * The pipeline for kernel {@code name}, specialised with boolean function constants
+     * {@code constants[i]} at index {@code i + 1} when given (index 0 unused, as in MLX's kernels).
+     */
+    private static long[] pipeline(long device, String name, boolean[] constants) {
+        String key = device + ":" + name + (constants == null ? "" : java.util.Arrays.toString(constants));
+        return PIPELINES.computeIfAbsent(key, k -> {
             long library = LIBRARIES.computeIfAbsent(device, MlxMetalKernels::loadLibrary);
-            long function = send(library, "newFunctionWithName:", nsString(name));
+            long function;
+            if (constants == null) {
+                function = send(library, "newFunctionWithName:", nsString(name));
+            } else {
+                long values = send(objcClass("MTLFunctionConstantValues"), "new");
+                try (Arena arena = Arena.ofConfined()) {
+                    for (int i = 0; i < constants.length; i++) {
+                        MemorySegment value = arena.allocate(1);
+                        value.set(FFMSupport.C_CHAR, 0, (byte) (constants[i] ? 1 : 0));
+                        sendVoid(values, "setConstantValue:type:atIndex:", value.address(), MTL_DATA_TYPE_BOOL, i + 1);
+                    }
+                }
+                MemorySegment error = FFMSupport.scratchPointer();
+                error.set(C_POINTER, 0, MemorySegment.NULL);
+                function = send(library, "newFunctionWithName:constantValues:error:", nsString(name), values, error.address());
+                sendVoid(values, "release");
+            }
             if (function == 0) {
                 throw new TornadoRuntimeException("[ERROR] mlx.metallib has no kernel " + name);
             }
@@ -645,6 +722,14 @@ final class MlxMetalKernels {
     private static long send(long receiver, String selector, long first, long second) {
         try {
             return (long) msgSend(FunctionDescriptor.of(C_LONG, C_LONG, C_LONG, C_LONG, C_LONG)).invokeExact(receiver, sel(selector), first, second);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    private static long send(long receiver, String selector, long first, long second, long third) {
+        try {
+            return (long) msgSend(FunctionDescriptor.of(C_LONG, C_LONG, C_LONG, C_LONG, C_LONG, C_LONG)).invokeExact(receiver, sel(selector), first, second, third);
         } catch (Throwable t) {
             throw rethrow(t);
         }

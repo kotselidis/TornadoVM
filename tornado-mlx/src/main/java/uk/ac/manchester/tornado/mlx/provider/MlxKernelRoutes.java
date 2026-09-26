@@ -314,6 +314,7 @@ final class MlxKernelRoutes {
 
         registerShapeRoutes();
         registerConstructionRoutes();
+        registerRowRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -844,6 +845,125 @@ final class MlxKernelRoutes {
                 p.selectScalar(t, r * c, mask, 0, v.ref(0), v.ref(1));
             }
         };
+    }
+
+    // ---------------------------------------------------------------- row kernels (mlx.fast, softmax)
+
+    private static final int SIMD = 32;
+
+    /** MLX's threadgroup size for its one-threadgroup-per-row kernels: enough simdgroups for {@code axis / nReads}, or all threads when looped. */
+    private static long rowGroup(int axis, int nReads, int loopedLimit, long maxThreads) {
+        if (axis > loopedLimit) {
+            return maxThreads;
+        }
+        long needed = (axis + nReads - 1) / nReads;
+        return SIMD * ((needed + SIMD - 1) / SIMD);
+    }
+
+    /** softmax over the last axis of {@code rows x axis}, with {@code precise} accumulation for half types (as the provider asks). */
+    private static Encoder softmax(View v, int rows, int axis) {
+        int t = v.sameType(FLOATS, 0, 1);
+        if (t < 0 || rows <= 0 || axis <= 0 || (long) rows * axis != v.size(0)) {
+            return null;
+        }
+        String name = (axis > 4096 ? "looped_" : "block_") + "softmax_" + (t != MLX_FLOAT32 ? "precise_" : "") + MlxMetalKernels.typeName(t);
+        return p -> {
+            Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1)).i32(2, axis);
+            long group = rowGroup(axis, 4, 4096, k.maxThreads);
+            k.threads(rows * group, group, 1, 1, 1, 1);
+        };
+    }
+
+    /** RoPE over x[B, H, T, D] (contiguous) with a static offset (as bytes) or an offset array. */
+    private static Encoder rope(View v, int xIndex, int outIndex, int offsetIndex, int first) {
+        int t = pairType(v, xIndex, outIndex);
+        if (t < 0 || !FLOATS.contains(t) || v.args() < first + 8) {
+            return null;
+        }
+        int b = v.intArg(first);
+        int h = v.intArg(first + 1);
+        int seq = v.intArg(first + 2);
+        int d = v.intArg(first + 3);
+        int dims = v.intArg(first + 4);
+        boolean traditional = v.boolArg(first + 5);
+        float base = (float) (Math.log(v.floatArg(first + 6)) / Math.log(2.0));
+        float scale = v.floatArg(first + 7);
+        boolean staticOffset = offsetIndex < 0;
+        if ((long) b * h * seq * d != v.size(xIndex) || v.size(outIndex) != v.size(xIndex) || dims <= 0 || dims > d || dims % 2 != 0
+                || (!staticOffset && !v.is(offsetIndex, MLX_INT32, 1))) {
+            return null;
+        }
+        int offset = staticOffset ? v.intArg(first + 8) : 0;
+        long mat = (long) seq * d;
+        boolean single = seq == 1;
+        String name = "rope_" + (single ? "single_" : "") + MlxMetalKernels.typeName(t);
+        return p -> {
+            Ref in = v.ref(xIndex);
+            if (dims < d) {
+                // MLX copies x to the output and rotates the first dims of each row in place.
+                p.copy(t, t, v.size(xIndex), in, v.ref(outIndex));
+                in = v.ref(outIndex);
+            }
+            Program.Launch k = p.launch(name, true, traditional, false).buffer(0, in).buffer(1, v.ref(outIndex));
+            if (staticOffset) {
+                k.i32(2, offset);
+            } else {
+                k.buffer(2, v.ref(offsetIndex));
+            }
+            k.f32(3, scale).f32(10, base);
+            if (single) {
+                k.i64(4, mat).blocks(dims / 2, (long) b * h, 1);
+            } else {
+                k.i64(4, mat, d, 1).i64(5, mat, d, 1).i64(6, 0).i32(7, h).blocks(dims / 2, seq, (long) b * ((h + 3) / 4));
+            }
+        };
+    }
+
+    private static void registerRowRoutes() {
+        ROUTES.put("softmax", v -> v.isArray(0) ? softmax(v, 1, v.size(0)) : null);
+        ROUTES.put("softmax_axis", v -> v.args() < 4 ? null : softmax(v, v.intArg(2), v.intArg(3)));
+        // rms_norm(x[rows, dim], w[dim], eps).
+        ROUTES.put("fast_rms_norm", v -> {
+            int t = v.sameType(FLOATS, 0, 2);
+            if (t < 0 || v.args() < 6 || !v.isArray(1) || v.dtype(1) != t) {
+                return null;
+            }
+            int rows = v.intArg(3);
+            int dim = v.intArg(4);
+            float eps = v.floatArg(5);
+            if ((long) rows * dim != v.size(0) || v.size(1) != dim) {
+                return null;
+            }
+            String name = "rms" + (dim > 4096 ? "_looped" : "") + MlxMetalKernels.typeName(t);
+            return p -> {
+                Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).f32(3, eps).i32(4, dim).i32(5, 1);
+                long group = rowGroup(dim, 4, 4096, k.maxThreads);
+                k.threads(rows * group, group, 1, 1, 1, 1);
+            };
+        });
+        // layer_norm(x[rows, dim], w[dim], b[dim], eps).
+        ROUTES.put("fast_layer_norm", v -> {
+            int t = v.sameType(FLOATS, 0, 3);
+            if (t < 0 || v.args() < 7 || !v.is(1, t, v.intArg(5)) || !v.is(2, t, v.intArg(5))) {
+                return null;
+            }
+            int rows = v.intArg(4);
+            int dim = v.intArg(5);
+            float eps = v.floatArg(6);
+            if ((long) rows * dim != v.size(0)) {
+                return null;
+            }
+            boolean looped = dim > 6656;
+            String name = "layer_norm" + (looped ? "_looped" : "") + MlxMetalKernels.typeName(t);
+            return p -> {
+                Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2)).buffer(3, v.ref(3)).f32(4, eps).i32(5, dim).i32(6, 1).i32(7, 1);
+                long group = rowGroup(dim, looped ? 4 : 8, 6656, k.maxThreads);
+                k.threads(rows * group, group, 1, 1, 1, 1);
+            };
+        });
+        // rope(x, out, B, H, T, D, dims, traditional, base, scale, offset); rope_dynamic(x, offset[1], out, B, H, T, D, dims, traditional, base, scale).
+        ROUTES.put("fast_rope", v -> rope(v, 0, 1, -1, 2));
+        ROUTES.put("fast_rope_dynamic", v -> rope(v, 0, 2, 1, 3));
     }
 
     private static Encoder scaled(View v, double factor) {
