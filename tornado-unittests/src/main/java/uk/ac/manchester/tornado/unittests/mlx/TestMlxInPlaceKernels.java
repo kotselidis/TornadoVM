@@ -45,6 +45,7 @@ import uk.ac.manchester.tornado.mlx.MlxCreate;
 import uk.ac.manchester.tornado.mlx.MlxIndex;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
 import uk.ac.manchester.tornado.mlx.MlxProducts;
+import uk.ac.manchester.tornado.mlx.MlxRandom;
 import uk.ac.manchester.tornado.mlx.MlxReduce;
 import uk.ac.manchester.tornado.mlx.MlxSort;
 import uk.ac.manchester.tornado.mlx.MlxShape;
@@ -974,5 +975,43 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         FloatArray kb = FloatArray.fromArray(values(13 * 5, -1, 1, 193));
         same("kron", new Object[] { ka, kb }, floatsOut(9 * 7 * 13 * 5),
                 (g, id, c, o) -> g.libraryTask(id, (x1, x2, x3) -> tune(MlxProducts.kron(x1, x2, x3, 9, 7, 13, 5), c), ka, kb, (FloatArray) o[0]));
+    }
+
+    // ---------------------------------------------------------------- random sampling
+
+    @Test
+    public void testRandom() throws TornadoExecutionPlanException {
+        Object[] none = {};
+        for (int seed : new int[] { 7, -12345 }) {
+            for (int n : new int[] { 1, 1001, 70000 }) {
+                String tag = " n=" + n + " seed=" + seed;
+                same("bits" + tag, none, () -> new TornadoNativeArray[] { new IntArray(n) }, (g, id, c, o) -> g.libraryTask(id, (a, sd) -> tune(MlxRandom.bits(a, sd), c), (IntArray) o[0], seed));
+                same("uniform" + tag, none, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, lo, hi, sd) -> tune(MlxRandom.uniform(a, lo, hi, sd), c), (FloatArray) o[0], -2.5f, 3.75f, seed));
+                same("normal" + tag, none, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, l, sc, sd) -> tune(MlxRandom.normal(a, l, sc, sd), c), (FloatArray) o[0], 1.5f, 0.3f, seed));
+                same("normal std" + tag, none, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, l, sc, sd) -> tune(MlxRandom.normal(a, l, sc, sd), c), (FloatArray) o[0], 0.0f, 1.0f, seed));
+                same("randint" + tag, none, () -> new TornadoNativeArray[] { new IntArray(n) },
+                        (g, id, c, o) -> g.libraryTask(id, (a, lo, hi, sd) -> tune(MlxRandom.randint(a, lo, hi, sd), c), (IntArray) o[0], -7, 100, seed));
+                same("truncatedNormal" + tag, none, floatsOut(n),
+                        (g, id, c, o) -> g.libraryTask(id, (a, lo, hi, sd) -> tune(MlxRandom.truncatedNormal(a, lo, hi, sd), c), (FloatArray) o[0], -0.5f, 1.25f, seed));
+                same("gumbel" + tag, none, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, sd) -> tune(MlxRandom.gumbel(a, sd), c), (FloatArray) o[0], seed));
+                same("laplace" + tag, none, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, l, sc, sd) -> tune(MlxRandom.laplace(a, l, sc, sd), c), (FloatArray) o[0], 0.5f, 2.0f, seed));
+                same("permutationArange" + tag, none, () -> new TornadoNativeArray[] { new IntArray(n) },
+                        (g, id, c, o) -> g.libraryTask(id, (a, sd) -> tune(MlxRandom.permutationArange(a, sd), c), (IntArray) o[0], seed));
+                FloatArray probabilities = FloatArray.fromArray(values(n, 0, 1, 200 + n));
+                same("bernoulli" + tag, new Object[] { probabilities }, () -> new TornadoNativeArray[] { new ByteArray(n) },
+                        (g, id, c, o) -> g.libraryTask(id, (a, b, sd) -> tune(MlxRandom.bernoulli(a, b, sd), c), probabilities, (ByteArray) o[0], seed));
+                FloatArray loc = FloatArray.fromArray(values(n, -1, 1, 201 + n));
+                FloatArray scale = FloatArray.fromArray(values(n, 0.1f, 2, 202 + n));
+                same("normalBroadcast" + tag, new Object[] { loc, scale }, floatsOut(n),
+                        (g, id, c, o) -> g.libraryTask(id, (a, b, d, sd) -> tune(MlxRandom.normalBroadcast(a, b, d, sd), c), loc, scale, (FloatArray) o[0], seed));
+            }
+            FloatArray logits = FloatArray.fromArray(values(16 * 1000, -3, 3, 203));
+            same("categorical seed=" + seed, new Object[] { logits }, () -> new TornadoNativeArray[] { new IntArray(16) },
+                    (g, id, c, o) -> g.libraryTask(id, (a, b, r, k, sd) -> tune(MlxRandom.categorical(a, b, r, k, sd), c), logits, (IntArray) o[0], 16, 1000, seed));
+            same("categoricalSamples seed=" + seed, new Object[] { logits }, () -> new TornadoNativeArray[] { new IntArray(16 * 5) }, (g, id, c, o) -> g.libraryTask(id,
+                    (a, b, r, k, m, sd) -> tune(MlxRandom.categoricalSamples(a, b, r, k, m, sd), c), logits, (IntArray) o[0], 16, 1000, 5, seed));
+            same("categoricalShape seed=" + seed, new Object[] { logits }, () -> new TornadoNativeArray[] { new IntArray(16 * 3) }, (g, id, c, o) -> g.libraryTask(id,
+                    (a, b, r, k, m, sd) -> tune(MlxRandom.categoricalShape(a, b, r, k, m, sd), c), logits, (IntArray) o[0], 16, 1000, 3, seed));
+        }
     }
 }

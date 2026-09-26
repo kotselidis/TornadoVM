@@ -329,6 +329,7 @@ final class MlxKernelRoutes {
         registerMatmulRoutes();
         registerScanRoutes();
         registerSortRoutes();
+        registerRandomRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -1224,18 +1225,21 @@ final class MlxKernelRoutes {
         if (!v.isArray(0) || !v.is(1, MLX_INT32, (int) (outer * inner)) || outer * len * inner != v.size(0) || !NUMBERS.contains(v.dtype(0))) {
             return null;
         }
-        String name = op + "_" + MlxMetalKernels.typeName(v.dtype(0));
-        return p -> {
-            Program.Launch k = p.launch(name).buffer(0, v.ref(0)).buffer(1, v.ref(1));
-            long group = roundUp32(Math.min((len + 3) / 4, k.maxThreads));
-            boolean scalar = outer * inner == 1;
-            if (scalar) {
-                k.i32(2, 0).i64(3, 0).i64(4, 0).i64(5, 0);
-            } else {
-                k.bytes(2, MlxMetalKernels.intBytes(new int[] { (int) outer, (int) inner })).i64(3, len * inner, 1).i64(4, inner, 1).i64(5, 2);
-            }
-            k.i64(6, inner).i64(7, len).threads(group, group, outer * inner, 1, 1, 1);
-        };
+        int t = v.dtype(0);
+        return p -> argReduceInto(p, op, t, outer, len, inner, v.ref(0), v.ref(1));
+    }
+
+    /** MLX's ArgReduce over axis 1 of x viewed as [outer, len, inner], writing uint32 indices. */
+    private static void argReduceInto(Program p, String op, int t, long outer, long len, long inner, Ref x, Ref out) {
+        Program.Launch k = p.launch(op + "_" + MlxMetalKernels.typeName(t)).buffer(0, x).buffer(1, out);
+        long group = roundUp32(Math.min((len + 3) / 4, k.maxThreads));
+        boolean scalar = outer * inner == 1;
+        if (scalar) {
+            k.i32(2, 0).i64(3, 0).i64(4, 0).i64(5, 0);
+        } else {
+            k.bytes(2, MlxMetalKernels.intBytes(new int[] { (int) outer, (int) inner })).i64(3, len * inner, 1).i64(4, inner, 1).i64(5, 2);
+        }
+        k.i64(6, inner).i64(7, len).threads(group, group, outer * inner, 1, 1, 1);
     }
 
     private static void registerReductionRoutes() {
@@ -2109,6 +2113,264 @@ final class MlxKernelRoutes {
         ROUTES.put("argpartition_axis", v -> v.args() < 5 ? null : sortRoute(v, true, true));
         ROUTES.put("topk", v -> v.args() < 3 ? null : topk(v, false));
         ROUTES.put("topk_axis", v -> v.args() < 5 ? null : topk(v, true));
+    }
+
+    // ---------------------------------------------------------------- random sampling
+
+    private static final int F32 = MLX_FLOAT32;
+
+    /** MLX's random key for a seed: {seed >> 32, seed & 0xffffffff} as uint32, the seed widened as the C API receives it. */
+    private static byte[] randomKey(int seed) {
+        long wide = seed;
+        return MlxMetalKernels.intBytes(new int[] { (int) (wide >>> 32), (int) wide });
+    }
+
+    /** RandomBits with one row-contiguous key: {@code n} uint32 words into {@code out}. */
+    private static void randomBits(Program p, int seed, long n, Ref out) {
+        long bytes = 4 * n;
+        long words = (bytes + 3) / 4;
+        long half = words / 2;
+        boolean odd = words % 2 == 1;
+        p.launch("rbitsc").bytes(0, randomKey(seed)).buffer(1, out).bytes(2, new byte[] { (byte) (odd ? 1 : 0) }).i64(3, bytes).blocks(1, half + (odd ? 1 : 0), 1);
+    }
+
+    /**
+     * uniform(low, high, float32): bits / UINT32_MAX, capped just below one, then range * u + low. {@code low}
+     * and {@code range} are scalars already in float32 buffers (as MLX computes them) or constants.
+     */
+    private static void uniform(Program p, int seed, int n, Ref low, Ref range, double lowValue, double rangeValue, Ref out, Ref scratch) {
+        randomBits(p, seed, n, scratch);
+        p.copy(MlxNativeLib.MLX_UINT32, F32, n, scratch, out);
+        p.binaryScalarRight("Divide", F32, n, out, 4294967295.0, out);
+        p.binaryScalarRight("Minimum", F32, n, out, Math.nextDown(1.0f), out);
+        if (range != null) {
+            p.binaryScalarLeft("Multiply", F32, n, range, out, out);
+        } else {
+            p.binaryScalarLeft("Multiply", F32, n, rangeValue, out, out);
+        }
+        if (low != null) {
+            p.binaryScalarRight("Add", F32, n, out, low, out);
+        } else {
+            p.binaryScalarRight("Add", F32, n, out, lowValue, out);
+        }
+    }
+
+    /** uniform over (nextafter(-1, 0), 1): the base of normal and laplace. */
+    private static void symmetricUniform(Program p, int seed, int n, Ref out, Ref scratch) {
+        float low = Math.nextUp(-1.0f);
+        uniform(p, seed, n, null, null, low, 1.0f - low, out, scratch);
+    }
+
+    private static int seedArg(View v, int index) {
+        return v.intArg(index);
+    }
+
+    private static void registerRandomRoutes() {
+        ROUTES.put("random_bits", v -> v.args() < 2 || !v.isArray(0) || v.dtype(0) != MLX_INT32 ? null : p -> randomBits(p, seedArg(v, 1), v.size(0), v.ref(0)));
+        ROUTES.put("random_uniform", v -> {
+            if (v.args() < 4 || !v.isArray(0) || v.dtype(0) != F32) {
+                return null;
+            }
+            float low = v.floatArg(1);
+            float high = v.floatArg(2);
+            int n = v.size(0);
+            return p -> uniform(p, seedArg(v, 3), n, null, null, low, high - low, v.ref(0), p.scratch(4L * n));
+        });
+        // normal(loc, scale): sqrt(2) * erfinv(u) (times scale when it is not one), plus loc when it is not zero.
+        ROUTES.put("random_normal", v -> {
+            if (v.args() < 4 || !v.isArray(0) || v.dtype(0) != F32) {
+                return null;
+            }
+            float loc = v.floatArg(1);
+            float scale = v.floatArg(2);
+            int n = v.size(0);
+            float applied = scale == 1.0f ? (float) Math.sqrt(2.0) : (float) Math.sqrt(2.0) * scale;
+            return p -> {
+                symmetricUniform(p, seedArg(v, 3), n, v.ref(0), p.scratch(4L * n));
+                p.unary("ErfInv", F32, F32, n, v.ref(0), v.ref(0));
+                p.binaryScalarLeft("Multiply", F32, n, applied, v.ref(0), v.ref(0));
+                if (loc != 0.0f) {
+                    p.binaryScalarLeft("Add", F32, n, loc, v.ref(0), v.ref(0));
+                }
+            };
+        });
+        // normal with per-element loc and scale arrays.
+        ROUTES.put("random_normal_broadcast", v -> {
+            if (v.args() < 4 || floatType(v, 0, 1, 2) != F32 || v.size(0) != v.size(2) || v.size(1) != v.size(2)) {
+                return null;
+            }
+            int n = v.size(2);
+            return p -> {
+                Ref scale = p.scratch(4L * n);
+                symmetricUniform(p, seedArg(v, 3), n, v.ref(2), p.scratch(4L * n));
+                p.binaryScalarLeft("Multiply", F32, n, (float) Math.sqrt(2.0), v.ref(1), scale);
+                p.unary("ErfInv", F32, F32, n, v.ref(2), v.ref(2));
+                p.binary("Multiply", F32, n, scale, v.ref(2), v.ref(2));
+                p.binary("Add", F32, n, v.ref(0), v.ref(2), v.ref(2));
+            };
+        });
+        // bernoulli(p): bits < p * nextafter(UINT32_MAX as float, max).
+        ROUTES.put("random_bernoulli", v -> {
+            if (v.args() < 3 || !v.isArray(0) || v.dtype(0) != F32 || !v.is(1, MLX_UINT8, v.size(0))) {
+                return null;
+            }
+            int n = v.size(0);
+            float upper = Math.nextUp((float) 4294967295.0);
+            return p -> {
+                Ref bits = p.scratch(4L * n);
+                Ref threshold = p.scratch(4L * n);
+                randomBits(p, seedArg(v, 2), n, bits);
+                p.binaryScalarRight("Multiply", F32, n, v.ref(0), upper, threshold);
+                p.copy(MlxNativeLib.MLX_UINT32, F32, n, bits, bits);
+                p.binary("Less", F32, n, bits, threshold, v.ref(1));
+            };
+        });
+        // randint(low, high): floor of a float32 uniform, clipped to [low, high - 1].
+        ROUTES.put("random_randint", v -> {
+            if (v.args() < 4 || !v.isArray(0) || v.dtype(0) != MLX_INT32) {
+                return null;
+            }
+            int low = v.intArg(1);
+            int high = v.intArg(2);
+            int n = v.size(0);
+            return p -> {
+                Ref u = p.scratch(4L * n);
+                uniform(p, seedArg(v, 3), n, null, null, (float) low, (float) high - (float) low, u, p.scratch(4L * n));
+                p.unary("Floor", F32, F32, n, u, u);
+                p.copy(F32, MLX_INT32, n, u, v.ref(0));
+                p.binaryScalarRight("Minimum", MLX_INT32, n, v.ref(0), high - 1, v.ref(0));
+                p.binaryScalarRight("Maximum", MLX_INT32, n, v.ref(0), low, v.ref(0));
+            };
+        });
+        // truncated_normal(lower, upper): a uniform between erf(lower / sqrt2) and erf(upper / sqrt2), mapped back and clipped.
+        ROUTES.put("random_truncated_normal", v -> {
+            if (v.args() < 4 || !v.isArray(0) || v.dtype(0) != F32) {
+                return null;
+            }
+            float lower = v.floatArg(1);
+            float upper = v.floatArg(2);
+            float sqrt2 = (float) Math.sqrt(2.0);
+            int n = v.size(0);
+            return p -> {
+                Ref bounds = p.scratch(16);
+                Ref a = bounds;
+                Ref b = bounds.plus(1, F32);
+                Ref range = bounds.plus(2, F32);
+                p.fill(F32, 1, lower, a);
+                p.fill(F32, 1, upper, b);
+                p.binaryScalarRight("Divide", F32, 1, a, sqrt2, a);
+                p.binaryScalarRight("Divide", F32, 1, b, sqrt2, b);
+                p.unary("Erf", F32, F32, 1, a, a);
+                p.unary("Erf", F32, F32, 1, b, b);
+                p.binary("Subtract", F32, 1, b, a, range);
+                uniform(p, seedArg(v, 3), n, a, range, 0, 0, v.ref(0), p.scratch(4L * n));
+                p.unary("ErfInv", F32, F32, n, v.ref(0), v.ref(0));
+                p.binaryScalarLeft("Multiply", F32, n, sqrt2, v.ref(0), v.ref(0));
+                p.binaryScalarLeft("Minimum", F32, n, upper, v.ref(0), v.ref(0));
+                p.binaryScalarRight("Maximum", F32, n, v.ref(0), lower, v.ref(0));
+            };
+        });
+        // gumbel: -log(-log(uniform(0, 1))).
+        ROUTES.put("random_gumbel", v -> {
+            if (v.args() < 2 || !v.isArray(0) || v.dtype(0) != F32) {
+                return null;
+            }
+            int n = v.size(0);
+            return p -> gumbel(p, seedArg(v, 1), n, v.ref(0), p.scratch(4L * n));
+        });
+        // laplace(loc, scale): sign(u) * log1p(-|u|), scaled and shifted.
+        ROUTES.put("random_laplace", v -> {
+            if (v.args() < 4 || !v.isArray(0) || v.dtype(0) != F32) {
+                return null;
+            }
+            float loc = v.floatArg(1);
+            float scale = v.floatArg(2);
+            int n = v.size(0);
+            return p -> {
+                Ref sign = p.scratch(4L * n);
+                symmetricUniform(p, seedArg(v, 3), n, v.ref(0), p.scratch(4L * n));
+                p.unary("Sign", F32, F32, n, v.ref(0), sign);
+                p.unary("Abs", F32, F32, n, v.ref(0), v.ref(0));
+                p.binaryScalarLeft("Multiply", F32, n, -1.0f, v.ref(0), v.ref(0));
+                p.unary("Log1p", F32, F32, n, v.ref(0), v.ref(0));
+                p.binary("Multiply", F32, n, sign, v.ref(0), v.ref(0));
+                if (scale != 1.0f) {
+                    p.binaryScalarLeft("Multiply", F32, n, scale, v.ref(0), v.ref(0));
+                }
+                if (loc != 0.0f) {
+                    p.binaryScalarLeft("Add", F32, n, loc, v.ref(0), v.ref(0));
+                }
+            };
+        });
+        // permutation of arange(n): argsort of n random words.
+        ROUTES.put("random_permutation_arange", v -> {
+            if (v.args() < 2 || !v.isArray(0) || v.dtype(0) != MLX_INT32) {
+                return null;
+            }
+            int n = v.size(0);
+            return p -> {
+                Ref bits = p.scratch(4L * n);
+                randomBits(p, seedArg(v, 1), n, bits);
+                mergeSort(p, MlxNativeLib.MLX_UINT32, 1, n, 1, bits, v.ref(0), true);
+            };
+        });
+        // categorical: argmax of logits plus Gumbel noise (MLX's path when the logits have more than one row).
+        ROUTES.put("random_categorical", v -> {
+            if (v.args() < 5) {
+                return null;
+            }
+            int rows = v.intArg(2);
+            int classes = v.intArg(3);
+            return categorical(v, rows, classes, 1, v.intArg(4), false);
+        });
+        ROUTES.put("random_categorical_num_samples", v -> {
+            if (v.args() < 6) {
+                return null;
+            }
+            return categorical(v, v.intArg(2), v.intArg(3), v.intArg(4), v.intArg(5), false);
+        });
+        ROUTES.put("random_categorical_shape", v -> {
+            if (v.args() < 6) {
+                return null;
+            }
+            return categorical(v, v.intArg(2), v.intArg(3), v.intArg(4), v.intArg(5), true);
+        });
+    }
+
+    private static void gumbel(Program p, int seed, int n, Ref out, Ref scratch) {
+        uniform(p, seed, n, null, null, 0.0, 1.0, out, scratch);
+        p.unary("Log", F32, F32, n, out, out);
+        p.unary("Negative", F32, F32, n, out, out);
+        p.unary("Log", F32, F32, n, out, out);
+        p.unary("Negative", F32, F32, n, out, out);
+    }
+
+    /**
+     * categorical over logits[rows, classes] with {@code samples} draws per row: Gumbel noise shaped as MLX
+     * inserts the class axis, added to the broadcast logits, then argmax over the class axis. {@code shapeForm}
+     * orders the output [samples, rows] (categorical_shape); otherwise [rows, samples].
+     */
+    private static Encoder categorical(View v, int rows, int classes, int samples, int seed, boolean shapeForm) {
+        if (!v.isArray(0) || v.dtype(0) != F32 || !v.isArray(1) || v.dtype(1) != MLX_INT32 || rows <= 1 || classes <= 0 || samples <= 0 || v.size(0) != rows * classes
+                || v.size(1) != rows * samples) {
+            return null;
+        }
+        long total = (long) rows * classes * samples;
+        return p -> {
+            Ref noisy = p.scratch(4L * total);
+            gumbel(p, seed, (int) total, noisy, p.scratch(4L * total));
+            if (shapeForm) {
+                // noise [samples, rows, classes] + logits[None, rows, classes], argmax over the last axis.
+                p.generalBinary("Add", F32, new int[] { samples, rows, classes }, new long[] { (long) rows * classes, classes, 1 }, noisy, new long[] { 0, classes, 1 }, v.ref(0),
+                        noisy);
+                argReduceInto(p, "argmax", F32, (long) samples * rows, classes, 1, noisy, v.ref(1));
+            } else {
+                // noise [rows, classes, samples] + logits[rows, classes, None], argmax over the middle axis.
+                p.generalBinary("Add", F32, new int[] { rows, classes, samples }, new long[] { (long) classes * samples, samples, 1 }, noisy, new long[] { classes, 1, 0 },
+                        v.ref(0), noisy);
+                argReduceInto(p, "argmax", F32, rows, classes, samples, noisy, v.ref(1));
+            }
+        };
     }
 
     private static Encoder scaled(View v, double factor) {
