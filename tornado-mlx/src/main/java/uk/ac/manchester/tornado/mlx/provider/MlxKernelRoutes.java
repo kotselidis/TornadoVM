@@ -1689,6 +1689,8 @@ final class MlxKernelRoutes {
         ROUTES.put("quantized_matmul", MlxKernelRoutes::quantizedMatmul);
         ROUTES.put("gather_mm", MlxKernelRoutes::gatherMm);
         ROUTES.put("gather_qmm", MlxKernelRoutes::gatherQmm);
+        ROUTES.put("quantize_mx", MlxKernelRoutes::quantizeMx);
+        ROUTES.put("qqmm", MlxKernelRoutes::qqmm);
         ROUTES.put("segmented_mm", MlxKernelRoutes::segmentedMm);
         // addmm(c, a, b, out, m, k, n, alpha, beta) = alpha * a @ b + beta * c.
         ROUTES.put("addmm", v -> {
@@ -1886,6 +1888,65 @@ final class MlxKernelRoutes {
         byte[] paramBytes = params.array();
         return p -> p.launchIndexed(kernel, new int[] { 200, 201, 300, 301, 302 }, new boolean[] { alignQ, alignK, false, causal, false }).buffer(0, v.ref(0)).buffer(1, v.ref(1))
                 .buffer(2, v.ref(2)).buffer(3, v.ref(3)).bytes(4, paramBytes).threadgroups(nq, hq, b, 32, 4, 1);
+    }
+
+    /** quantize_mx(w[rows, cols], wq, scales, rows, cols, mode) in mxfp8 (group 32, 8 bits): MLX's quantize kernel. */
+    private static Encoder quantizeMx(View v) {
+        if (v.args() < 6 || v.intArg(5) != 0 || !v.isArray(0) || !v.isArray(1) || !v.isArray(2)) {
+            return null;
+        }
+        int t = v.dtype(0);
+        String type = cType(t);
+        long elements = (long) v.intArg(3) * v.intArg(4);
+        if (type == null || v.intArg(4) % 32 != 0 || v.size(0) != elements || (long) v.size(1) * 4 != elements || v.dtype(2) != MLX_UINT8 || v.size(2) != elements / 32) {
+            return null;
+        }
+        String kernel = "mxfp8_quantize_" + type + "_gs_32_b_8_hgs_false";
+        if (!v.hasKernel(kernel)) {
+            return null;
+        }
+        return p -> {
+            Program.Launch k = p.launch(kernel).buffer(0, v.ref(0)).buffer(1, v.ref(1)).buffer(2, v.ref(2));
+            k.threads(elements, Math.min(elements, k.maxThreads), 1, 1, 1, 1);
+        };
+    }
+
+    /**
+     * qqmm(x[m, k], wq[n, k / 4], scales[n, k / 32], out[m, n], m, k, n, mode) in mxfp8: quantize-dequantize x, then
+     * MLX's mxfp8 qmv (or qmv_quad for k = 64 / 128); m >= 2 takes MLX's qmv_wide, which is not reproduced.
+     */
+    private static Encoder qqmm(View v) {
+        if (v.args() < 8 || v.intArg(7) != 0 || !v.isArray(0) || !v.isArray(1) || !v.isArray(2) || !v.isArray(3)) {
+            return null;
+        }
+        int t = v.dtype(0);
+        String type = cType(t);
+        int m = v.intArg(4);
+        int k = v.intArg(5);
+        int n = v.intArg(6);
+        boolean quad = k == 64 || k == 128;
+        if (type == null || v.dtype(3) != t || v.dtype(2) != MLX_UINT8 || k % 32 != 0 || v.size(0) != m * k || (long) v.size(1) * 4 != (long) n * k || v.size(2) != n * (k / 32)
+                || v.size(3) != m * n || (!quad && m >= 2)) {
+            return null;
+        }
+        String roundTrip = "mxfp8_quantize_dequantize_" + type + "_gs_32_b_8_hgs_false";
+        boolean fast = n % 8 == 0 && k % (4 * 2 * 32) == 0;
+        String kernel = quad ? "mxfp8_qmv_quad_" + type + "_gs_32_b_8_d_" + k + "_batch_0" : "mxfp8_qmv" + (fast ? "_fast_" : "_") + type + "_gs_32_b_8_batch_0";
+        if (!v.hasKernel(roundTrip) || !v.hasKernel(kernel)) {
+            return null;
+        }
+        long elements = (long) m * k;
+        return p -> {
+            Ref xhat = p.scratch(elements * MlxMetalKernels.itemSize(t));
+            Program.Launch q = p.launch(roundTrip).buffer(0, v.ref(0)).buffer(2, xhat);
+            q.threads(elements, Math.min(elements, q.maxThreads), 1, 1, 1, 1);
+            if (quad) {
+                // qmv_quad numbers its arguments in sequence, so without biases x follows the scales directly.
+                p.launch(kernel).buffer(0, v.ref(1)).buffer(1, v.ref(2)).buffer(2, xhat).buffer(3, v.ref(3)).i32(4, k).i32(5, n).threadgroups(m, (n + 63) / 64, 1, 32, 1, 1);
+            } else {
+                p.launch(kernel).buffer(0, v.ref(1)).buffer(1, v.ref(2)).buffer(3, xhat).buffer(4, v.ref(3)).i32(5, k).i32(6, n).threadgroups(m, (n + 7) / 8, 1, 32, 2, 1);
+            }
+        };
     }
 
     /**

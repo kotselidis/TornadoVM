@@ -1208,4 +1208,30 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
                     biases, lhs, rhs, (FloatArray) o[0], batches, experts, m, k, n, gs, bits));
         }
     }
+
+    @Test
+    public void testMxfp8() throws TornadoExecutionPlanException {
+        int rows = 64;
+        int cols = 1024;
+        FloatArray weights = FloatArray.fromArray(values(rows * cols, -2, 2, 270));
+        same("quantizeMx", new Object[] { weights }, () -> new TornadoNativeArray[] { new IntArray(rows * cols / 4), new ByteArray(rows * cols / 32) }, (g, id, c, o) -> g
+                .libraryTask(id, (a, b, q, r, cc, md) -> tune(MlxProducts.quantizeMx(a, b, q, r, cc, md), c), weights, (IntArray) o[0], (ByteArray) o[1], rows, cols, 0));
+        for (int[] sh : new int[][] { { 1, 2048, 512 }, { 1, 96, 200 }, { 4, 128, 100 } }) {
+            int m = sh[0];
+            int k = sh[1];
+            int n = sh[2];
+            FloatArray x = FloatArray.fromArray(values(m * k, -1, 1, 271 + k));
+            IntArray seed = ints(272 + n, -1000000000, 1000000000);
+            IntArray w = new IntArray(n * k / 4);
+            for (int i = 0; i < w.getSize(); i++) {
+                w.set(i, (seed.get(i % seed.getSize()) * 31 + i) & 0x3f3f3f3f);
+            }
+            ByteArray scales = new ByteArray(n * k / 32);
+            for (int i = 0; i < scales.getSize(); i++) {
+                scales.set(i, (byte) (118 + i % 12));
+            }
+            same("qqmm " + java.util.Arrays.toString(sh), new Object[] { x, w, scales }, floatsOut(m * n), (g, id, c, o) -> g.libraryTask(id,
+                    (a, b, q, r, i4, i5, i6, i7) -> tune(MlxProducts.qqmm(a, b, q, r, i4, i5, i6, i7), c), x, w, scales, (FloatArray) o[0], m, k, n, 0));
+        }
+    }
 }
