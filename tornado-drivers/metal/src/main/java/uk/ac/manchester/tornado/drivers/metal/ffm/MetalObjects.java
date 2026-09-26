@@ -581,17 +581,15 @@ public final class MetalObjects {
                 }
             }
 
-            // A trailing device buffer holding the three global sizes, bound past the user arguments,
-            // mirrors the _global_sizes parameter the generated MSL reads.
+            // The three global sizes, bound past the user arguments, fill the _global_sizes parameter
+            // the generated MSL reads. setBytes copies them into the command buffer, which is cheaper
+            // than creating (and mapping for the GPU) a new buffer on every launch.
             int sizesIndex = state.args.size();
             MemorySegment sizes = arena.allocate(3 * Integer.BYTES);
             sizes.set(C_INT, 0, (int) gx);
             sizes.set(C_INT, 4, (int) gy);
             sizes.set(C_INT, 8, (int) gz);
-            long sizesBuffer = MetalAPI.newBufferWithBytes(state.device, sizes, 3L * Integer.BYTES, MetalAPI.MTL_RESOURCE_STORAGE_MODE_SHARED);
-            if (sizesBuffer != 0) {
-                MetalAPI.setBuffer(encoder, sizesBuffer, 0, sizesIndex);
-            }
+            MetalAPI.setBytes(encoder, sizes, 3L * Integer.BYTES, sizesIndex);
 
             MemorySegment grid = mtlSize(arena, gx, gy, gz);
             MemorySegment group = mtlSize(arena, lx, ly, lz);
@@ -599,9 +597,6 @@ public final class MetalObjects {
             MetalAPI.endEncoding(encoder);
             MetalAPI.commit(commandBuffer);
             MetalAPI.waitUntilCompleted(commandBuffer);
-            if (sizesBuffer != 0) {
-                ObjCRuntime.release(sizesBuffer);
-            }
             // Retain across the pool so GPUStartTime/GPUEndTime can be read when the profiler asks.
             retainedCommandBuffer = ObjCRuntime.retain(commandBuffer);
         }
