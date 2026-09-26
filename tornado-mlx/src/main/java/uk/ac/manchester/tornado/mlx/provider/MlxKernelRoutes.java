@@ -1780,8 +1780,13 @@ final class MlxKernelRoutes {
             return null;
         }
         int gqa = hq / hkv;
-        if (!headDim || lq > 8 || lq > lk || lq * gqa > 32 || v.size(0) != b * hq * lq * d || v.size(1) != b * hkv * lk * d || v.size(2) != b * hkv * lk * d
-                || v.size(3) != b * hq * lq * d) {
+        if (v.size(0) != b * hq * lq * d || v.size(1) != b * hkv * lk * d || v.size(2) != b * hkv * lk * d || v.size(3) != b * hq * lq * d) {
+            return null;
+        }
+        if (lq > 8) {
+            return fullAttention(v, t, b, hq, hkv, lq, lk, d, scale, v.boolArg(11), architecture);
+        }
+        if (!headDim || lq > lk || lq * gqa > 32) {
             return null;
         }
         char devc = architecture.charAt(architecture.length() - 1);
@@ -1833,6 +1838,40 @@ final class MlxKernelRoutes {
         String kernel = "sdpa_vector_" + type + "_" + d + "_" + d;
         return p -> p.launchConstants(kernel, indices, constants).buffer(0, q).buffer(1, k).buffer(2, vv).buffer(3, out).i32(4, gqa).i32(5, lk).i64(6, headStride).i64(7, seqStride)
                 .i64(8, headStride).i64(9, seqStride).f32(10, scale).threadgroups((long) b * hq, lq, 1, 1024, 1, 1);
+    }
+
+    /**
+     * Prefill attention (Lq > 8): MLX's steel_attention kernel, where MLX uses it (head dim 64/72/80/96/128,
+     * causal only with Lq <= Lk, no NAX). The output strides are those of the contiguous [B, H, Lq, D] buffer.
+     */
+    private static Encoder fullAttention(View v, int t, int b, int hq, int hkv, int lq, int lk, int d, float scale, boolean causal, String architecture) {
+        boolean headDim = d == 64 || d == 72 || d == 80 || d == 96 || d == 128;
+        if (!headDim || (causal && lq > lk) || MlxMetalKernels.architectureGeneration(architecture) >= 17) {
+            return null;
+        }
+        int bq = 32;
+        int bk = d < 128 ? 32 : 16;
+        String type = MlxMetalKernels.typeName(t);
+        String kernel = "steel_attention_" + type + "_bq" + bq + "_bk" + bk + "_bd" + d + "_wm4_wn1_mask" + type;
+        boolean alignQ = lq % bq == 0;
+        boolean alignK = lk % bk == 0;
+        int nq = (lq + bq - 1) / bq;
+        int nk = (lk + bk - 1) / bk;
+        int nqAligned = lq / bq;
+        int nkAligned = lk / bk;
+        java.nio.ByteBuffer params = java.nio.ByteBuffer.allocate(152).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        params.putInt(b).putInt(hq).putInt(d).putInt(lq).putInt(lk).putInt(hq / hkv).putFloat(scale).putInt(nq).putInt(nk).putInt(nqAligned).putInt(nkAligned)
+                .putInt(lq - nqAligned * bq).putInt(lk - nkAligned * bk).putInt(lk - lq);
+        long[][] strides = { { (long) hq * lq * d, (long) lq * d, d }, { (long) hkv * lk * d, (long) lk * d, d }, { (long) hkv * lk * d, (long) lk * d, d },
+                { (long) hq * lq * d, (long) lq * d, d } };
+        for (long[] st : strides) {
+            for (long x : st) {
+                params.putLong(x);
+            }
+        }
+        byte[] paramBytes = params.array();
+        return p -> p.launchIndexed(kernel, new int[] { 200, 201, 300, 301, 302 }, new boolean[] { alignQ, alignK, false, causal, false }).buffer(0, v.ref(0)).buffer(1, v.ref(1))
+                .buffer(2, v.ref(2)).buffer(3, v.ref(3)).bytes(4, paramBytes).threadgroups(nq, hq, b, 32, 4, 1);
     }
 
     /** MLX's C type names, as its quantized kernel names use them. */

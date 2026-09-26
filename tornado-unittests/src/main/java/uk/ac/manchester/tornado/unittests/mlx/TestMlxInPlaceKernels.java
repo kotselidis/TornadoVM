@@ -851,7 +851,8 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
     @Test
     public void testAttention() throws TornadoExecutionPlanException {
         // {batch, qHeads, kvHeads, qLen, kvLen, headDim, causal}: one-pass and two-pass decode, grouped queries, a causal query block.
-        int[][] shapes = { { 1, 32, 8, 1, 512, 128, 0 }, { 1, 32, 8, 1, 2048, 128, 0 }, { 2, 8, 8, 1, 300, 64, 0 }, { 1, 8, 2, 4, 100, 128, 1 }, { 1, 16, 16, 1, 9000, 64, 0 } };
+        int[][] shapes = { { 1, 32, 8, 1, 512, 128, 0 }, { 1, 32, 8, 1, 2048, 128, 0 }, { 2, 8, 8, 1, 300, 64, 0 }, { 1, 8, 2, 4, 100, 128, 1 }, { 1, 16, 16, 1, 9000, 64, 0 },
+                { 1, 8, 2, 128, 128, 128, 1 }, { 2, 4, 4, 100, 150, 64, 0 }, { 1, 8, 8, 77, 77, 64, 1 }, { 1, 4, 1, 33, 200, 128, 1 } };
         for (int[] sh : shapes) {
             int b = sh[0];
             int hq = sh[1];
