@@ -322,7 +322,9 @@ public class MetalNodeLIRBuilder extends NodeLIRBuilder {
         } else if (node instanceof FloatLessThanNode floatLessThanNode) {
             final Value x = operand(floatLessThanNode.getX());
             final Value y = operand(floatLessThanNode.getY());
-            result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_GREATEREQUAL, intLirKind, x, y);
+            // !(x < y), which is true when either operand is NaN (x >= y would be false).
+            Value less = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_LESS, intLirKind, x, y);
+            result = getGen().getArithmetic().genUnaryExpr(MetalUnaryOp.LOGICAL_NOT, boolLirKind, less);
         } else if (node instanceof IntegerBelowNode integerBelowNode) {
             final Value x = operand(integerBelowNode.getX());
             final Value y = operand(integerBelowNode.getY());
