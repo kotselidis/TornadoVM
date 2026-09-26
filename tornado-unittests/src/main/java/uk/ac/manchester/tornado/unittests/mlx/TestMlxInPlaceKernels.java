@@ -45,6 +45,7 @@ import uk.ac.manchester.tornado.mlx.MlxCreate;
 import uk.ac.manchester.tornado.mlx.MlxIndex;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
 import uk.ac.manchester.tornado.mlx.MlxReduce;
+import uk.ac.manchester.tornado.mlx.MlxSort;
 import uk.ac.manchester.tornado.mlx.MlxShape;
 import uk.ac.manchester.tornado.mlx.provider.MlxLibraryProvider;
 
@@ -897,5 +898,35 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
             case "cummin" -> MlxReduce.cummin(a, b, outer, len, inner, reverse, inclusive);
             default -> MlxReduce.logcumsumexp(a, b, outer, len, inner, reverse, inclusive);
         };
+    }
+
+    // ---------------------------------------------------------------- sorting
+
+    @Test
+    public void testSorting() throws TornadoExecutionPlanException {
+        for (int n : new int[] { 100, 1500, 2048, 5000, 100000 }) {
+            float[] raw = values(n, -50, 50, 170 + n);
+            for (int i = 0; i < n; i += 9) {
+                raw[i] = Math.round(raw[i]);
+            }
+            FloatArray x = FloatArray.fromArray(raw);
+            same("sort " + n, new Object[] { x }, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxSort.sort(a, b), c), x, (FloatArray) o[0]));
+            same("argsort " + n, new Object[] { x }, () -> new TornadoNativeArray[] { new IntArray(n) },
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxSort.argsort(a, b), c), x, (IntArray) o[0]));
+            same("partition " + n, new Object[] { x }, floatsOut(n), (g, id, c, o) -> g.libraryTask(id, (a, b, k) -> tune(MlxSort.partition(a, b, k), c), x, (FloatArray) o[0], n / 3));
+            same("topk " + n, new Object[] { x }, floatsOut(Math.min(50, n)), (g, id, c, o) -> g.libraryTask(id, (a, b, k) -> tune(Mlx.topk(a, b, k), c), x, (FloatArray) o[0], Math.min(50, n)));
+        }
+        // {outer, len, inner}: rows, strided axes, and multi-block rows and strided axes.
+        int[][] shapes = { { 64, 300, 1 }, { 8, 200, 5 }, { 3, 6000, 1 }, { 2, 4100, 3 } };
+        for (int[] sh : shapes) {
+            int n = sh[0] * sh[1] * sh[2];
+            FloatArray x = FloatArray.fromArray(values(n, -50, 50, 171 + n));
+            same("sortAxis " + java.util.Arrays.toString(sh), new Object[] { x }, floatsOut(n),
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxSort.sortAxis(a, b, sh[0], sh[1], sh[2]), c), x, (FloatArray) o[0]));
+            same("argsortAxis " + java.util.Arrays.toString(sh), new Object[] { x }, () -> new TornadoNativeArray[] { new IntArray(n) },
+                    (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxSort.argsortAxis(a, b, sh[0], sh[1], sh[2]), c), x, (IntArray) o[0]));
+        }
+        FloatArray rows = FloatArray.fromArray(values(32 * 32000, -10, 10, 172));
+        same("topkRows", new Object[] { rows }, floatsOut(32 * 40), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(Mlx.topkRows(a, b, 32, 32000, 40), c), rows, (FloatArray) o[0]));
     }
 }

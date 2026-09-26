@@ -328,6 +328,7 @@ final class MlxKernelRoutes {
         registerCompositeRoutes();
         registerMatmulRoutes();
         registerScanRoutes();
+        registerSortRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -1901,6 +1902,123 @@ final class MlxKernelRoutes {
         for (String[] sc : scans) {
             ROUTES.put(sc[0], v -> scan(v, sc[1]));
         }
+    }
+
+    // ---------------------------------------------------------------- sorting
+
+    /**
+     * MLX's gpu_merge_sort of x viewed as [outer, len, inner] along axis 1 into {@code out} (values, or
+     * uint32 indices when {@code argsort}): the single-block kernel, or block sort plus merge passes.
+     */
+    private static void mergeSort(Program p, int t, long outer, long len, long inner, Ref in, Ref out, boolean argsort) {
+        int tn = 4;
+        long potential = (len + tn - 1) / tn;
+        int bn = potential > 256 ? 512 : potential > 128 ? 256 : potential > 64 ? 128 : potential > 32 ? 64 : 32;
+        if (bn == 512 && MlxMetalKernels.itemSize(t) > 4) {
+            bn = 256;
+        }
+        long perBlock = (long) bn * tn;
+        long blocks = (len + perBlock - 1) / perBlock;
+        long rows = outer * inner;
+        String type = MlxMetalKernels.typeName(t);
+        String outType = argsort ? "uint32" : type;
+        if (blocks == 1) {
+            boolean contiguous = inner == 1;
+            String name = (contiguous ? "c" : "nc") + (argsort ? "arg" : "") + "_block_sort_" + type + "_" + outType + "_bn" + bn + "_tn" + tn;
+            Program.Launch k = p.launch(name).buffer(0, in).buffer(1, out).i32(2, (int) len).i32(3, (int) inner).i32(4, (int) inner);
+            if (contiguous) {
+                int segment = outer > 1 ? (int) len : Integer.MAX_VALUE;
+                k.i32(5, segment).i32(6, segment);
+            } else {
+                k.i32(5, 2).bytes(6, MlxMetalKernels.intBytes(new int[] { (int) outer, (int) inner })).i64(7, len * inner, 1).i64(8, len * inner, 1);
+            }
+            k.threadgroups(1, rows, 1, bn, 1, 1);
+            return;
+        }
+        int valueSize = MlxMetalKernels.itemSize(t);
+        Ref vals0 = p.scratch(rows * len * valueSize);
+        Ref vals1 = p.scratch(rows * len * valueSize);
+        Ref idxs0 = p.scratch(rows * len * 4);
+        Ref idxs1 = p.scratch(rows * len * 4);
+        Ref partitions = p.scratch(rows * (blocks + 1) * 4);
+        String suffix = "_" + type + "_uint32_bn" + bn + "_tn" + tn;
+        Program.Launch k = p.launch("sort_mbsort" + suffix).buffer(0, in).buffer(1, vals0).buffer(2, idxs0).i32(3, (int) len).i32(4, (int) inner);
+        if (inner == 1 && outer == 1) {
+            k.i32(5, 0).bytes(6, MlxMetalKernels.intBytes(new int[] { 0 })).i64(7, 1);
+        } else {
+            k.i32(5, 2).bytes(6, MlxMetalKernels.intBytes(new int[] { (int) outer, (int) inner })).i64(7, len * inner, 1);
+        }
+        k.threadgroups(blocks, rows, 1, bn, 1, 1);
+        boolean ping = false;
+        Ref valsOut = vals1;
+        Ref idxsOut = idxs1;
+        long partitionThreads = Math.min(blocks + 1, 1024);
+        for (long tiles = 2; tiles / 2 < blocks; tiles *= 2) {
+            Ref valsIn = ping ? vals1 : vals0;
+            Ref idxsIn = ping ? idxs1 : idxs0;
+            valsOut = ping ? vals0 : vals1;
+            idxsOut = ping ? idxs0 : idxs1;
+            ping = !ping;
+            p.launch("partition_mbsort" + suffix).buffer(0, partitions).buffer(1, valsIn).buffer(2, idxsIn).i32(3, (int) len).i32(4, (int) tiles).i32(5, (int) blocks)
+                    .threadgroups(1, rows, 1, partitionThreads, 1, 1);
+            p.launch("merge_mbsort" + suffix).buffer(0, partitions).buffer(1, valsIn).buffer(2, idxsIn).buffer(3, valsOut).buffer(4, idxsOut).i32(5, (int) len).i32(6, (int) tiles)
+                    .i32(7, (int) blocks).threadgroups(blocks, rows, 1, bn, 1, 1);
+        }
+        Ref sorted = argsort ? idxsOut : valsOut;
+        int sortedType = argsort ? MlxNativeLib.MLX_UINT32 : t;
+        int[] shape = { (int) outer, (int) len, (int) inner };
+        p.generalCopy(sortedType, sortedType, shape, new long[] { len * inner, 1, len }, sorted, null, out, null);
+    }
+
+    /** sort-like calls: whole (x, out) or along axis 1 of [outer, len, inner] (x, out, outer, len, inner). */
+    private static Encoder sortRoute(View v, boolean argsort, boolean alongAxis) {
+        if (!v.isArray(0) || !v.isArray(1) || !NUMBERS.contains(v.dtype(0))) {
+            return null;
+        }
+        long outer = alongAxis ? v.intArg(2) : 1;
+        long len = alongAxis ? v.intArg(3) : v.size(0);
+        long inner = alongAxis ? v.intArg(4) : 1;
+        int t = v.dtype(0);
+        if (outer * len * inner != v.size(0) || v.size(1) != v.size(0) || (argsort ? v.dtype(1) != MLX_INT32 : v.dtype(1) != t)) {
+            return null;
+        }
+        return p -> mergeSort(p, t, outer, len, inner, v.ref(0), v.ref(1), argsort);
+    }
+
+    /** topk(x, out, k) over a whole array, or topk_axis(x, out, rows, cols, k) over rows: partition, then the last k along the axis. */
+    private static Encoder topk(View v, boolean rowsForm) {
+        if (!v.isArray(0) || !v.isArray(1) || !NUMBERS.contains(v.dtype(0)) || v.dtype(1) != v.dtype(0)) {
+            return null;
+        }
+        int t = v.dtype(0);
+        long rows = rowsForm ? v.intArg(2) : 1;
+        long cols = rowsForm ? v.intArg(3) : v.size(0);
+        int k = rowsForm ? v.intArg(4) : v.intArg(2);
+        if (rows * cols != v.size(0) || k <= 0 || k > cols || v.size(1) != rows * k) {
+            return null;
+        }
+        return p -> {
+            if (k == cols) {
+                p.copy(t, t, (int) (rows * cols), v.ref(0), v.ref(1));
+                return;
+            }
+            Ref sorted = p.scratch(rows * cols * MlxMetalKernels.itemSize(t));
+            mergeSort(p, t, rows, cols, 1, v.ref(0), sorted, false);
+            block(p, t, sorted, (int) cols, cols - k, v.ref(1), k, 0, (int) rows, k);
+        };
+    }
+
+    private static void registerSortRoutes() {
+        ROUTES.put("sort", v -> sortRoute(v, false, false));
+        ROUTES.put("argsort", v -> sortRoute(v, true, false));
+        ROUTES.put("partition", v -> sortRoute(v, false, false));
+        ROUTES.put("argpartition", v -> sortRoute(v, true, false));
+        ROUTES.put("sort_axis", v -> v.args() < 5 ? null : sortRoute(v, false, true));
+        ROUTES.put("argsort_axis", v -> v.args() < 5 ? null : sortRoute(v, true, true));
+        ROUTES.put("partition_axis", v -> v.args() < 5 ? null : sortRoute(v, false, true));
+        ROUTES.put("argpartition_axis", v -> v.args() < 5 ? null : sortRoute(v, true, true));
+        ROUTES.put("topk", v -> v.args() < 3 ? null : topk(v, false));
+        ROUTES.put("topk_axis", v -> v.args() < 5 ? null : topk(v, true));
     }
 
     private static Encoder scaled(View v, double factor) {
