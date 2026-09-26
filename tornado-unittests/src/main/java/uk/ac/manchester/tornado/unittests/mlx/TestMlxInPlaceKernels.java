@@ -1054,4 +1054,61 @@ public class TestMlxInPlaceKernels extends MlxTestBase {
         FloatArray vb = FloatArray.fromArray(values(3 * 5001, -3, 3, 215));
         same("cross", new Object[] { va, vb }, floatsOut(3 * 5001), (g, id, cc, o) -> g.libraryTask(id, (a, b, q) -> tune(MlxLinalg.cross(a, b, q, 5001), cc), va, vb, (FloatArray) o[0]));
     }
+
+    // ---------------------------------------------------------------- FFT
+
+    @Test
+    public void testFft() throws TornadoExecutionPlanException {
+        int rows = 9;
+        for (int n : new int[] { 8, 64, 100, 1000, 1024, 2187, 4096, 7 }) {
+            FloatArray z = FloatArray.fromArray(values(rows * n * 2, -1, 1, 220 + n));
+            FloatArray real = FloatArray.fromArray(values(rows * n, -1, 1, 221 + n));
+            FloatArray half = FloatArray.fromArray(values(rows * (n / 2 + 1) * 2, -1, 1, 222 + n));
+            for (int norm = 0; norm < 3; norm++) {
+                int nm = norm;
+                String tag = " n=" + n + " norm=" + nm;
+                same("fft" + tag, new Object[] { z }, floatsOut(rows * n * 2), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxFft.fft(a, b, rows, n, n, nm), c), z, (FloatArray) o[0]));
+                same("ifft" + tag, new Object[] { z }, floatsOut(rows * n * 2), (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxFft.ifft(a, b, rows, n, n, nm), c), z, (FloatArray) o[0]));
+                same("rfft" + tag, new Object[] { real }, floatsOut(rows * (n / 2 + 1) * 2),
+                        (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxFft.rfft(a, b, rows, n, n, nm), c), real, (FloatArray) o[0]));
+                same("irfft" + tag, new Object[] { half }, floatsOut(rows * n),
+                        (g, id, c, o) -> g.libraryTask(id, (a, b) -> tune(MlxFft.irfft(a, b, rows, n / 2 + 1, n, nm), c), half, (FloatArray) o[0]));
+            }
+        }
+    }
+
+    @Test
+    public void testFftNd() throws TornadoExecutionPlanException {
+        int[][] shapes2 = { { 3, 16, 32 }, { 2, 60, 100 }, { 1, 256, 8 } };
+        for (int[] sh : shapes2) {
+            int b = sh[0];
+            int h = sh[1];
+            int w = sh[2];
+            FloatArray z = FloatArray.fromArray(values(b * h * w * 2, -1, 1, 230 + h));
+            FloatArray real = FloatArray.fromArray(values(b * h * w, -1, 1, 231 + h));
+            FloatArray half = FloatArray.fromArray(values(b * h * (w / 2 + 1) * 2, -1, 1, 232 + h));
+            for (int norm : new int[] { 0, 1 }) {
+                String tag = " " + java.util.Arrays.toString(sh) + " norm=" + norm;
+                same("fft2" + tag, new Object[] { z }, floatsOut(b * h * w * 2), (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.fft2(x, y, b, h, w, norm), c), z, (FloatArray) o[0]));
+                same("ifft2" + tag, new Object[] { z }, floatsOut(b * h * w * 2), (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.ifft2(x, y, b, h, w, norm), c), z, (FloatArray) o[0]));
+                same("rfft2" + tag, new Object[] { real }, floatsOut(b * h * (w / 2 + 1) * 2),
+                        (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.rfft2(x, y, b, h, w, norm), c), real, (FloatArray) o[0]));
+                same("irfft2" + tag, new Object[] { half }, floatsOut(b * h * w),
+                        (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.irfft2(x, y, b, h, w, norm), c), half, (FloatArray) o[0]));
+            }
+        }
+        int b = 2;
+        int d = 8;
+        int h = 12;
+        int w = 16;
+        FloatArray z = FloatArray.fromArray(values(b * d * h * w * 2, -1, 1, 233));
+        FloatArray real = FloatArray.fromArray(values(b * d * h * w, -1, 1, 234));
+        FloatArray half = FloatArray.fromArray(values(b * d * h * (w / 2 + 1) * 2, -1, 1, 235));
+        same("fftn", new Object[] { z }, floatsOut(b * d * h * w * 2), (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.fftn(x, y, b, d, h, w, 0), c), z, (FloatArray) o[0]));
+        same("ifftn", new Object[] { z }, floatsOut(b * d * h * w * 2), (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.ifftn(x, y, b, d, h, w, 2), c), z, (FloatArray) o[0]));
+        same("rfftn", new Object[] { real }, floatsOut(b * d * h * (w / 2 + 1) * 2),
+                (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.rfftn(x, y, b, d, h, w, 0), c), real, (FloatArray) o[0]));
+        same("irfftn", new Object[] { half }, floatsOut(b * d * h * w),
+                (g, id, c, o) -> g.libraryTask(id, (x, y) -> tune(MlxFft.irfftn(x, y, b, d, h, w, 0), c), half, (FloatArray) o[0]));
+    }
 }

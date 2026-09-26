@@ -331,6 +331,7 @@ final class MlxKernelRoutes {
         registerSortRoutes();
         registerRandomRoutes();
         registerSmallCompositeRoutes();
+        registerFftRoutes();
     }
 
     private MlxKernelRoutes() {
@@ -2587,6 +2588,305 @@ final class MlxKernelRoutes {
                 }
             };
         });
+    }
+
+    // ---------------------------------------------------------------- FFT (Stockham plans)
+
+    private static final int[] RADICES = { 13, 11, 8, 7, 6, 5, 4, 3, 2 };
+
+    private static boolean powerOfTwo(int n) {
+        return n > 0 && (n & (n - 1)) == 0;
+    }
+
+    /** MLX's plan_stockham_fft: steps per radix, or null if n does not factor over the radices. */
+    private static int[] stockhamPlan(int n) {
+        int[] plan = new int[RADICES.length];
+        int remaining = n;
+        if (n == 1) {
+            return plan;
+        }
+        for (int i = 0; i < RADICES.length; i++) {
+            int radix = RADICES[i];
+            if (powerOfTwo(n) && n < 512 && radix > 4) {
+                continue;
+            }
+            while (remaining % radix == 0) {
+                plan[i]++;
+                remaining /= radix;
+                if (remaining == 1) {
+                    return plan;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** MLX's compute_elems_per_thread for a Stockham-only plan. */
+    private static int elementsPerThread(int n, int[] plan) {
+        java.util.TreeSet<Integer> used = new java.util.TreeSet<>();
+        for (int i = 0; i < plan.length; i++) {
+            if (plan[i] > 0) {
+                used.add(RADICES[i]);
+            }
+        }
+        if (used.contains(7) && (used.contains(11) || used.contains(13))) {
+            return 7;
+        }
+        if (used.contains(11) && used.contains(13)) {
+            return 11;
+        }
+        switch (n) {
+            case 3159:
+                return 13;
+            case 3645:
+                return 5;
+            case 3969:
+                return 7;
+            case 1982:
+                return 5;
+            default:
+                break;
+        }
+        if (used.size() == 1) {
+            return used.first();
+        }
+        Integer[] sorted = used.toArray(new Integer[0]);
+        if (used.size() == 2 && (used.contains(11) || used.contains(13))) {
+            return (sorted[0] + sorted[1]) / 2;
+        }
+        return sorted[1];
+    }
+
+    /**
+     * One MLX fft_op pass over contiguous rows of length n (total batch rows): the Stockham fft_mem kernel,
+     * or false when MLX would plan Rader, Bluestein or four-step for n (sizes above 4096 or with other prime factors).
+     */
+    private static boolean fftPass(Program p, int n, int batch, boolean inverse, boolean real, Ref in, Ref out, boolean dryRun) {
+        if (n > 4096) {
+            return false;
+        }
+        int[] plan = stockhamPlan(n);
+        if (plan == null) {
+            return false;
+        }
+        if (dryRun) {
+            return true;
+        }
+        int ept = elementsPerThread(n, plan);
+        int threadsPerFft = (n + ept - 1) / ept;
+        int groupBatch = Math.max(256 / n, 1);
+        int memory = nextPowerOfTwo(groupBatch * n);
+        int batchSize = (batch + groupBatch - 1) / groupBatch;
+        if (real) {
+            batchSize = (batchSize + 1) / 2;
+        }
+        String inType = real && !inverse ? "float" : "float2";
+        String outType = real && inverse ? "float" : "float2";
+        int[] indices = new int[4 + 2 * RADICES.length];
+        Object[] values = new Object[indices.length];
+        indices[0] = 0;
+        values[0] = inverse;
+        indices[1] = 1;
+        values[1] = powerOfTwo(n);
+        for (int i = 0; i < RADICES.length; i++) {
+            indices[2 + i] = 4 + i;
+            values[2 + i] = plan[i];
+            indices[2 + RADICES.length + i] = 4 + RADICES.length + i;
+            values[2 + RADICES.length + i] = 0;
+        }
+        indices[2 + 2 * RADICES.length] = 2;
+        values[2 + 2 * RADICES.length] = ept;
+        indices[3 + 2 * RADICES.length] = 3;
+        values[3 + 2 * RADICES.length] = n;
+        p.launchConstants("fft_mem_" + memory + "_" + inType + "_" + outType, indices, values).buffer(0, in).buffer(1, out).i64(2, n).i32(3, batch)
+                .threads(batchSize, 1, groupBatch, groupBatch, threadsPerFft, threadsPerFft);
+        return true;
+    }
+
+    /** MLX's fft_scale_factor for norm (0 backward, 1 ortho, 2 forward) over n elements. */
+    private static double fftScale(int norm, double n, boolean inverse) {
+        return switch (norm) {
+            case 1 -> inverse ? Math.sqrt(n) : 1.0 / Math.sqrt(n);
+            case 2 -> inverse ? n : 1.0 / n;
+            default -> 1.0;
+        };
+    }
+
+    /** fft / ifft / rfft / irfft (x, out, rows, len, n, norm) along the last axis of [rows, len]. */
+    private static Encoder fft1d(View v, boolean inverse, boolean real) {
+        if (v.args() < 6 || !v.isArray(0) || !v.isArray(1) || v.dtype(0) != F32 || v.dtype(1) != F32) {
+            return null;
+        }
+        int rows = v.intArg(2);
+        int len = v.intArg(3);
+        int n = v.intArg(4);
+        int norm = v.intArg(5);
+        int inLen = real && inverse ? n / 2 + 1 : n;
+        int outLen = real && !inverse ? n / 2 + 1 : n;
+        boolean complexIn = !(real && !inverse);
+        boolean complexOut = !(real && inverse);
+        if (len != inLen || n <= 1 || v.size(0) != rows * inLen * (complexIn ? 2 : 1) || v.size(1) != rows * outLen * (complexOut ? 2 : 1) || !fftPass(null, n, rows, inverse, real,
+                null, null, true)) {
+            return null;
+        }
+        double scale = fftScale(norm, n, inverse);
+        int outType = complexOut ? MLX_COMPLEX64 : F32;
+        return p -> {
+            fftPass(p, n, rows, inverse, real, v.ref(0), v.ref(1), false);
+            if (scale != 1.0) {
+                p.binaryScalarRight("Multiply", outType, rows * outLen, v.ref(1), scale, v.ref(1));
+            }
+        };
+    }
+
+    /** An array in an FFT chain: its buffer, logical shape and element strides (complex elements for complex data). */
+    private record FftArray(Ref ref, int[] shape, long[] strides) {
+        long size() {
+            long n = 1;
+            for (int d : shape) {
+                n *= d;
+            }
+            return n;
+        }
+    }
+
+    /** MLX's check_contiguity: {row contiguous, column contiguous}. */
+    private static boolean[] contiguity(int[] shape, long[] strides) {
+        long f = 1;
+        long b = 1;
+        boolean row = true;
+        boolean col = true;
+        for (int i = 0, ri = shape.length - 1; ri >= 0; i++, ri--) {
+            col &= strides[i] == f || shape[i] == 1;
+            row &= strides[ri] == b || shape[ri] == 1;
+            f *= shape[i];
+            b *= shape[ri];
+        }
+        return new boolean[] { row, col };
+    }
+
+    /**
+     * One pass of MLX's nd_fft_op / fft_op along {@code axis}: relayout the input so the axis has stride 1 when
+     * MLX would (a copy, which moves data only), run the Stockham kernel over its rows, and return the output
+     * with the strides MLX gives it.
+     */
+    private static FftArray fftAxisPass(Program p, FftArray in, int axis, boolean inverse, boolean real, int n, int inType, Ref outBuffer) {
+        boolean[] c = contiguity(in.shape(), in.strides());
+        FftArray source = in;
+        if (!(in.strides()[axis] == 1 && (c[0] || c[1]))) {
+            long[] strides = new long[in.shape().length];
+            long current = in.shape()[axis];
+            for (int d = 0; d < strides.length; d++) {
+                if (d == axis) {
+                    strides[d] = 1;
+                } else {
+                    strides[d] = current;
+                    current *= in.shape()[d];
+                }
+            }
+            Ref copy = p.scratch(in.size() * MlxMetalKernels.itemSize(inType));
+            p.generalCopy(inType, inType, in.shape(), in.strides(), in.ref(), strides, copy, null);
+            source = new FftArray(copy, in.shape(), strides);
+        }
+        int inLen = in.shape()[axis];
+        int outLen = real ? (inverse ? n : n / 2 + 1) : inLen;
+        int[] outShape = in.shape().clone();
+        outShape[axis] = outLen;
+        long[] outStrides = source.strides().clone();
+        if (inLen != outLen) {
+            for (int d = 0; d < outStrides.length; d++) {
+                if (outStrides[d] != 1) {
+                    outStrides[d] = outStrides[d] / inLen * outLen;
+                }
+            }
+        }
+        long total = real && inverse ? new FftArray(null, outShape, outStrides).size() : source.size();
+        fftPass(p, n, (int) (total / n), inverse, real, source.ref(), outBuffer, false);
+        return new FftArray(outBuffer, outShape, outStrides);
+    }
+
+    /**
+     * fft2 / fftn and their inverse and real forms over axes 1.. of x[batch, d1, .., dk] (x, out, batch, d1, .., dk, norm):
+     * the 1D passes in MLX's order (last axis first forward, first axis first inverse), the real transform on the last axis.
+     */
+    private static Encoder fftNd(View v, int dims, boolean inverse, boolean real) {
+        if (v.args() < 4 + dims || !v.isArray(0) || !v.isArray(1) || v.dtype(0) != F32 || v.dtype(1) != F32) {
+            return null;
+        }
+        int[] sizes = new int[dims + 1];
+        for (int i = 0; i <= dims; i++) {
+            sizes[i] = v.intArg(2 + i);
+        }
+        int norm = v.intArg(3 + dims);
+        int[] inShape = sizes.clone();
+        int[] outShape = sizes.clone();
+        if (real && inverse) {
+            inShape[dims] = sizes[dims] / 2 + 1;
+        }
+        if (real && !inverse) {
+            outShape[dims] = sizes[dims] / 2 + 1;
+        }
+        boolean complexIn = !(real && !inverse);
+        boolean complexOut = !(real && inverse);
+        long inCount = 1;
+        long outCount = 1;
+        double elements = 1;
+        for (int i = 0; i <= dims; i++) {
+            inCount *= inShape[i];
+            outCount *= outShape[i];
+            if (i > 0) {
+                elements *= sizes[i];
+                if (sizes[i] <= 1 || !fftPass(null, sizes[i], 1, false, false, null, null, true)) {
+                    return null;
+                }
+            }
+        }
+        if (v.size(0) != inCount * (complexIn ? 2 : 1) || v.size(1) != outCount * (complexOut ? 2 : 1)) {
+            return null;
+        }
+        double scale = fftScale(norm, elements, inverse);
+        int c64 = MLX_COMPLEX64;
+        int outElements = (int) outCount;
+        return p -> {
+            FftArray current = new FftArray(v.ref(0), inShape, MlxMetalKernels.contiguousStrides(inShape));
+            int currentType = complexIn ? c64 : F32;
+            for (int i = dims - 1; i >= 0; i--) {
+                int reverse = dims - i - 1;
+                int index = inverse ? reverse : i;
+                int axis = 1 + index;
+                boolean stepReal = real && index == dims - 1;
+                int n = sizes[axis];
+                int passOutType = stepReal && inverse ? F32 : c64;
+                long passOut = 1;
+                for (int d = 0; d <= dims; d++) {
+                    passOut *= d == axis ? (stepReal ? (inverse ? n : n / 2 + 1) : current.shape()[d]) : current.shape()[d];
+                }
+                Ref buffer = p.scratch(passOut * MlxMetalKernels.itemSize(passOutType));
+                current = fftAxisPass(p, current, axis, inverse, stepReal, n, currentType, buffer);
+                currentType = passOutType;
+            }
+            // The result has MLX's strides; the output buffer is row-major.
+            int outType = complexOut ? c64 : F32;
+            p.generalCopy(outType, outType, current.shape(), current.strides(), current.ref(), null, v.ref(1), null);
+            if (scale != 1.0) {
+                p.binaryScalarRight("Multiply", outType, outElements, v.ref(1), scale, v.ref(1));
+            }
+        };
+    }
+
+    private static void registerFftRoutes() {
+        ROUTES.put("fft_fft", v -> fft1d(v, false, false));
+        ROUTES.put("fft_ifft", v -> fft1d(v, true, false));
+        ROUTES.put("fft_rfft", v -> fft1d(v, false, true));
+        ROUTES.put("fft_irfft", v -> fft1d(v, true, true));
+        ROUTES.put("fft_fft2", v -> fftNd(v, 2, false, false));
+        ROUTES.put("fft_ifft2", v -> fftNd(v, 2, true, false));
+        ROUTES.put("fft_rfft2", v -> fftNd(v, 2, false, true));
+        ROUTES.put("fft_irfft2", v -> fftNd(v, 2, true, true));
+        ROUTES.put("fft_fftn", v -> fftNd(v, 3, false, false));
+        ROUTES.put("fft_ifftn", v -> fftNd(v, 3, true, false));
+        ROUTES.put("fft_rfftn", v -> fftNd(v, 3, false, true));
+        ROUTES.put("fft_irfftn", v -> fftNd(v, 3, true, true));
     }
 
     private static Encoder scaled(View v, double factor) {

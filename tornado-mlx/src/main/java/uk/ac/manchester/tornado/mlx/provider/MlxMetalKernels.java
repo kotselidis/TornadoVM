@@ -546,6 +546,7 @@ final class MlxMetalKernels {
             case MlxNativeLib.MLX_INT64 -> b.putLong((long) value);
             case MlxNativeLib.MLX_INT16, MlxNativeLib.MLX_UINT16 -> b.putShort((short) value);
             case MlxNativeLib.MLX_INT8, MlxNativeLib.MLX_UINT8, MlxNativeLib.MLX_BOOL -> b.put((byte) value);
+            case MlxNativeLib.MLX_COMPLEX64 -> b.putFloat((float) value).putFloat(0.0f);
             default -> throw new TornadoRuntimeException("[ERROR] No scalar form for MLX dtype " + dtype);
         }
         byte[] out = new byte[itemSize(dtype)];
