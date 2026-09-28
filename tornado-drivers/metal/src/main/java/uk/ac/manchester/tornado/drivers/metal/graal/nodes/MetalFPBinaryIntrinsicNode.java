@@ -70,43 +70,38 @@ public class MetalFPBinaryIntrinsicNode extends BinaryNode implements Arithmetic
 
         if (x.isConstant() && y.isConstant()) {
             if (kind == JavaKind.Double) {
-                double ret = doCompute(x.asJavaConstant().asDouble(), y.asJavaConstant().asDouble(), op);
-                result = ConstantNode.forDouble(ret);
+                Double ret = fold(x.asJavaConstant().asDouble(), y.asJavaConstant().asDouble(), op);
+                if (ret != null) {
+                    result = ConstantNode.forDouble(ret);
+                }
             } else if (kind == JavaKind.Float) {
-                float ret = doCompute(x.asJavaConstant().asFloat(), y.asJavaConstant().asFloat(), op);
-                result = ConstantNode.forFloat(ret);
+                Double ret = fold(x.asJavaConstant().asFloat(), y.asJavaConstant().asFloat(), op);
+                if (ret != null) {
+                    result = ConstantNode.forFloat(ret.floatValue());
+                }
             }
         }
         return result;
     }
     // @formatter:on
 
-    private static double doCompute(double x, double y, Operation op) {
-        switch (op) {
-            case ATAN2:
-                return Math.atan2(x, y);
-            case FMIN:
-                return Math.min(x, y);
-            case FMAX:
-                return Math.max(x, y);
-            case POW:
-                return Math.pow(x, y);
-            default:
-                throw new TornadoInternalError("unknown op %s", op);
-        }
-    }
-
-    private static float doCompute(float x, float y, Operation op) {
-        switch (op) {
-            case ATAN2:
-                return (float) Math.atan2(x, y);
-            case FMIN:
-                return Math.min(x, y);
-            case FMAX:
-                return Math.max(x, y);
-            default:
-                throw new TornadoInternalError("unknown op %s", op);
-        }
+    /**
+     * The value of {@code op} at constants, or null when the operation has no exact Java
+     * equivalent; the node is then left for the device to compute. Float constants are folded in
+     * double precision and rounded once.
+     */
+    private static Double fold(double x, double y, Operation op) {
+        return switch (op) {
+            case ATAN2 -> Math.atan2(x, y);
+            case COPYSIGN -> Math.copySign(x, y);
+            case FDIM -> x > y ? x - y : 0.0;
+            case FMAX -> Math.max(x, y);
+            case FMIN -> Math.min(x, y);
+            case FMOD -> x % y;
+            case HYPOT -> Math.hypot(x, y);
+            case POW, POWR -> Math.pow(x, y);
+            default -> null;
+        };
     }
 
     @Override

@@ -187,10 +187,40 @@ __TEST_THE_WORLD__ = [
     TestEntry("uk.ac.manchester.tornado.unittests.cudf.TestCudf"),
     TestEntry("uk.ac.manchester.tornado.unittests.cutlass.TestCutlass"),
     TestEntry("uk.ac.manchester.tornado.unittests.curand.TestCuRand"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlx"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxElementwise"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxBlas"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxQuantized"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxFast"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxReductions"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxMemory"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitElementwise"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitBlas"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitFast"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitReductions"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitQuantized"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitMath"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxMath"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitReduce"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxReduce"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitScan"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitSort"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitIndex"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitConv"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitLinalg"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitFft"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitLogic"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitCreate"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitShape"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitProducts"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestJitRandom"),
+    TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxInPlaceKernels"),
     TestEntry("uk.ac.manchester.tornado.unittests.virtualization.TestsVirtualLayer"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestSingleTaskSingleDevice"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestMultipleTasksSingleDevice"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestLibraryTaskArity"),
+    TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestLibraryProviderSelection"),
+    TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestLibraryNativeBuffers"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestManyArgumentTasks"),
     TestEntry("uk.ac.manchester.tornado.unittests.temporary.values.TestTemporaryValues"),
     TestEntry("uk.ac.manchester.tornado.unittests.images.TestImages"),
@@ -787,6 +817,8 @@ def runTestTheWorld(options, args):
     for t in __TEST_THE_WORLD__:
         if args.quickPass and t.testName in __TORNADO_QUICK_PASS_SKIP_TESTS__:
             continue
+        if args.mlx and ".unittests.mlx." not in t.testName:
+            continue
         command = options
         if t.testParameters:
             for testParam in t.testParameters:
@@ -879,6 +911,8 @@ def parseArguments():
                         help="Visualize output in live mode (no wait)")
     parser.add_argument('--quickPass', "-qp", action="store_true", dest="quickPass", default=False,
                         help="Quick pass without stress memory and output for logs in a file.")
+    parser.add_argument('--mlx', action="store_true", dest="mlx", default=False,
+                        help="Run only the Apple MLX library-task tests (Metal backend with mlx-c installed)")
     parser.add_argument('--device', dest="device", default=None, help="Set an specific device. E.g `s0.t0.device=0:1`")
     parser.add_argument('--printExec', dest="printExecution", action="store_true", default=False,
                         help="Print OpenCL Kernel Execution Time")

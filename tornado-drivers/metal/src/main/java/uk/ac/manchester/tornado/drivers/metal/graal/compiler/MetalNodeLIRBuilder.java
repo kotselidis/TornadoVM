@@ -318,11 +318,20 @@ public class MetalNodeLIRBuilder extends NodeLIRBuilder {
         } else if (node instanceof FloatEqualsNode floatEqualsNode) {
             final Value x = operand(floatEqualsNode.getX());
             final Value y = operand(floatEqualsNode.getY());
-            result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_NOT_EQUAL, intLirKind, x, y);
+            // !(x == y || unordered) is x < y || x > y; !(x == y) is true when either operand is NaN.
+            MetalBinaryIntrinsicCmp op = floatEqualsNode.unorderedIsTrue() ? MetalBinaryIntrinsicCmp.FLOAT_IS_LESSGREATER : MetalBinaryIntrinsicCmp.FLOAT_IS_NOT_EQUAL;
+            result = getGen().getArithmetic().genBinaryExpr(op, intLirKind, x, y);
         } else if (node instanceof FloatLessThanNode floatLessThanNode) {
             final Value x = operand(floatLessThanNode.getX());
             final Value y = operand(floatLessThanNode.getY());
-            result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_GREATEREQUAL, intLirKind, x, y);
+            if (floatLessThanNode.unorderedIsTrue()) {
+                // !(x < y || unordered) is x >= y, which is false when either operand is NaN.
+                result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_GREATEREQUAL, intLirKind, x, y);
+            } else {
+                // !(x < y), which is true when either operand is NaN (x >= y would be false).
+                Value less = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_LESS, intLirKind, x, y);
+                result = getGen().getArithmetic().genUnaryExpr(MetalUnaryOp.LOGICAL_NOT, boolLirKind, less);
+            }
         } else if (node instanceof IntegerBelowNode integerBelowNode) {
             final Value x = operand(integerBelowNode.getX());
             final Value y = operand(integerBelowNode.getY());
@@ -380,11 +389,23 @@ public class MetalNodeLIRBuilder extends NodeLIRBuilder {
         } else if (node instanceof FloatEqualsNode floatEqualsNode) {
             final Value x = operand(floatEqualsNode.getX());
             final Value y = operand(floatEqualsNode.getY());
-            result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_EQUAL, intLirKind, x, y);
+            if (floatEqualsNode.unorderedIsTrue()) {
+                // x == y || unordered is !(x < y || x > y).
+                Value lessGreater = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_LESSGREATER, intLirKind, x, y);
+                result = getGen().getArithmetic().genUnaryExpr(MetalUnaryOp.LOGICAL_NOT, boolLirKind, lessGreater);
+            } else {
+                result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_EQUAL, intLirKind, x, y);
+            }
         } else if (node instanceof FloatLessThanNode floatLessThanNode) {
             final Value x = operand(floatLessThanNode.getX());
             final Value y = operand(floatLessThanNode.getY());
-            result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_LESS, intLirKind, x, y);
+            if (floatLessThanNode.unorderedIsTrue()) {
+                // x < y || unordered is !(x >= y): the branch Java's x >= y skips on NaN.
+                Value greaterEqual = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_GREATEREQUAL, intLirKind, x, y);
+                result = getGen().getArithmetic().genUnaryExpr(MetalUnaryOp.LOGICAL_NOT, boolLirKind, greaterEqual);
+            } else {
+                result = getGen().getArithmetic().genBinaryExpr(MetalBinaryIntrinsicCmp.FLOAT_IS_LESS, intLirKind, x, y);
+            }
         } else if (node instanceof IntegerBelowNode integerBelowNode) {
             final Value x = operand(integerBelowNode.getX());
             final Value y = operand(integerBelowNode.getY());
@@ -481,7 +502,9 @@ public class MetalNodeLIRBuilder extends NodeLIRBuilder {
             append(new MetalControlFlow.LinkedConditionalBranchOp(condition));
         } else {
             Value operand = operand(x.condition());
-            Variable newVariable = getGen().newVariable(operand.getValueKind());
+            // A condition folded to a constant (e.g. once scalar arguments are specialised) has no
+            // Metal kind; hold it in a bool.
+            Variable newVariable = operand.getPlatformKind() instanceof MetalKind ? getGen().newVariable(operand.getValueKind()) : getGen().newVariable(LIRKind.value(MetalKind.BOOL));
             append(new AssignStmt(newVariable, operand));
             append(new MetalControlFlow.ConditionalBranchOp(newVariable));
         }

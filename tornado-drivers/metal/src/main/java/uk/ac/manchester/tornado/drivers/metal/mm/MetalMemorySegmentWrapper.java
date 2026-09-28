@@ -39,6 +39,7 @@ import uk.ac.manchester.tornado.api.types.images.TornadoImagesInterface;
 import uk.ac.manchester.tornado.api.types.matrix.TornadoMatrixInterface;
 import uk.ac.manchester.tornado.api.types.volumes.TornadoVolumesInterface;
 import uk.ac.manchester.tornado.drivers.metal.MetalDeviceContext;
+import uk.ac.manchester.tornado.drivers.metal.ffm.MetalAPI;
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 import uk.ac.manchester.tornado.runtime.common.exceptions.TornadoUnsupportedError;
@@ -89,6 +90,15 @@ public class MetalMemorySegmentWrapper implements XPUBuffer {
     @Override
     public long getBufferOffset() {
         return bufferOffset;
+    }
+
+    /**
+     * CPU address of the first element. Metal buffers use shared storage, so this is the
+     * memory the GPU reads and writes too.
+     */
+    @Override
+    public long libraryAddress() {
+        return MetalAPI.bufferContents(toBuffer()) + libraryOffset();
     }
 
     @Override

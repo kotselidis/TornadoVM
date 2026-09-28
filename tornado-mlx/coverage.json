@@ -1,0 +1,8200 @@
+{
+  "generatedBy": "tornado-mlx/scripts/update_coverage.py",
+  "mlxCVersion": "0.6.0_4",
+  "summary": {
+    "operations": 332,
+    "excluded": 40,
+    "inScope": 292,
+    "bound": 292,
+    "tested": 292,
+    "benchmarked": 292,
+    "jitBaselines": 292,
+    "remaining": 0,
+    "byTier": {
+      "1": {
+        "inScope": 32,
+        "bound": 32
+      },
+      "2": {
+        "inScope": 148,
+        "bound": 148
+      },
+      "3": {
+        "inScope": 112,
+        "bound": 112
+      }
+    }
+  },
+  "operations": [
+    {
+      "name": "mlx_abs",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.abs"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_add",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.add"
+        ],
+        "sources": [
+          "tornado-unittests/.../kernelcontext/api/TestVectorAdditionKernelContext.java (pattern)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_addmm",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.addmm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (alpha/beta epilogue)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_all_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_all_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_all",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny",
+          "JitReduce.reducePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_allclose",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.allcloseCheck",
+          "JitLogic.setFlag"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_any_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_any_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_any",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.allAny",
+          "JitReduce.reducePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_arange",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.arange"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_arccos",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arccos"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_arccosh",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arccosh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_arcsin",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arcsin"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_arcsinh",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arcsinh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_arctan",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arctan"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_arctan2",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arctan2"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_arctanh",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.arctanh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_argmax_axis",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.argmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_argmax",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.argmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_argmin_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.argmin"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_argmin",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.argmin"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_argpartition_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_argpartition",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_argsort_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_argsort",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_array_equal",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.arrayEqualCheck",
+          "JitLogic.setFlag"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_as_strided",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.asStrided"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_astype",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.toHalf"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_atleast_1d",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_atleast_2d",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_atleast_3d",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_bartlett",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.window"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_bitwise_and",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.bitwise"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_bitwise_invert",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.invert"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_bitwise_or",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.bitwise"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_bitwise_xor",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.bitwise"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_blackman",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.window"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_block_masked_mm",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.blockMaskedGemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (block-masked)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_broadcast_arrays",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.broadcastPair"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_broadcast_to",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.broadcastRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_ceil",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.ceil"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_clip",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.clip"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_concatenate_axis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.concat"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_concatenate",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.concat"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_conjugate",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.conjugate"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_contiguous",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_conv1d",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_conv2d",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_conv3d",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_conv_general",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_conv_transpose1d",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_conv_transpose2d",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_conv_transpose3d",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitConv.conv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxConv.java"
+      ]
+    },
+    {
+      "name": "mlx_copy",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_cos",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.cos"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_cosh",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.cosh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_cummax",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_cummin",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_cumprod",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_cumsum",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_degrees",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.degrees"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_depends",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and scheduling markers with no effect on values outside an MLX transform"
+    },
+    {
+      "name": "mlx_dequantize",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.dequantize"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_diag",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.diag"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_diagonal",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.diagonal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_divide",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.divide"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_divmod",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.divmod"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_einsum",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.batchedGemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (batched)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_equal",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.compare"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_erf",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.erf"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_erfinv",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.erfinv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_exp",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.exp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_expand_dims_axes",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_expand_dims",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_expm1",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.expm1"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_eye",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.eye"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_flatten",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_floor",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.floor"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_floor_divide",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.floorDivide"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_from_fp8",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.fromFp8"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_full",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.fill"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_full_like",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.fill"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_gather",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.gatherPoints"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_gather_single",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.gatherRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_gather_mm",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.gatherMm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (gathered batches)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_gather_qmm",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.gatherQmm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (MLX affine weights, gathered)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_greater",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.compare"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_greater_equal",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.compare"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_hadamard_transform",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.hadamard"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_hamming",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.window"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_hanning",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.window"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_identity",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.eye"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_imag",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.complexPart"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_inner",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.dotPartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_isclose",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.isclose"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_isfinite",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.classify"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_isinf",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.classify"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_isnan",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.classify"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_isneginf",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.classify"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_isposinf",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.classify"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_kron",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.kron"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_left_shift",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.bitwise"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_less",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.compare"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_less_equal",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.compare"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_linspace",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.linspace"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_log",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.log"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_log10",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.log10"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_log1p",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.log1p"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_log2",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.log2"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_logaddexp",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.logaddexp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_logcumsumexp",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitScan.scanColumns",
+          "JitScan.scanRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_logical_and",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.logical"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_logical_not",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.logicalNot"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_logical_or",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.logical"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_logsumexp_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.logsumexp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_logsumexp_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.logsumexp"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_logsumexp",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.logsumexp",
+          "JitReduce.logsumexpMerge",
+          "JitReduce.logsumexpPartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_masked_scatter",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.maskPositions",
+          "JitIndex.maskedScatter"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_matmul",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemm",
+          "JitBlas.gemmTransposed",
+          "JitBlas.gemmTransposedF16",
+          "JitBlas.gemv",
+          "JitBlas.gemvF16"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled",
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (float16 operands, transposed B staging)",
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (transposed B staging)",
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd",
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (float16 operands)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_max_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_max_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_max",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_maximum",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.maximum"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_mean_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_mean_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_mean",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_median",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.median"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_meshgrid",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.meshgrid"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_min_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_min_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_min",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_minimum",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.minimum"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_moveaxis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.permute3"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_multiply",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.multiply"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_nan_to_num",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.nanToNum"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_negative",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.negative"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_not_equal",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.compare"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_number_of_elements",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.writeInt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_ones",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.fill"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_ones_like",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.fill"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_outer",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.outer"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_pad",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.pad"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_pad_symmetric",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.pad"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_partition_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_partition",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_power",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.power"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_prod_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_prod_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_prod",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_put_along_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.putAlongAxis"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_qqmm",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.qqmm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_quantize",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.quantize"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java",
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_quantized_matmul",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitQuantized.quantizedMatmul"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (MLX affine weights)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_radians",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.radians"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_real",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.complexPart"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_reciprocal",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.reciprocal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_remainder",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.remainder"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_repeat_axis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.repeatRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_repeat",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.repeatRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_reshape",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_right_shift",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLogic.bitwise"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLogic.java"
+      ]
+    },
+    {
+      "name": "mlx_roll_axis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.roll"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_roll_axes",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.roll"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_roll",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.roll"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_round",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.round"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_rsqrt",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.rsqrt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterPoints"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_single",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_add",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterPoints"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_add_single",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_add_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.putAlongAxis"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_max",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterPoints"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_max_single",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_min",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterPoints"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_min_single",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_prod",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterPoints"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_scatter_prod_single",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.scatterRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_segmented_mm",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.segmentedGemm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_sigmoid",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.sigmoid"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_sign",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.sign"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_sin",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.sin"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_sinh",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.sinh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_slice",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.slice"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_dynamic",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.sliceRowsAt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_update",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.sliceUpdate"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_update_dynamic",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.sliceUpdateRowsAt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_update_add",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.sliceUpdate"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_update_max",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.sliceUpdate"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_update_min",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.sliceUpdate"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_slice_update_prod",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.copy",
+          "JitIndex.sliceUpdate"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_softmax_axes",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.softmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_softmax_axis",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.softmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_softmax",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.softmaxRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_sort_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.sortSlices"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_sort",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitSort.mergeBlocks",
+          "JitSort.mergeGlobal",
+          "JitSort.pad",
+          "JitSort.sortBlocks",
+          "JitSort.sortSlices",
+          "JitSort.unpad"
+        ],
+        "sources": [
+          "written",
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxSort.java"
+      ]
+    },
+    {
+      "name": "mlx_split",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.split"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_split_sections",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.split"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_sqrt",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.sqrt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_square",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.square"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_squeeze_axes",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_squeeze_axis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_squeeze",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_stack_axis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.interleave"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_stack",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.concat"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_std_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_std_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_std",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance",
+          "JitReduce.varianceMerge",
+          "JitReduce.variancePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_stop_gradient",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and scheduling markers with no effect on values outside an MLX transform"
+    },
+    {
+      "name": "mlx_subtract",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.subtract"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_sum_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_sum_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reduceColumns",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_sum",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.reducePartial",
+          "JitReduce.reduceRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_swapaxes",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.permute3"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_take_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.takeAxis"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_take",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.take"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_take_along_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitIndex.takeAlongAxis"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxIndex.java"
+      ]
+    },
+    {
+      "name": "mlx_tan",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.tan"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_tanh",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitElementwise.tanh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_tensordot",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_tensordot_axis",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemm"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_tile",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.tile"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_to_fp8",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitProducts.toFp8"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxProducts.java"
+      ]
+    },
+    {
+      "name": "mlx_topk_axis",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.topkRows"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_topk",
+      "header": "ops.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReductions.topkRows"
+        ],
+        "sources": [
+          "written (bitonic network as in tornado-unittests/.../kernelcontext/sort/TestBitonicSort.java)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_trace",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.trace"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_transpose_axes",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.permute3"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_transpose",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitBlas.gemmTransposed",
+          "JitBlas.gemmTransposedF16",
+          "JitBlas.gemvF16",
+          "JitBlas.transpose"
+        ],
+        "sources": [
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (float16 operands, transposed B staging)",
+          "tornado-examples/.../compute/MatrixMultiplySimdgroup.java#gemmTiled (transposed B staging)",
+          "tornado-examples/.../compute/MatrixVectorSimdReduction.java#matvecSimd (float16 operands)",
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_tri",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.eye"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_tril",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.triangle"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_triu",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.triangle"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_unflatten",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.copy"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_var_axes",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_var_axis",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_var",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitReduce.variance",
+          "JitReduce.varianceMerge",
+          "JitReduce.variancePartial"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxReduce.java"
+      ]
+    },
+    {
+      "name": "mlx_view",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitShape.viewAsInt"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxShape.java"
+      ]
+    },
+    {
+      "name": "mlx_where",
+      "header": "ops.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitMath.where"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxMath.java"
+      ]
+    },
+    {
+      "name": "mlx_zeros",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.fill"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_zeros_like",
+      "header": "ops.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitCreate.fill"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxCreate.java"
+      ]
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_new",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_free",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_add_output_arg",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_set_grid",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_set_thread_group",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_set_init_value",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_set_verbose",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_add_template_arg_dtype",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_add_template_arg_int",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_config_add_template_arg_bool",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_new",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_free",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_cuda_kernel_apply",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
+    },
+    {
+      "name": "mlx_fast_layer_norm",
+      "header": "fast.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.layerNorm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_new",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_free",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_add_output_arg",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_set_grid",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_set_thread_group",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_set_init_value",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_set_verbose",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_add_template_arg_dtype",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_add_template_arg_int",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_config_add_template_arg_bool",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_new",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_free",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_metal_kernel_apply",
+      "header": "fast.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
+    },
+    {
+      "name": "mlx_fast_rms_norm",
+      "header": "fast.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.rmsNorm"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_fast_rope",
+      "header": "fast.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.rope"
+        ],
+        "sources": [
+          "tornado-unittests/.../compute/TransformerKernelsTest.java#ropeRotation (out of place, parametric base/scale/offset, both pairings)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_fast_rope_dynamic",
+      "header": "fast.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.ropeDynamic"
+        ],
+        "sources": [
+          "tornado-unittests/.../compute/TransformerKernelsTest.java#ropeRotation (position from device memory)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_fast_scaled_dot_product_attention",
+      "header": "fast.h",
+      "tier": 1,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFast.attentionDecode"
+        ],
+        "sources": [
+          "tornado-unittests/.../kernelcontext/api/TestFlashAttentionKernelContext.java#processHeadsFlashAttentionOptV2 (MLX layout, head dim 128, explicit scale)"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/Mlx.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_cholesky",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.cholesky"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_cholesky_inv",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.choleskyInv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_cross",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.crossProduct"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_eig",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.eig"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_eigh",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.eigh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_eigvals",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.eig"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_eigvalsh",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.eigh"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_inv",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.inv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_lu",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.lu",
+          "JitLinalg.splitLu"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_lu_factor",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.lu"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_norm",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.normRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_norm_matrix",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.normRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_norm_l2",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.normRows"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_pinv",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.pinvFromSvd",
+          "JitLinalg.svd"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_qr",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.qr"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_solve",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.solve"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_solve_triangular",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.solveTriangular"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_svd",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.svd"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_linalg_tri_inv",
+      "header": "linalg.h",
+      "tier": 2,
+      "device": "cpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitLinalg.triInv"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxLinalg.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_fft",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_fft2",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_fftfreq",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.frequencies"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_fftn",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_fftshift",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.roll"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_ifft",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_ifft2",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_ifftn",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_ifftshift",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.roll"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_irfft",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_irfft2",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_irfftn",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_rfft",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_rfft2",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_rfftfreq",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.frequencies"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_fft_rfftn",
+      "header": "fft.h",
+      "tier": 2,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitFft.dft",
+          "JitFft.fft"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxFft.java"
+      ]
+    },
+    {
+      "name": "mlx_random_bernoulli",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.bernoulli"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "uint8"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_bits",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.bits"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_categorical_shape",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.categorical",
+          "JitRandom.categoricalChunked",
+          "JitRandom.categoricalMerge"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_categorical_num_samples",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.categorical",
+          "JitRandom.categoricalChunked",
+          "JitRandom.categoricalMerge"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_categorical",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.categorical",
+          "JitRandom.categoricalChunked",
+          "JitRandom.categoricalMerge"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_gumbel",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.gumbel"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_key",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
+    },
+    {
+      "name": "mlx_random_laplace",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.laplace"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_multivariate_normal",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.multivariateNormal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_normal_broadcast",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.normal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_normal",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.normal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_permutation",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.sortKeys"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_permutation_arange",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.sortKeys"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_randint",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.randint"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "int32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_seed",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
+    },
+    {
+      "name": "mlx_random_split_num",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
+    },
+    {
+      "name": "mlx_random_split",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
+    },
+    {
+      "name": "mlx_random_truncated_normal",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.truncatedNormal"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_random_uniform",
+      "header": "random.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": true,
+      "tested": true,
+      "benchmarked": true,
+      "jitBaseline": {
+        "kernels": [
+          "JitRandom.uniformRange"
+        ],
+        "sources": [
+          "written"
+        ],
+        "tested": true
+      },
+      "dtypes": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "factories": [
+        "tornado-mlx/src/main/java/uk/ac/manchester/tornado/mlx/MlxRandom.java"
+      ]
+    },
+    {
+      "name": "mlx_async_eval",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_checkpoint",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_custom_function",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_custom_vjp",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_eval",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_jvp",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_value_and_grad",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    },
+    {
+      "name": "mlx_vjp",
+      "header": "transforms.h",
+      "tier": 3,
+      "device": "gpu",
+      "bound": false,
+      "tested": false,
+      "benchmarked": false,
+      "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
+    }
+  ]
+}
