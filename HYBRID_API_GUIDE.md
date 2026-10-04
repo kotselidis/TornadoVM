@@ -2,14 +2,16 @@
 
 The **hybrid API** lets a single TornadoVM `TaskGraph` mix JIT-compiled Java
 tasks (`@Parallel` / `KernelContext`) with calls into vendor-optimized native
-GPU libraries — **cuBLAS, cuBLASLt, cuFFT, cuDNN, cuSPARSE, and CUTLASS**.
+GPU libraries — **cuBLAS, cuBLASLt, cuFFT, cuDNN, cuSPARSE, CUTLASS and cuVS** on
+NVIDIA GPUs, and **Apple MLX** on Apple silicon.
 A native call becomes a **library task**: it shares TornadoVM-managed device
 buffers with the surrounding kernels, runs on the same CUDA stream, and is
 captured into CUDA Graphs — so data produced by a JIT kernel feeds a library
 call (and vice-versa) with **no extra copies and no manual memory management**.
 
-> Requires the **CUDA backend** (`make BACKEND=cuda`) and an NVIDIA GPU.
-> Library tasks are silently reported as `UNSUPPORTED` on OpenCL/Metal.
+> The NVIDIA providers require the **CUDA backend** (`make BACKEND=cuda`) and an NVIDIA GPU; the
+> Apple MLX provider requires the **Metal backend** (`make BACKEND=metal`) on Apple silicon. A library
+> task on a backend its provider does not support is reported as `UNSUPPORTED`.
 
 ---
 
@@ -17,7 +19,7 @@ call (and vice-versa) with **no extra copies and no manual memory management**.
 
 1. [Quick start](#1-quick-start)
 2. [Core concepts](#2-core-concepts)
-3. [Provider catalog](#3-provider-catalog) — cuBLAS · cuBLASLt · cuFFT · cuDNN · CUTLASS · cuSPARSE · cuVS
+3. [Provider catalog](#3-provider-catalog) — cuBLAS · cuBLASLt · cuFFT · cuDNN · CUTLASS · cuSPARSE · cuVS · Apple MLX
 4. [Composition patterns](#4-composition-patterns)
 5. [CUDA Graphs](#5-cuda-graphs)
 6. [Execution-plan controls](#6-execution-plan-controls)
@@ -118,6 +120,7 @@ Each provider registers a unique id, matched by the factory:
 | `nvidia/cusparse` | `tornado-cusparse` |
 | `nvidia/cutlass` | `tornado-cutlass` |
 | `nvidia/cuvs` | `tornado-cuvs` |
+| `apple/mlx` | `tornado-mlx` |
 
 ---
 
@@ -312,6 +315,41 @@ new TaskGraph("knn")
     .transferToHost(DataTransferMode.EVERY_EXECUTION, ids, distances);
 ```
 
+### 3.8 Apple MLX — array operations on Metal (`apple/mlx`)
+
+[MLX](https://github.com/ml-explore/mlx)'s operations on Apple silicon, through the Metal backend and
+MLX's C API, [mlx-c](https://github.com/ml-explore/mlx-c). MLX wraps TornadoVM's input buffers as MLX
+arrays without copying, runs the operation on its GPU or CPU stream, and the provider copies the result
+into the output buffer. All 292 in-scope mlx-c operations are bound, in 14 categories (arithmetic,
+logic, reductions, scans, sorting, indexing, linear algebra, quantization, `mlx.fast`, FFT,
+convolution, creation, shape, random). Arrays are row-major, as in TornadoVM, so no transposes are
+needed.
+
+| Factory class | Operations (examples) |
+|---|---|
+| `Mlx` | `add`, `matmul`, `addmm`, `softmax`, `argmax`, `topk`, `rmsNorm`, `layerNorm`, `rope`, `scaledDotProductAttention`, `quantize`, `quantizedMatmul`, `gatherQmm` |
+| `MlxMath`, `MlxLogic` | trigonometric, exponential, rounding, `clip`, `where`; comparisons, bitwise, `isnan`, `isclose` |
+| `MlxReduce`, `MlxSort` | `sum`/`mean`/`max`/`var`/`median` (whole, axis, axes), scans; `sort`, `argsort`, `partition` |
+| `MlxShape`, `MlxCreate`, `MlxIndex` | reshape, transpose, concatenate, pad; `arange`, `eye`, `tril`; `take`, `gather`, `scatter`, slices |
+| `MlxLinalg` | norms, cross, `cholesky`, `inv`, `solve`, `lu`, `qr`, `eigh`, `svd`, `pinv`, `eig` |
+| `MlxFft`, `MlxConv`, `MlxProducts`, `MlxRandom` | FFTs; 1D/2D/3D and transposed convolutions; einsum, tensordot, Hadamard, fp8, `qqmm`; samplers |
+
+Operations run on MLX's GPU stream unless the task carries `MlxOptions.cpu()`
+(`LibraryTaskDescriptor.withTuning`); the operations MLX implements only on its CPU stream (the
+linear-algebra decompositions, `random_multivariate_normal`) always use it. MLX errors surface as
+`TornadoRuntimeException` instead of ending the JVM.
+
+```java
+new TaskGraph("solve")
+    .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, rhs)
+    .task("assemble", MyKernels::assemble, a)                              // Java kernel
+    .libraryTask("chol", MlxLinalg::cholesky, a, l, batch, n, false)       // MLX, CPU stream
+    .libraryTask("solve", MlxLinalg::solveTriangular, l, rhs, x, batch, n, nrhs, false)
+    .transferToHost(DataTransferMode.EVERY_EXECUTION, x);
+```
+
+See [`tornado-mlx/README.md`](tornado-mlx/README.md) for the full operation list and benchmarks.
+
 > **cuTENSOR** (`nvidia/cutensor`, tensor contractions / einsum) is implemented
 > on branch `hybrid-cutensor` but is **not part of this build**.
 
@@ -471,6 +509,12 @@ The launcher adds the provider modules to `--add-modules` automatically when the
 CUDA backend is present:
 `tornado.cublas, tornado.cufft, tornado.cudnn, tornado.cusparse, tornado.cutlass, tornado.cuvs`.
 
+The Apple MLX provider (`tornado-mlx`) builds with the Metal backend and has no native module:
+
+```bash
+make BACKEND=metal       # activates the metal-backend Maven profile
+```
+
 ### 8.2 Per-library install requirements
 
 | Provider | Extra dependency | How to get it |
@@ -480,6 +524,7 @@ CUDA backend is present:
 | cuDNN | libcudnn 9 | `apt install libcudnn9-cuda-12 libcudnn9-dev-cuda-12` |
 | CUTLASS | header-only, **CUDA 12+** | fetched by CMake `FetchContent` (v3.5.1); no install |
 | cuSPARSE | in the CUDA toolkit | nothing |
+| Apple MLX | `libmlxc` (mlx-c) and MLX | `brew install mlx mlx-c` |
 | cuVS | `libcuvs_c` (cuVS 26.08) | `pip install libcuvs-cu12` (or conda `libcuvs`), then add its `lib64` to `LD_LIBRARY_PATH` |
 
 The CUTLASS kernel arch defaults to
@@ -619,6 +664,8 @@ Key SPI types (in `tornado-runtime/.../runtime/library/spi/`):
 | `UnsatisfiedLinkError: libtornado-<x>` | Native module was skipped at build time (library not found). Set the corresponding `*_ROOT` and rebuild. |
 | CUTLASS FP16 rejects a shape | `k` or `n` not a multiple of 4 (8-byte alignment). Pad, or use `cutlassSgemm` (FP32, unconstrained). |
 | Wrong result from cuBLAS | Column-major mismatch — transpose (SGEMV) or swap operands (SGEMM). |
+| MLX task fails with ``Library `apple/mlx` is not supported`` | Default device is not Metal, or `libmlxc` cannot be loaded. Build `make BACKEND=metal`; `brew install mlx mlx-c`. |
+| `TornadoRuntimeException` with an MLX message | MLX rejected the call: an operation it does not implement on the chosen stream, or a shape it rejects. The message is MLX's own. |
 | `CUDA_ERROR_LAUNCH_FAILED` after a tensor-core call | The kernel was built for the wrong SM. Rebuild with `CUDA_ARCH=<your cc>`. |
 
 ---
@@ -627,6 +674,6 @@ Key SPI types (in `tornado-runtime/.../runtime/library/spi/`):
 
 - `docs/source/hybrid-api.rst` — architecture reference (SPI internals).
 - Per-provider READMEs: `tornado-cublas/`, `tornado-cufft/`, `tornado-cudnn/`,
-  `tornado-cutlass/`, `tornado-cusparse/`, `tornado-cuvs/`.
+  `tornado-cutlass/`, `tornado-cusparse/`, `tornado-cuvs/`, `tornado-mlx/`.
 - Unit tests double as worked examples:
-  `tornado-unittests/.../unittests/{cublas,cufft,cudnn,cusparse,cutlass,cuvs}/`.
+  `tornado-unittests/.../unittests/{cublas,cufft,cudnn,cusparse,cutlass,cuvs,mlx}/`.
