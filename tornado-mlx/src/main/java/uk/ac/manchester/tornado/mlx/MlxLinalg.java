@@ -24,7 +24,7 @@ import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 
 /**
- * MLX linear algebra (Tier 2) as TornadoVM library tasks. Matrices are batched,
+ * MLX linear algebra as TornadoVM library tasks. Matrices are batched,
  * {@code [batch, n, n]}. MLX runs the decompositions, inverses and solves on its CPU stream
  * (LAPACK, float32 only), which the provider selects automatically; cross products and norms run on
  * the GPU.

@@ -10,18 +10,66 @@
     "benchmarked": 0,
     "jitBaselines": 292,
     "remaining": 0,
-    "byTier": {
-      "1": {
-        "inScope": 32,
-        "bound": 32
+    "llm": {
+      "inScope": 32,
+      "bound": 32
+    },
+    "byCategory": {
+      "NeuralNetwork": {
+        "inScope": 5,
+        "bound": 5
       },
-      "2": {
-        "inScope": 148,
-        "bound": 148
+      "Fft": {
+        "inScope": 16,
+        "bound": 16
       },
-      "3": {
-        "inScope": 112,
-        "bound": 112
+      "Random": {
+        "inScope": 15,
+        "bound": 15
+      },
+      "Quantization": {
+        "inScope": 7,
+        "bound": 7
+      },
+      "Convolution": {
+        "inScope": 7,
+        "bound": 7
+      },
+      "LinearAlgebra": {
+        "inScope": 31,
+        "bound": 31
+      },
+      "Scans": {
+        "inScope": 5,
+        "bound": 5
+      },
+      "Sorting": {
+        "inScope": 10,
+        "bound": 10
+      },
+      "Reductions": {
+        "inScope": 38,
+        "bound": 38
+      },
+      "Indexing": {
+        "inScope": 26,
+        "bound": 26
+      },
+      "Creation": {
+        "inScope": 21,
+        "bound": 21
+      },
+      "Logic": {
+        "inScope": 23,
+        "bound": 23
+      },
+      "Shape": {
+        "inScope": 37,
+        "bound": 37
+      },
+      "Arithmetic": {
+        "inScope": 51,
+        "bound": 51
       }
     }
   },
@@ -29,7 +77,8 @@
     {
       "name": "mlx_abs",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -56,7 +105,8 @@
     {
       "name": "mlx_add",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -83,7 +133,8 @@
     {
       "name": "mlx_addmm",
       "header": "ops.h",
-      "tier": 1,
+      "category": "LinearAlgebra",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -109,7 +160,8 @@
     {
       "name": "mlx_all_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -137,7 +189,8 @@
     {
       "name": "mlx_all_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -165,7 +218,8 @@
     {
       "name": "mlx_all",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -194,7 +248,8 @@
     {
       "name": "mlx_allclose",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -222,7 +277,8 @@
     {
       "name": "mlx_any_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -250,7 +306,8 @@
     {
       "name": "mlx_any_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -278,7 +335,8 @@
     {
       "name": "mlx_any",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -307,7 +365,8 @@
     {
       "name": "mlx_arange",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -334,7 +393,8 @@
     {
       "name": "mlx_arccos",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -360,7 +420,8 @@
     {
       "name": "mlx_arccosh",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -386,7 +447,8 @@
     {
       "name": "mlx_arcsin",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -412,7 +474,8 @@
     {
       "name": "mlx_arcsinh",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -438,7 +501,8 @@
     {
       "name": "mlx_arctan",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -464,7 +528,8 @@
     {
       "name": "mlx_arctan2",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -490,7 +555,8 @@
     {
       "name": "mlx_arctanh",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -516,7 +582,8 @@
     {
       "name": "mlx_argmax_axis",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Reductions",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -543,7 +610,8 @@
     {
       "name": "mlx_argmax",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Reductions",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -570,7 +638,8 @@
     {
       "name": "mlx_argmin_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -597,7 +666,8 @@
     {
       "name": "mlx_argmin",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -624,7 +694,8 @@
     {
       "name": "mlx_argpartition_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -651,7 +722,8 @@
     {
       "name": "mlx_argpartition",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -684,7 +756,8 @@
     {
       "name": "mlx_argsort_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -711,7 +784,8 @@
     {
       "name": "mlx_argsort",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -744,7 +818,8 @@
     {
       "name": "mlx_array_equal",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -773,7 +848,8 @@
     {
       "name": "mlx_as_strided",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -800,7 +876,8 @@
     {
       "name": "mlx_astype",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -827,7 +904,8 @@
     {
       "name": "mlx_atleast_1d",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -854,7 +932,8 @@
     {
       "name": "mlx_atleast_2d",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -881,7 +960,8 @@
     {
       "name": "mlx_atleast_3d",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -908,7 +988,8 @@
     {
       "name": "mlx_bartlett",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -932,7 +1013,8 @@
     {
       "name": "mlx_bitwise_and",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -956,7 +1038,8 @@
     {
       "name": "mlx_bitwise_invert",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -980,7 +1063,8 @@
     {
       "name": "mlx_bitwise_or",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1004,7 +1088,8 @@
     {
       "name": "mlx_bitwise_xor",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1028,7 +1113,8 @@
     {
       "name": "mlx_blackman",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1052,7 +1138,8 @@
     {
       "name": "mlx_block_masked_mm",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1079,7 +1166,8 @@
     {
       "name": "mlx_broadcast_arrays",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1106,7 +1194,8 @@
     {
       "name": "mlx_broadcast_to",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1133,7 +1222,8 @@
     {
       "name": "mlx_ceil",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1159,7 +1249,8 @@
     {
       "name": "mlx_clip",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1186,7 +1277,8 @@
     {
       "name": "mlx_concatenate_axis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1213,7 +1305,8 @@
     {
       "name": "mlx_concatenate",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1240,7 +1333,8 @@
     {
       "name": "mlx_conjugate",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1264,7 +1358,8 @@
     {
       "name": "mlx_contiguous",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1291,7 +1386,8 @@
     {
       "name": "mlx_conv1d",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1317,7 +1413,8 @@
     {
       "name": "mlx_conv2d",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1343,7 +1440,8 @@
     {
       "name": "mlx_conv3d",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1369,7 +1467,8 @@
     {
       "name": "mlx_conv_general",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1395,7 +1494,8 @@
     {
       "name": "mlx_conv_transpose1d",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1421,7 +1521,8 @@
     {
       "name": "mlx_conv_transpose2d",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1447,7 +1548,8 @@
     {
       "name": "mlx_conv_transpose3d",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Convolution",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1473,7 +1575,8 @@
     {
       "name": "mlx_copy",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1500,7 +1603,8 @@
     {
       "name": "mlx_cos",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1526,7 +1630,8 @@
     {
       "name": "mlx_cosh",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1552,7 +1657,8 @@
     {
       "name": "mlx_cummax",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Scans",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1580,7 +1686,8 @@
     {
       "name": "mlx_cummin",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Scans",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1608,7 +1715,8 @@
     {
       "name": "mlx_cumprod",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Scans",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1636,7 +1744,8 @@
     {
       "name": "mlx_cumsum",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Scans",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1664,7 +1773,8 @@
     {
       "name": "mlx_degrees",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1690,7 +1800,8 @@
     {
       "name": "mlx_depends",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -1700,7 +1811,8 @@
     {
       "name": "mlx_dequantize",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Quantization",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1727,7 +1839,8 @@
     {
       "name": "mlx_diag",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1754,7 +1867,8 @@
     {
       "name": "mlx_diagonal",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1781,7 +1895,8 @@
     {
       "name": "mlx_divide",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1808,7 +1923,8 @@
     {
       "name": "mlx_divmod",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1835,7 +1951,8 @@
     {
       "name": "mlx_einsum",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1861,7 +1978,8 @@
     {
       "name": "mlx_equal",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1889,7 +2007,8 @@
     {
       "name": "mlx_erf",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1915,7 +2034,8 @@
     {
       "name": "mlx_erfinv",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1941,7 +2061,8 @@
     {
       "name": "mlx_exp",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1967,7 +2088,8 @@
     {
       "name": "mlx_expand_dims_axes",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -1994,7 +2116,8 @@
     {
       "name": "mlx_expand_dims",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2021,7 +2144,8 @@
     {
       "name": "mlx_expm1",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2047,7 +2171,8 @@
     {
       "name": "mlx_eye",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2074,7 +2199,8 @@
     {
       "name": "mlx_flatten",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2101,7 +2227,8 @@
     {
       "name": "mlx_floor",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2127,7 +2254,8 @@
     {
       "name": "mlx_floor_divide",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2154,7 +2282,8 @@
     {
       "name": "mlx_from_fp8",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Quantization",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2179,7 +2308,8 @@
     {
       "name": "mlx_full",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2206,7 +2336,8 @@
     {
       "name": "mlx_full_like",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2233,7 +2364,8 @@
     {
       "name": "mlx_gather",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2260,7 +2392,8 @@
     {
       "name": "mlx_gather_single",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2287,7 +2420,8 @@
     {
       "name": "mlx_gather_mm",
       "header": "ops.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2314,7 +2448,8 @@
     {
       "name": "mlx_gather_qmm",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Quantization",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2341,7 +2476,8 @@
     {
       "name": "mlx_greater",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2369,7 +2505,8 @@
     {
       "name": "mlx_greater_equal",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2397,7 +2534,8 @@
     {
       "name": "mlx_hadamard_transform",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2423,7 +2561,8 @@
     {
       "name": "mlx_hamming",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2447,7 +2586,8 @@
     {
       "name": "mlx_hanning",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2471,7 +2611,8 @@
     {
       "name": "mlx_identity",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2498,7 +2639,8 @@
     {
       "name": "mlx_imag",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2522,7 +2664,8 @@
     {
       "name": "mlx_inner",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2548,7 +2691,8 @@
     {
       "name": "mlx_isclose",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2575,7 +2719,8 @@
     {
       "name": "mlx_isfinite",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2602,7 +2747,8 @@
     {
       "name": "mlx_isinf",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2629,7 +2775,8 @@
     {
       "name": "mlx_isnan",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2656,7 +2803,8 @@
     {
       "name": "mlx_isneginf",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2683,7 +2831,8 @@
     {
       "name": "mlx_isposinf",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2710,7 +2859,8 @@
     {
       "name": "mlx_kron",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2736,7 +2886,8 @@
     {
       "name": "mlx_left_shift",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2760,7 +2911,8 @@
     {
       "name": "mlx_less",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2788,7 +2940,8 @@
     {
       "name": "mlx_less_equal",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2816,7 +2969,8 @@
     {
       "name": "mlx_linspace",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2842,7 +2996,8 @@
     {
       "name": "mlx_log",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2868,7 +3023,8 @@
     {
       "name": "mlx_log10",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2894,7 +3050,8 @@
     {
       "name": "mlx_log1p",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2920,7 +3077,8 @@
     {
       "name": "mlx_log2",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2946,7 +3104,8 @@
     {
       "name": "mlx_logaddexp",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2972,7 +3131,8 @@
     {
       "name": "mlx_logcumsumexp",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Scans",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -2999,7 +3159,8 @@
     {
       "name": "mlx_logical_and",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3023,7 +3184,8 @@
     {
       "name": "mlx_logical_not",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3047,7 +3209,8 @@
     {
       "name": "mlx_logical_or",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3071,7 +3234,8 @@
     {
       "name": "mlx_logsumexp_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3097,7 +3261,8 @@
     {
       "name": "mlx_logsumexp_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3123,7 +3288,8 @@
     {
       "name": "mlx_logsumexp",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3151,7 +3317,8 @@
     {
       "name": "mlx_masked_scatter",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3180,7 +3347,8 @@
     {
       "name": "mlx_matmul",
       "header": "ops.h",
-      "tier": 1,
+      "category": "LinearAlgebra",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3214,7 +3382,8 @@
     {
       "name": "mlx_max_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3242,7 +3411,8 @@
     {
       "name": "mlx_max_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3270,7 +3440,8 @@
     {
       "name": "mlx_max",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3298,7 +3469,8 @@
     {
       "name": "mlx_maximum",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3325,7 +3497,8 @@
     {
       "name": "mlx_mean_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3352,7 +3525,8 @@
     {
       "name": "mlx_mean_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3379,7 +3553,8 @@
     {
       "name": "mlx_mean",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3406,7 +3581,8 @@
     {
       "name": "mlx_median",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3432,7 +3608,8 @@
     {
       "name": "mlx_meshgrid",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3459,7 +3636,8 @@
     {
       "name": "mlx_min_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3487,7 +3665,8 @@
     {
       "name": "mlx_min_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3515,7 +3694,8 @@
     {
       "name": "mlx_min",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3543,7 +3723,8 @@
     {
       "name": "mlx_minimum",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3570,7 +3751,8 @@
     {
       "name": "mlx_moveaxis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3597,7 +3779,8 @@
     {
       "name": "mlx_multiply",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3624,7 +3807,8 @@
     {
       "name": "mlx_nan_to_num",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3650,7 +3834,8 @@
     {
       "name": "mlx_negative",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3677,7 +3862,8 @@
     {
       "name": "mlx_not_equal",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3705,7 +3891,8 @@
     {
       "name": "mlx_number_of_elements",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3732,7 +3919,8 @@
     {
       "name": "mlx_ones",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3759,7 +3947,8 @@
     {
       "name": "mlx_ones_like",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3786,7 +3975,8 @@
     {
       "name": "mlx_outer",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3812,7 +4002,8 @@
     {
       "name": "mlx_pad",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3839,7 +4030,8 @@
     {
       "name": "mlx_pad_symmetric",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3866,7 +4058,8 @@
     {
       "name": "mlx_partition_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3893,7 +4086,8 @@
     {
       "name": "mlx_partition",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3926,7 +4120,8 @@
     {
       "name": "mlx_power",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3952,7 +4147,8 @@
     {
       "name": "mlx_prod_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -3980,7 +4176,8 @@
     {
       "name": "mlx_prod_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4008,7 +4205,8 @@
     {
       "name": "mlx_prod",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4036,7 +4234,8 @@
     {
       "name": "mlx_put_along_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4064,7 +4263,8 @@
     {
       "name": "mlx_qqmm",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Quantization",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4090,7 +4290,8 @@
     {
       "name": "mlx_quantize",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Quantization",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4119,7 +4320,8 @@
     {
       "name": "mlx_quantized_matmul",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Quantization",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4146,7 +4348,8 @@
     {
       "name": "mlx_radians",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4172,7 +4375,8 @@
     {
       "name": "mlx_real",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4196,7 +4400,8 @@
     {
       "name": "mlx_reciprocal",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4222,7 +4427,8 @@
     {
       "name": "mlx_remainder",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4249,7 +4455,8 @@
     {
       "name": "mlx_repeat_axis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4276,7 +4483,8 @@
     {
       "name": "mlx_repeat",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4303,7 +4511,8 @@
     {
       "name": "mlx_reshape",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4330,7 +4539,8 @@
     {
       "name": "mlx_right_shift",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Logic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4354,7 +4564,8 @@
     {
       "name": "mlx_roll_axis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4381,7 +4592,8 @@
     {
       "name": "mlx_roll_axes",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4408,7 +4620,8 @@
     {
       "name": "mlx_roll",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4435,7 +4648,8 @@
     {
       "name": "mlx_round",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4461,7 +4675,8 @@
     {
       "name": "mlx_rsqrt",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4487,7 +4702,8 @@
     {
       "name": "mlx_scatter",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4515,7 +4731,8 @@
     {
       "name": "mlx_scatter_single",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4543,7 +4760,8 @@
     {
       "name": "mlx_scatter_add",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4571,7 +4789,8 @@
     {
       "name": "mlx_scatter_add_single",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4599,7 +4818,8 @@
     {
       "name": "mlx_scatter_add_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4627,7 +4847,8 @@
     {
       "name": "mlx_scatter_max",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4655,7 +4876,8 @@
     {
       "name": "mlx_scatter_max_single",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4683,7 +4905,8 @@
     {
       "name": "mlx_scatter_min",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4711,7 +4934,8 @@
     {
       "name": "mlx_scatter_min_single",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4739,7 +4963,8 @@
     {
       "name": "mlx_scatter_prod",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4767,7 +4992,8 @@
     {
       "name": "mlx_scatter_prod_single",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4795,7 +5021,8 @@
     {
       "name": "mlx_segmented_mm",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4822,7 +5049,8 @@
     {
       "name": "mlx_sigmoid",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4848,7 +5076,8 @@
     {
       "name": "mlx_sign",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4875,7 +5104,8 @@
     {
       "name": "mlx_sin",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4901,7 +5131,8 @@
     {
       "name": "mlx_sinh",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4927,7 +5158,8 @@
     {
       "name": "mlx_slice",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4954,7 +5186,8 @@
     {
       "name": "mlx_slice_dynamic",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -4981,7 +5214,8 @@
     {
       "name": "mlx_slice_update",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5009,7 +5243,8 @@
     {
       "name": "mlx_slice_update_dynamic",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5037,7 +5272,8 @@
     {
       "name": "mlx_slice_update_add",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5065,7 +5301,8 @@
     {
       "name": "mlx_slice_update_max",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5093,7 +5330,8 @@
     {
       "name": "mlx_slice_update_min",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5121,7 +5359,8 @@
     {
       "name": "mlx_slice_update_prod",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5149,7 +5388,8 @@
     {
       "name": "mlx_softmax_axes",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Reductions",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5175,7 +5415,8 @@
     {
       "name": "mlx_softmax_axis",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Reductions",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5201,7 +5442,8 @@
     {
       "name": "mlx_softmax",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Reductions",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5227,7 +5469,8 @@
     {
       "name": "mlx_sort_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5254,7 +5497,8 @@
     {
       "name": "mlx_sort",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Sorting",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5287,7 +5531,8 @@
     {
       "name": "mlx_split",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5314,7 +5559,8 @@
     {
       "name": "mlx_split_sections",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5341,7 +5587,8 @@
     {
       "name": "mlx_sqrt",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5367,7 +5614,8 @@
     {
       "name": "mlx_square",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5394,7 +5642,8 @@
     {
       "name": "mlx_squeeze_axes",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5421,7 +5670,8 @@
     {
       "name": "mlx_squeeze_axis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5448,7 +5698,8 @@
     {
       "name": "mlx_squeeze",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5475,7 +5726,8 @@
     {
       "name": "mlx_stack_axis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5502,7 +5754,8 @@
     {
       "name": "mlx_stack",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5529,7 +5782,8 @@
     {
       "name": "mlx_std_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5555,7 +5809,8 @@
     {
       "name": "mlx_std_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5581,7 +5836,8 @@
     {
       "name": "mlx_std",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5609,7 +5865,8 @@
     {
       "name": "mlx_stop_gradient",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -5619,7 +5876,8 @@
     {
       "name": "mlx_subtract",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5646,7 +5904,8 @@
     {
       "name": "mlx_sum_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5674,7 +5933,8 @@
     {
       "name": "mlx_sum_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5702,7 +5962,8 @@
     {
       "name": "mlx_sum",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5730,7 +5991,8 @@
     {
       "name": "mlx_swapaxes",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5757,7 +6019,8 @@
     {
       "name": "mlx_take_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5784,7 +6047,8 @@
     {
       "name": "mlx_take",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5811,7 +6075,8 @@
     {
       "name": "mlx_take_along_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Indexing",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5838,7 +6103,8 @@
     {
       "name": "mlx_tan",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5864,7 +6130,8 @@
     {
       "name": "mlx_tanh",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Arithmetic",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5890,7 +6157,8 @@
     {
       "name": "mlx_tensordot",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5916,7 +6184,8 @@
     {
       "name": "mlx_tensordot_axis",
       "header": "ops.h",
-      "tier": 3,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5942,7 +6211,8 @@
     {
       "name": "mlx_tile",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5969,7 +6239,8 @@
     {
       "name": "mlx_to_fp8",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Quantization",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -5994,7 +6265,8 @@
     {
       "name": "mlx_topk_axis",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Sorting",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6020,7 +6292,8 @@
     {
       "name": "mlx_topk",
       "header": "ops.h",
-      "tier": 1,
+      "category": "Sorting",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6046,7 +6319,8 @@
     {
       "name": "mlx_trace",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6073,7 +6347,8 @@
     {
       "name": "mlx_transpose_axes",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6100,7 +6375,8 @@
     {
       "name": "mlx_transpose",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6132,7 +6408,8 @@
     {
       "name": "mlx_tri",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6159,7 +6436,8 @@
     {
       "name": "mlx_tril",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6186,7 +6464,8 @@
     {
       "name": "mlx_triu",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6213,7 +6492,8 @@
     {
       "name": "mlx_unflatten",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6240,7 +6520,8 @@
     {
       "name": "mlx_var_axes",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6266,7 +6547,8 @@
     {
       "name": "mlx_var_axis",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6292,7 +6574,8 @@
     {
       "name": "mlx_var",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Reductions",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6320,7 +6603,8 @@
     {
       "name": "mlx_view",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Shape",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6345,7 +6629,8 @@
     {
       "name": "mlx_where",
       "header": "ops.h",
-      "tier": 2,
+      "category": "Arithmetic",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6373,7 +6658,8 @@
     {
       "name": "mlx_zeros",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6400,7 +6686,8 @@
     {
       "name": "mlx_zeros_like",
       "header": "ops.h",
-      "tier": 3,
+      "category": "Creation",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6427,7 +6714,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_new",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6437,7 +6725,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_free",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6447,7 +6736,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_add_output_arg",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6457,7 +6747,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_set_grid",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6467,7 +6758,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_set_thread_group",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6477,7 +6769,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_set_init_value",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6487,7 +6780,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_set_verbose",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6497,7 +6791,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_add_template_arg_dtype",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6507,7 +6802,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_add_template_arg_int",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6517,7 +6813,8 @@
     {
       "name": "mlx_fast_cuda_kernel_config_add_template_arg_bool",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6527,7 +6824,8 @@
     {
       "name": "mlx_fast_cuda_kernel_new",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6537,7 +6835,8 @@
     {
       "name": "mlx_fast_cuda_kernel_free",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6547,7 +6846,8 @@
     {
       "name": "mlx_fast_cuda_kernel_apply",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6557,7 +6857,8 @@
     {
       "name": "mlx_fast_layer_norm",
       "header": "fast.h",
-      "tier": 1,
+      "category": "NeuralNetwork",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6583,7 +6884,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_new",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6593,7 +6895,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_free",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6603,7 +6906,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_add_output_arg",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6613,7 +6917,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_set_grid",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6623,7 +6928,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_set_thread_group",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6633,7 +6939,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_set_init_value",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6643,7 +6950,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_set_verbose",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6653,7 +6961,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_add_template_arg_dtype",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6663,7 +6972,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_add_template_arg_int",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6673,7 +6983,8 @@
     {
       "name": "mlx_fast_metal_kernel_config_add_template_arg_bool",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6683,7 +6994,8 @@
     {
       "name": "mlx_fast_metal_kernel_new",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6693,7 +7005,8 @@
     {
       "name": "mlx_fast_metal_kernel_free",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6703,7 +7016,8 @@
     {
       "name": "mlx_fast_metal_kernel_apply",
       "header": "fast.h",
-      "tier": 3,
+      "category": "CustomKernels",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -6713,7 +7027,8 @@
     {
       "name": "mlx_fast_rms_norm",
       "header": "fast.h",
-      "tier": 1,
+      "category": "NeuralNetwork",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6739,7 +7054,8 @@
     {
       "name": "mlx_fast_rope",
       "header": "fast.h",
-      "tier": 1,
+      "category": "NeuralNetwork",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6765,7 +7081,8 @@
     {
       "name": "mlx_fast_rope_dynamic",
       "header": "fast.h",
-      "tier": 1,
+      "category": "NeuralNetwork",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6792,7 +7109,8 @@
     {
       "name": "mlx_fast_scaled_dot_product_attention",
       "header": "fast.h",
-      "tier": 1,
+      "category": "NeuralNetwork",
+      "llm": true,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6818,7 +7136,8 @@
     {
       "name": "mlx_linalg_cholesky",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -6842,7 +7161,8 @@
     {
       "name": "mlx_linalg_cholesky_inv",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -6866,7 +7186,8 @@
     {
       "name": "mlx_linalg_cross",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -6892,7 +7213,8 @@
     {
       "name": "mlx_linalg_eig",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -6916,7 +7238,8 @@
     {
       "name": "mlx_linalg_eigh",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -6940,7 +7263,8 @@
     {
       "name": "mlx_linalg_eigvals",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -6964,7 +7288,8 @@
     {
       "name": "mlx_linalg_eigvalsh",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -6988,7 +7313,8 @@
     {
       "name": "mlx_linalg_inv",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7012,7 +7338,8 @@
     {
       "name": "mlx_linalg_lu",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7038,7 +7365,8 @@
     {
       "name": "mlx_linalg_lu_factor",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7063,7 +7391,8 @@
     {
       "name": "mlx_linalg_norm",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7089,7 +7418,8 @@
     {
       "name": "mlx_linalg_norm_matrix",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7115,7 +7445,8 @@
     {
       "name": "mlx_linalg_norm_l2",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7141,7 +7472,8 @@
     {
       "name": "mlx_linalg_pinv",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7166,7 +7498,8 @@
     {
       "name": "mlx_linalg_qr",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7190,7 +7523,8 @@
     {
       "name": "mlx_linalg_solve",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7214,7 +7548,8 @@
     {
       "name": "mlx_linalg_solve_triangular",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7238,7 +7573,8 @@
     {
       "name": "mlx_linalg_svd",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7262,7 +7598,8 @@
     {
       "name": "mlx_linalg_tri_inv",
       "header": "linalg.h",
-      "tier": 2,
+      "category": "LinearAlgebra",
+      "llm": false,
       "device": "cpu",
       "bound": true,
       "tested": true,
@@ -7286,7 +7623,8 @@
     {
       "name": "mlx_fft_fft",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7311,7 +7649,8 @@
     {
       "name": "mlx_fft_fft2",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7336,7 +7675,8 @@
     {
       "name": "mlx_fft_fftfreq",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7360,7 +7700,8 @@
     {
       "name": "mlx_fft_fftn",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7385,7 +7726,8 @@
     {
       "name": "mlx_fft_fftshift",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7411,7 +7753,8 @@
     {
       "name": "mlx_fft_ifft",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7436,7 +7779,8 @@
     {
       "name": "mlx_fft_ifft2",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7461,7 +7805,8 @@
     {
       "name": "mlx_fft_ifftn",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7486,7 +7831,8 @@
     {
       "name": "mlx_fft_ifftshift",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7512,7 +7858,8 @@
     {
       "name": "mlx_fft_irfft",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7537,7 +7884,8 @@
     {
       "name": "mlx_fft_irfft2",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7562,7 +7910,8 @@
     {
       "name": "mlx_fft_irfftn",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7587,7 +7936,8 @@
     {
       "name": "mlx_fft_rfft",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7612,7 +7962,8 @@
     {
       "name": "mlx_fft_rfft2",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7637,7 +7988,8 @@
     {
       "name": "mlx_fft_rfftfreq",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7661,7 +8013,8 @@
     {
       "name": "mlx_fft_rfftn",
       "header": "fft.h",
-      "tier": 2,
+      "category": "Fft",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7686,7 +8039,8 @@
     {
       "name": "mlx_random_bernoulli",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7713,7 +8067,8 @@
     {
       "name": "mlx_random_bits",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7737,7 +8092,8 @@
     {
       "name": "mlx_random_categorical_shape",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7766,7 +8122,8 @@
     {
       "name": "mlx_random_categorical_num_samples",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7795,7 +8152,8 @@
     {
       "name": "mlx_random_categorical",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7824,7 +8182,8 @@
     {
       "name": "mlx_random_gumbel",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7850,7 +8209,8 @@
     {
       "name": "mlx_random_key",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -7860,7 +8220,8 @@
     {
       "name": "mlx_random_laplace",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7886,7 +8247,8 @@
     {
       "name": "mlx_random_multivariate_normal",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7910,7 +8272,8 @@
     {
       "name": "mlx_random_normal_broadcast",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7936,7 +8299,8 @@
     {
       "name": "mlx_random_normal",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7962,7 +8326,8 @@
     {
       "name": "mlx_random_permutation",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -7989,7 +8354,8 @@
     {
       "name": "mlx_random_permutation_arange",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -8013,7 +8379,8 @@
     {
       "name": "mlx_random_randint",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -8037,7 +8404,8 @@
     {
       "name": "mlx_random_seed",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8047,7 +8415,8 @@
     {
       "name": "mlx_random_split_num",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8057,7 +8426,8 @@
     {
       "name": "mlx_random_split",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8067,7 +8437,8 @@
     {
       "name": "mlx_random_truncated_normal",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -8093,7 +8464,8 @@
     {
       "name": "mlx_random_uniform",
       "header": "random.h",
-      "tier": 3,
+      "category": "Random",
+      "llm": false,
       "device": "gpu",
       "bound": true,
       "tested": true,
@@ -8119,7 +8491,8 @@
     {
       "name": "mlx_async_eval",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8129,7 +8502,8 @@
     {
       "name": "mlx_checkpoint",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8139,7 +8513,8 @@
     {
       "name": "mlx_custom_function",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8149,7 +8524,8 @@
     {
       "name": "mlx_custom_vjp",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8159,7 +8535,8 @@
     {
       "name": "mlx_eval",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8169,7 +8546,8 @@
     {
       "name": "mlx_jvp",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8179,7 +8557,8 @@
     {
       "name": "mlx_value_and_grad",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,
@@ -8189,7 +8568,8 @@
     {
       "name": "mlx_vjp",
       "header": "transforms.h",
-      "tier": 3,
+      "category": "Transforms",
+      "llm": false,
       "device": "gpu",
       "bound": false,
       "tested": false,

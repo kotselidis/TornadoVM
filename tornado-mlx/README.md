@@ -36,7 +36,7 @@ is the result allocation and copy-back.
 All 292 in-scope operations of the MLX C API are bound; `coverage.json` lists them, and the 40
 deliberately excluded ones with reasons. The factories are in `uk.ac.manchester.tornado.mlx`:
 
-- `Mlx` (Tier 1 LLM operations)
+- `Mlx` (the operations LLM inference uses)
 - `MlxMath`, `MlxLogic`, `MlxReduce`, `MlxShape` and `MlxCreate`
 - `MlxIndex`, `MlxSort`, `MlxFft` and `MlxConv`
 - `MlxLinalg`, `MlxProducts` and `MlxRandom`
