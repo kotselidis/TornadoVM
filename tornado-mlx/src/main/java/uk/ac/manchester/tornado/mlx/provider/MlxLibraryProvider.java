@@ -51,12 +51,6 @@ import uk.ac.manchester.tornado.runtime.library.spi.TornadoLibraryProvider;
  * </p>
  *
  * <p>
- * Contiguous element-wise operations skip the C API: {@link MlxMetalKernels} runs MLX's own kernel
- * from {@code mlx.metallib} on TornadoVM's command queue with the TornadoVM buffers bound in place,
- * as a JIT-compiled kernel would run, so there is neither a result array nor a copy.
- * </p>
- *
- * <p>
  * Wrapping a buffer makes MLX create a no-copy MTLBuffer the GPU has to map, which is costly for
  * large arrays, so wrappers are cached per execution plan. The cache key is the data address, so
  * the provider retains each TornadoVM MTLBuffer it has wrapped: while it is retained, no other
@@ -603,51 +597,13 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             throw new TornadoRuntimeException("[ERROR] Unknown MLX function: " + functionName);
         }
         MlxContext ctx = (MlxContext) invocation.getContext();
-        MlxOptions options = invocation.getTuning() instanceof MlxOptions tuning ? tuning : defaultOptions;
+        MlxOptions options = invocation.getTuning() instanceof MlxOptions tuning ? tuning : MlxOptions.gpu();
         MlxOptions.Device device = CPU_ONLY.contains(functionName) ? MlxOptions.Device.CPU : options.getDevice();
-        lastDevice = device;
-        lastInPlace = false;
-        if (device == MlxOptions.Device.GPU && options.isInPlaceKernels() && MlxKernelRoutes.dispatch(functionName, invocation)) {
-            lastInPlace = true;
-            return;
-        }
         synchronized (ctx) {
             try (MlxCall call = new MlxCall(ctx, invocation, ctx.stream(device))) {
                 operation.accept(call);
             }
         }
-    }
-
-    // ---------------------------------------------------------------- MLX kernels in place
-
-    /** Options for calls that carry none, normally the GPU with in-place kernels; benchmarks change it to compare paths. */
-    private static volatile MlxOptions defaultOptions = MlxOptions.gpu();
-    private static volatile MlxOptions.Device lastDevice = MlxOptions.Device.GPU;
-    private static volatile boolean lastInPlace;
-
-    /** Sets the options used by MLX tasks that have no tuning of their own (null restores the GPU default). */
-    public static void setDefaultOptions(MlxOptions options) {
-        defaultOptions = options == null ? MlxOptions.gpu() : options;
-    }
-
-    /** The device the most recent MLX call ran on (CPU for operations MLX only implements there). */
-    public static MlxOptions.Device lastDevice() {
-        return lastDevice;
-    }
-
-    /** Whether the most recent MLX call ran as an in-place MLX kernel. */
-    public static boolean lastInPlace() {
-        return lastInPlace;
-    }
-
-    /** How many operations ran as in-place MLX kernels rather than through the C API. */
-    public static long kernelDispatches() {
-        return MlxKernelRoutes.dispatches();
-    }
-
-    /** Whether {@code functionName} can run as an in-place MLX kernel (when its arguments allow). */
-    public static boolean hasInPlaceKernel(String functionName) {
-        return MlxKernelRoutes.hasRoute(functionName);
     }
 
     // ---------------------------------------------------------------- operation families

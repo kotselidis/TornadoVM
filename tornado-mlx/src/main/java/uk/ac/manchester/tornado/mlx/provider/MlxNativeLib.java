@@ -28,8 +28,6 @@ import java.lang.foreign.SymbolLookup;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
@@ -104,16 +102,6 @@ final class MlxNativeLib {
 
     private static void onError(MemorySegment message, MemorySegment data) {
         LAST_ERROR.set(FFMSupport.readCString(message));
-    }
-
-    /** Where MLX installs its compiled kernel library, next to {@code libmlx.dylib}; null if not found. */
-    static String metallibPath() {
-        for (String candidate : new String[] { "/opt/homebrew/opt/mlx/lib/mlx.metallib", "/usr/local/opt/mlx/lib/mlx.metallib" }) {
-            if (Files.isReadable(Path.of(candidate))) {
-                return candidate;
-            }
-        }
-        return null;
     }
 
     /** Throws if libmlxc (or the Objective-C runtime) could not be loaded. */

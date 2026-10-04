@@ -50,7 +50,6 @@ FACTORY_SOURCES = os.path.join(MODULE_DIR, "src/main/java/uk/ac/manchester/torna
 JIT_SOURCES = os.path.join(MODULE_DIR, "src/main/java/uk/ac/manchester/tornado/mlx/jit")
 TEST_SOURCES = os.path.join(REPO_DIR, "tornado-unittests/src/main/java/uk/ac/manchester/tornado/unittests/mlx")
 BENCHMARK_SOURCES = [
-    os.path.join(MODULE_DIR, "src/main/java/uk/ac/manchester/tornado/mlx/benchmarks"),
     os.path.join(REPO_DIR, "tornado-benchmarks/src/main/java"),
 ]
 
