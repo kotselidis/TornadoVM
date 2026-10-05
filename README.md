@@ -336,7 +336,7 @@ Link the **Tornado-API** (Apache 2.0) into your application.
 | Tornado-Runtime, Tornado-Drivers | [GPLv2 with Classpath Exception](LICENSE_GPLv2CE) |
 | Graal compiler, GraalVM SDK and other bundled libraries | See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) |
 
-Each source file's header states its license. Some runtime and driver files are derived from Oracle code without the Classpath Exception; their headers say GPLv2 only, and the exception does not apply to them.
+Each source file's header states its license. Four runtime and driver files are derived from the OpenJDK JVMCI sources, which have no Classpath Exception; their headers say GPLv2 only, and the exception does not apply to them.
 
 ## Acknowledgments
 
