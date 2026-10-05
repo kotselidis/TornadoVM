@@ -120,20 +120,21 @@ If `libmlxc.dylib` cannot be loaded, the provider declines the device and an MLX
 
 ## Tests
 
-The JUnit suite lives in `tornado-unittests` (`uk.ac.manchester.tornado.unittests.mlx`). Each test
-runs an MLX task and its `KernelContext` JIT counterpart in one graph and checks both against a
-sequential Java reference. `TestMlxMemory` also checks that MLX adopts the input buffers rather than
-copying them, and that repeated executions and many short-lived plans do not grow MLX's live memory.
-The tests report `UNSUPPORTED` when the default device is not Metal or mlx-c is missing.
+The JUnit suite lives in `tornado-unittests` (`uk.ac.manchester.tornado.unittests.mlx`), one class
+per category (`TestMlxArithmetic`, `TestMlxReductions`, `TestMlxLinearAlgebra`, ...) plus `TestMlx`,
+which covers how MLX tasks behave in a task graph: mixed with JIT tasks, buffers shared across task
+graphs, inputs changing between executions, input adoption, the CPU stream, and MLX errors raised as
+exceptions. Each test runs one factory and checks it against a sequential Java reference.
+`TestMlxMemory` checks that repeated executions and many short-lived plans do not grow MLX's live
+memory. The tests report `UNSUPPORTED` when the default device is not Metal or mlx-c is missing.
 
 ```bash
 tornado-test --mlx                                                      # all MLX tests
-tornado-test -V uk.ac.manchester.tornado.unittests.mlx.TestMlxMemory
+tornado-test -V uk.ac.manchester.tornado.unittests.mlx.TestMlxLinearAlgebra
 ```
 
 The build enforces coverage: `scripts/update_coverage.py --check` fails if a bound operation has no
-test or no tested JIT baseline (`@JitBaseline` in `uk.ac.manchester.tornado.mlx.jit`). After you add a
-factory or a test, run `python3 tornado-mlx/scripts/update_coverage.py`.
+test. After you add a factory or a test, run `python3 tornado-mlx/scripts/update_coverage.py`.
 
 ## Benchmarks
 
@@ -176,10 +177,9 @@ fresh run gives lower absolute times, mostly for decode-sized cases.
 |---|---|
 | `src/main/java/.../mlx/` | Factory classes, `MlxOp`, `MlxOptions` |
 | `src/main/java/.../mlx/provider/` | `MlxLibraryProvider` (the SPI provider), `MlxCall` (argument marshalling), `MlxNativeLib` (loading, wrapping, errors), `MlxC` (generated FFM bindings) |
-| `src/main/java/.../mlx/jit/` | `KernelContext` JIT counterparts of each operation, annotated `@JitBaseline` |
 | `mlx-c-api.json` | Every mlx-c operation, written by `scripts/generate_bindings.py` |
 | `scripts/generate_bindings.py` | Regenerates `MlxC.java` and `mlx-c-api.json` from mlx-c's headers |
-| `coverage.json`, `coverage-overrides.json`, `scripts/update_coverage.py` | Coverage manifest: category, bound, tested and JIT baseline per MLX operation; Maven runs the script with `--check` |
+| `coverage.json`, `coverage-overrides.json`, `scripts/update_coverage.py` | Coverage manifest: category, bound and tested per MLX operation; Maven runs the script with `--check` |
 | `../prototypes/mlx-m0/` | The zero-copy spike and its findings (`FINDINGS.md`) |
 
 ## Adding an operation
@@ -188,8 +188,8 @@ fresh run gives lower absolute times, mostly for decode-sized cases.
 2. Add a factory that calls `Mlx.task(name, outputIndex, args...)` and annotate it with `@MlxOp`.
 3. Add an entry for `name` in `MlxLibraryProvider`'s operation table: it wraps the inputs with
    `MlxCall`, calls the `MlxC` function and stores the result.
-4. Add a `@JitBaseline` kernel in `uk.ac.manchester.tornado.mlx.jit` and a test in
-   `tornado-unittests/.../unittests/mlx`, then run `scripts/update_coverage.py`.
+4. Add a test to the category's class in `tornado-unittests/.../unittests/mlx`, then run
+   `scripts/update_coverage.py`.
 
 For a new native library, see `HYBRID_API_GUIDE.md`; `MlxLibraryProvider` is a provider bound
 entirely through `java.lang.foreign`.

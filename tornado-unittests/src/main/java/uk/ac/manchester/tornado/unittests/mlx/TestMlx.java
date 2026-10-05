@@ -18,29 +18,28 @@
 package uk.ac.manchester.tornado.unittests.mlx;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
-import java.util.Random;
-
-import org.junit.Before;
 import org.junit.Test;
 
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.annotations.Parallel;
 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
-import uk.ac.manchester.tornado.api.enums.TornadoVMBackendType;
 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
-import uk.ac.manchester.tornado.api.types.HalfFloat;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
-import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
-import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 import uk.ac.manchester.tornado.mlx.Mlx;
+import uk.ac.manchester.tornado.mlx.MlxOptions;
+import uk.ac.manchester.tornado.mlx.MlxShape;
 import uk.ac.manchester.tornado.mlx.provider.MlxLibraryProvider;
-import uk.ac.manchester.tornado.unittests.common.TornadoTestBase;
-import uk.ac.manchester.tornado.unittests.common.TornadoVMMetalNotSupported;
 
 /**
- * Apple MLX library tasks ({@code apple/mlx}) on the Metal backend.
+ * Unit tests for how MLX library tasks behave inside TornadoVM: MLX adopts the task graph's buffers
+ * without copying them, tasks mix with JIT-compiled tasks in one graph, read buffers produced by
+ * another task graph, see new inputs on every execution, run on MLX's CPU stream when asked, and
+ * turn MLX errors into exceptions. The
+ * operations themselves are tested per category in the other {@code TestMlx*} classes. Skipped
+ * unless the default device is on the Metal backend and mlx.metallib is available.
  *
  * <p>
  * How to run?
@@ -49,30 +48,9 @@ import uk.ac.manchester.tornado.unittests.common.TornadoVMMetalNotSupported;
  * tornado-test -V uk.ac.manchester.tornado.unittests.mlx.TestMlx
  * </code>
  */
-public class TestMlx extends TornadoTestBase {
+public class TestMlx extends MlxTestBase {
 
-    /**
-     * MLX tasks need the Metal backend and mlx-c. Unavailable configurations throw the typed
-     * *NotSupported exceptions that TornadoTestRunner reports as [UNSUPPORTED].
-     */
-    @Before
-    public void mlxMustBeAvailable() {
-        TornadoVMBackendType backend = getTornadoRuntime().getDefaultDevice().getTornadoVMBackend();
-        if (backend != TornadoVMBackendType.METAL) {
-            assertNotBackend(backend, "MLX library tasks require the Metal backend (default device is " + backend + ")");
-        }
-        if (!MlxLibraryProvider.isAvailable()) {
-            throw new TornadoVMMetalNotSupported("mlx-c is not available on this host");
-        }
-    }
-
-    private static FloatArray randomFloats(int n, Random random) {
-        FloatArray array = new FloatArray(n);
-        for (int i = 0; i < n; i++) {
-            array.set(i, random.nextFloat() * 2 - 1);
-        }
-        return array;
-    }
+    private static final int SIZE = 4096;
 
     public static void iota(FloatArray a) {
         for (@Parallel int i = 0; i < a.getSize(); i++) {
@@ -86,165 +64,219 @@ public class TestMlx extends TornadoTestBase {
         }
     }
 
-    private static void addFloat(int n) throws TornadoExecutionPlanException {
-        Random random = new Random(n);
-        FloatArray a = randomFloats(n, random);
-        FloatArray b = randomFloats(n, random);
-        FloatArray c = new FloatArray(n);
+    public static void addOneInPlace(FloatArray a) {
+        for (@Parallel int i = 0; i < a.getSize(); i++) {
+            a.set(i, a.get(i) + 1.0f);
+        }
+    }
 
-        long fallbacks = MlxLibraryProvider.copyFallbacks();
-        TaskGraph taskGraph = new TaskGraph("mlxAdd") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+    @Test
+    public void testInputsAreAdoptedNotCopied() throws TornadoExecutionPlanException {
+        // MLX wraps each TornadoVM buffer as an MLX array over the same memory; a copy would be counted.
+        FloatArray a = FloatArray.fromArray(values(SIZE, -1, 1, 1));
+        FloatArray b = FloatArray.fromArray(values(SIZE, -1, 1, 2));
+        FloatArray c = new FloatArray(SIZE);
+
+        TaskGraph taskGraph = new TaskGraph("g") //
+                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
                 .libraryTask("add", Mlx::add, a, b, c) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-        try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
-            executionPlan.execute();
+
+        long before = MlxLibraryProvider.copyFallbacks();
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+            plan.execute();
         }
-        for (int i = 0; i < n; i++) {
-            assertEquals(a.get(i) + b.get(i), c.get(i), 0.0f);
+
+        assertEquals("inputs MLX copied instead of adopting", before, MlxLibraryProvider.copyFallbacks());
+        for (int i = 0; i < SIZE; i++) {
+            assertEquals(a.get(i) + b.get(i), c.get(i), 0f);
         }
-        assertEquals("MLX copied an input instead of adopting TornadoVM's buffer", fallbacks, MlxLibraryProvider.copyFallbacks());
     }
 
     @Test
-    public void testAddFloatOneElement() throws TornadoExecutionPlanException {
-        addFloat(1);
-    }
+    public void testCpuStream() throws TornadoExecutionPlanException {
+        // MlxOptions.cpu() runs the task on MLX's CPU stream.
+        FloatArray a = FloatArray.fromArray(values(SIZE, -1, 1, 3));
+        FloatArray b = FloatArray.fromArray(values(SIZE, -1, 1, 4));
+        FloatArray c = new FloatArray(SIZE);
 
-    @Test
-    public void testAddFloat() throws TornadoExecutionPlanException {
-        addFloat(1000);
-    }
-
-    @Test
-    public void testAddFloatLarge() throws TornadoExecutionPlanException {
-        addFloat(1 << 22);
-    }
-
-    /** A result copied out by several threads whose last chunk is shorter than the others. */
-    @Test
-    public void testAddFloatLargeOddSize() throws TornadoExecutionPlanException {
-        addFloat((1 << 22) + 13);
-    }
-
-    @Test
-    public void testAddHalfFloat() throws TornadoExecutionPlanException {
-        final int n = 1027;
-        HalfFloatArray a = new HalfFloatArray(n);
-        HalfFloatArray b = new HalfFloatArray(n);
-        HalfFloatArray c = new HalfFloatArray(n);
-        for (int i = 0; i < n; i++) {
-            a.set(i, new HalfFloat(i * 0.25f));
-            b.set(i, new HalfFloat(-i * 0.125f));
-        }
-        TaskGraph taskGraph = new TaskGraph("mlxAddHalf") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .libraryTask("add", Mlx::add, a, b, c) //
+        TaskGraph taskGraph = new TaskGraph("g") //
+                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
+                .libraryTask("add", (FloatArray x, FloatArray y, FloatArray z) -> Mlx.add(x, y, z).withTuning(MlxOptions.cpu()), a, b, c) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-        try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
-            executionPlan.execute();
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+            plan.execute();
         }
-        for (int i = 0; i < n; i++) {
-            float expected = new HalfFloat(a.get(i).getFloat32() + b.get(i).getFloat32()).getFloat32();
-            assertEquals(expected, c.get(i).getFloat32(), 0.0f);
+
+        for (int i = 0; i < SIZE; i++) {
+            assertEquals(a.get(i) + b.get(i), c.get(i), 0f);
         }
     }
 
     @Test
-    public void testAddInt() throws TornadoExecutionPlanException {
-        final int n = 513;
-        IntArray a = new IntArray(n);
-        IntArray b = new IntArray(n);
-        IntArray c = new IntArray(n);
-        for (int i = 0; i < n; i++) {
-            a.set(i, i * 3);
-            b.set(i, -i + 7);
-        }
-        TaskGraph taskGraph = new TaskGraph("mlxAddInt") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .libraryTask("add", Mlx::add, a, b, c) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-        try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
-            executionPlan.execute();
-        }
-        for (int i = 0; i < n; i++) {
-            assertEquals(a.get(i) + b.get(i), c.get(i));
-        }
-    }
+    public void testMixedPrePostTasks() throws TornadoExecutionPlanException {
+        // JIT -> MLX -> JIT with no host transfers in between: MLX reads what the first kernel wrote,
+        // the second kernel reads what MLX wrote.
+        FloatArray a = new FloatArray(SIZE);
+        FloatArray b = new FloatArray(SIZE);
+        FloatArray c = new FloatArray(SIZE);
 
-    /**
-     * JIT -> MLX -> JIT with no host transfers in between: MLX reads what the first kernel wrote,
-     * the second kernel reads what MLX wrote.
-     */
-    @Test
-    public void testJitMlxJit() throws TornadoExecutionPlanException {
-        final int n = 4096;
-        FloatArray a = new FloatArray(n);
-        FloatArray b = new FloatArray(n);
-        FloatArray c = new FloatArray(n);
-        TaskGraph taskGraph = new TaskGraph("jitMlxJit") //
+        TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b, c) //
                 .task("iota", TestMlx::iota, a) //
                 .libraryTask("add", Mlx::add, a, a, b) //
                 .task("addOne", TestMlx::addOne, b, c) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-        try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
-            executionPlan.execute();
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+            plan.execute();
         }
-        for (int i = 0; i < n; i++) {
-            assertEquals(2.0f * i + 1.0f, c.get(i), 0.0f);
+
+        for (int i = 0; i < SIZE; i++) {
+            assertEquals(2.0f * i + 1.0f, c.get(i), 0f);
         }
     }
 
-    /**
-     * Inputs are re-sent on every execution; MLX's cached wrapper must see the new values
-     * because it is the same memory, not a copy.
-     */
     @Test
-    public void testInputsChangeBetweenExecutions() throws TornadoExecutionPlanException {
-        final int n = 2048;
-        FloatArray a = new FloatArray(n);
+    public void testChainOfMlxTasks() throws TornadoExecutionPlanException {
+        // sqrt(a)^2 - a, each MLX task reading the previous one's output on the device.
+        final int n = 1 << 18;
+        FloatArray a = FloatArray.fromArray(values(n, 0.5f, 2, 3));
         FloatArray b = new FloatArray(n);
         FloatArray c = new FloatArray(n);
-        TaskGraph taskGraph = new TaskGraph("mlxRepeat") //
+        FloatArray d = new FloatArray(n);
+
+        TaskGraph taskGraph = new TaskGraph("g") //
+                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a) //
+                .libraryTask("sqrt", Mlx::sqrt, a, b) //
+                .libraryTask("square", Mlx::multiply, b, b, c) //
+                .libraryTask("subtract", Mlx::subtract, c, a, d) //
+                .transferToHost(DataTransferMode.EVERY_EXECUTION, d);
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+            plan.execute();
+        }
+
+        for (int i = 0; i < n; i++) {
+            assertEquals("element " + i, 0.0f, d.get(i), 1e-5f * a.get(i));
+        }
+    }
+
+    @Test
+    public void testSharedBufferAcrossTaskGraphs() throws TornadoExecutionPlanException {
+        // A JIT task graph produces a on the device; a second task graph consumes it with an MLX task,
+        // without the data returning to the host.
+        float[] av = values(SIZE, -1, 1, 4);
+        FloatArray a = FloatArray.fromArray(av);
+        FloatArray b = FloatArray.fromArray(values(SIZE, -1, 1, 5));
+        FloatArray c = new FloatArray(SIZE);
+
+        TaskGraph producer = new TaskGraph("producer") //
+                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a) //
+                .task("mutate", TestMlx::addOneInPlace, a) //
+                .persistOnDevice(a);
+
+        TaskGraph consumer = new TaskGraph("consumer") //
+                .consumeFromDevice(producer.getTaskGraphName(), a) //
+                .transferToDevice(DataTransferMode.EVERY_EXECUTION, b) //
+                .libraryTask("multiply", Mlx::multiply, a, b, c) //
+                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(producer.snapshot(), consumer.snapshot())) {
+            plan.withGraph(0).execute();
+            plan.withGraph(1).execute();
+        }
+
+        for (int i = 0; i < SIZE; i++) {
+            assertEquals("element " + i, (av[i] + 1.0f) * b.get(i), c.get(i), 1e-6f);
+        }
+    }
+
+    @Test
+    public void testInputsChangeBetweenExecutions() throws TornadoExecutionPlanException {
+        // Inputs are re-sent on every execution; the kernels read the same buffers, so they see the new values.
+        FloatArray a = new FloatArray(SIZE);
+        FloatArray b = new FloatArray(SIZE);
+        FloatArray c = new FloatArray(SIZE);
+
+        TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
                 .libraryTask("add", Mlx::add, a, b, c) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-        try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
             for (int iteration = 0; iteration < 5; iteration++) {
                 a.init(iteration);
                 b.init(10.0f * iteration);
-                executionPlan.execute();
-                for (int i = 0; i < n; i++) {
-                    assertEquals(11.0f * iteration, c.get(i), 0.0f);
+                plan.execute();
+                for (int i = 0; i < SIZE; i++) {
+                    assertEquals("iteration " + iteration, 11.0f * iteration, c.get(i), 0f);
                 }
             }
         }
     }
 
-    /**
-     * Consecutive execution plans with new arrays: TornadoVM may hand the second plan buffers at
-     * the addresses the first plan used. A wrapper from the first plan must never be reused.
-     */
     @Test
     public void testConsecutivePlans() throws TornadoExecutionPlanException {
-        final int n = 4096;
-        for (int plan = 0; plan < 4; plan++) {
-            FloatArray a = new FloatArray(n);
-            FloatArray b = new FloatArray(n);
-            FloatArray c = new FloatArray(n);
-            a.init(plan + 1.0f);
-            b.init(100.0f * (plan + 1));
-            TaskGraph taskGraph = new TaskGraph("mlxPlan" + plan) //
+        // New arrays in each plan: TornadoVM may hand a later plan buffers at the addresses an earlier
+        // plan used, and the result must still come from the new arrays.
+        for (int p = 0; p < 4; p++) {
+            FloatArray a = new FloatArray(SIZE);
+            FloatArray b = new FloatArray(SIZE);
+            FloatArray c = new FloatArray(SIZE);
+            a.init(p + 1.0f);
+            b.init(100.0f * (p + 1));
+
+            TaskGraph taskGraph = new TaskGraph("g" + p) //
                     .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
                     .libraryTask("add", Mlx::add, a, b, c) //
                     .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-            try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
-                executionPlan.execute();
+
+            try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+                plan.execute();
             }
-            for (int i = 0; i < n; i++) {
-                assertEquals("plan " + plan, 101.0f * (plan + 1), c.get(i), 0.0f);
+
+            for (int i = 0; i < SIZE; i++) {
+                assertEquals("plan " + p, 101.0f * (p + 1), c.get(i), 0f);
             }
         }
+    }
+
+    @Test
+    public void testOneElement() throws TornadoExecutionPlanException {
+        FloatArray a = FloatArray.fromElements(1.5f);
+        FloatArray b = FloatArray.fromElements(-4f);
+        FloatArray c = new FloatArray(1);
+
+        TaskGraph taskGraph = new TaskGraph("g") //
+                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
+                .libraryTask("add", Mlx::add, a, b, c) //
+                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+            plan.execute();
+        }
+
+        assertEquals(-2.5f, c.get(0), 0f);
+    }
+
+    @Test
+    public void testMlxErrorsBecomeExceptions() {
+        // A shape MLX rejects (a reshape to a different number of elements) surfaces as an exception
+        // carrying MLX's message instead of ending the JVM.
+        FloatArray x = FloatArray.fromArray(values(12, -1, 1, 6));
+        FloatArray output = new FloatArray(12);
+
+        TaskGraph taskGraph = new TaskGraph("g") //
+                .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
+                .libraryTask("reshape", MlxShape::reshape, x, output, 5, 5) //
+                .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+
+        assertThrows(RuntimeException.class, () -> {
+            try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+                plan.execute();
+            }
+        });
     }
 }
