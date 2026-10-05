@@ -327,12 +327,15 @@ needed.
 
 | Factory class | Operations (examples) |
 |---|---|
-| `Mlx` | `add`, `matmul`, `addmm`, `softmax`, `argmax`, `topk`, `rmsNorm`, `layerNorm`, `rope`, `scaledDotProductAttention`, `quantize`, `quantizedMatmul`, `gatherQmm` |
-| `MlxMath`, `MlxLogic` | trigonometric, exponential, rounding, `clip`, `where`; comparisons, bitwise, `isnan`, `isclose` |
-| `MlxReduce`, `MlxSort` | `sum`/`mean`/`max`/`var`/`median` (whole, axis, axes), scans; `sort`, `argsort`, `partition` |
-| `MlxShape`, `MlxCreate`, `MlxIndex` | reshape, transpose, concatenate, pad; `arange`, `eye`, `tril`; `take`, `gather`, `scatter`, slices |
-| `MlxLinalg` | norms, cross, `cholesky`, `inv`, `solve`, `lu`, `qr`, `eigh`, `svd`, `pinv`, `eig` |
-| `MlxFft`, `MlxConv`, `MlxProducts`, `MlxRandom` | FFTs; 1D/2D/3D and transposed convolutions; einsum, tensordot, Hadamard, fp8, `qqmm`; samplers |
+| `MlxArithmetic` | `add`, `multiply`, `exp`, `log`, `tanh`, `sigmoid`, `clip`, `where`, `round`, `floorDivide` |
+| `MlxLogic` | comparisons, `isnan`, `isclose`, `allclose`, bitwise and logical operations |
+| `MlxReductions`, `MlxScans` | `sum`/`mean`/`max`/`var`/`median` (whole, axis, axes), `argmax`, `softmax`; `cumsum`, `logcumsumexp` |
+| `MlxSorting`, `MlxIndexing` | `sort`, `argsort`, `partition`, `topk`; `take`, `gather`, `scatter`, slices |
+| `MlxLinearAlgebra` | `matmul`, `addmm`, `einsum`, `tensordot`, Hadamard, norms, cross, `cholesky`, `inv`, `solve`, `lu`, `qr`, `eigh`, `svd`, `pinv`, `eig` |
+| `MlxQuantization` | `quantize`, `dequantize`, `quantizedMatmul`, `gatherQmm`, `qqmm`, fp8 conversion |
+| `MlxNeuralNetwork` | `rmsNorm`, `layerNorm`, `rope`, `scaledDotProductAttention` |
+| `MlxFft`, `MlxConvolution` | FFTs; 1D/2D/3D and transposed convolutions |
+| `MlxCreation`, `MlxShape`, `MlxRandom` | `arange`, `eye`, `tril`; `reshape`, `transpose`, `concatenate`, `pad`; samplers |
 
 Operations run on MLX's GPU stream unless the task carries `MlxOptions.cpu()`
 (`LibraryTaskDescriptor.withTuning`); the operations MLX implements only on its CPU stream (the
@@ -342,9 +345,9 @@ linear-algebra decompositions, `random_multivariate_normal`) always use it. MLX 
 ```java
 new TaskGraph("solve")
     .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, rhs)
-    .task("assemble", MyKernels::assemble, a)                              // Java kernel
-    .libraryTask("chol", MlxLinalg::cholesky, a, l, batch, n, false)       // MLX, CPU stream
-    .libraryTask("solve", MlxLinalg::solveTriangular, l, rhs, x, batch, n, nrhs, false)
+    .task("assemble", MyKernels::assemble, a)                                // Java kernel
+    .libraryTask("chol", MlxLinearAlgebra::cholesky, a, l, batch, n, false)  // MLX, CPU stream
+    .libraryTask("solve", MlxLinearAlgebra::solveTriangular, l, rhs, x, batch, n, nrhs, false)
     .transferToHost(DataTransferMode.EVERY_EXECUTION, x);
 ```
 

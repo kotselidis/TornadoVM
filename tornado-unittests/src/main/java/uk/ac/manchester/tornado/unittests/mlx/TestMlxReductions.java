@@ -38,8 +38,7 @@ import uk.ac.manchester.tornado.api.types.arrays.ByteArray;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
-import uk.ac.manchester.tornado.mlx.Mlx;
-import uk.ac.manchester.tornado.mlx.MlxReduce;
+import uk.ac.manchester.tornado.mlx.MlxReductions;
 
 /**
  * Unit tests for the MLX reduction library tasks: sum, prod, max, min, mean, var, std, logsumexp,
@@ -234,42 +233,42 @@ public class TestMlxReductions extends MlxTestBase {
 
     @Test
     public void testSum() throws TornadoExecutionPlanException {
-        whole(MlxReduce::sum, TestMlxReductions::sumJava, -1, 1, 1e-4, 1e-3);
+        whole(MlxReductions::sum, TestMlxReductions::sumJava, -1, 1, 1e-4, 1e-3);
     }
 
     @Test
     public void testProd() throws TornadoExecutionPlanException {
-        whole(MlxReduce::prod, TestMlxReductions::prodJava, 0.99f, 1.01f, 1e-4, 1e-4);
+        whole(MlxReductions::prod, TestMlxReductions::prodJava, 0.99f, 1.01f, 1e-4, 1e-4);
     }
 
     @Test
     public void testMax() throws TornadoExecutionPlanException {
-        whole(MlxReduce::max, TestMlxReductions::maxJava, -1, 1, 0, 0);
+        whole(MlxReductions::max, TestMlxReductions::maxJava, -1, 1, 0, 0);
     }
 
     @Test
     public void testMin() throws TornadoExecutionPlanException {
-        whole(MlxReduce::min, TestMlxReductions::minJava, -1, 1, 0, 0);
+        whole(MlxReductions::min, TestMlxReductions::minJava, -1, 1, 0, 0);
     }
 
     @Test
     public void testMean() throws TornadoExecutionPlanException {
-        whole(MlxReduce::mean, TestMlxReductions::meanJava, -1, 1, 1e-4, 1e-5);
+        whole(MlxReductions::mean, TestMlxReductions::meanJava, -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testVar() throws TornadoExecutionPlanException {
-        whole((x, out) -> MlxReduce.var(x, out, 0), v -> varJava(v, 0), -1, 1, 1e-4, 1e-5);
+        whole((x, out) -> MlxReductions.var(x, out, 0), v -> varJava(v, 0), -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testStd() throws TornadoExecutionPlanException {
-        whole((x, out) -> MlxReduce.std(x, out, 1), v -> Math.sqrt(varJava(v, 1)), -1, 1, 1e-4, 1e-5);
+        whole((x, out) -> MlxReductions.std(x, out, 1), v -> Math.sqrt(varJava(v, 1)), -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testLogsumexp() throws TornadoExecutionPlanException {
-        whole(MlxReduce::logsumexp, TestMlxReductions::logsumexpJava, -5, 5, 1e-5, 1e-5);
+        whole(MlxReductions::logsumexp, TestMlxReductions::logsumexpJava, -5, 5, 1e-5, 1e-5);
     }
 
     @Test
@@ -283,8 +282,8 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x, y) //
-                .libraryTask("allSparse", MlxReduce::all, x, allSparse) //
-                .libraryTask("allDense", MlxReduce::all, y, allDense) //
+                .libraryTask("allSparse", MlxReductions::all, x, allSparse) //
+                .libraryTask("allDense", MlxReductions::all, y, allDense) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, allSparse, allDense);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -305,8 +304,8 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, zeros, oneNonZero) //
-                .libraryTask("anyZeros", MlxReduce::any, zeros, anyZeros) //
-                .libraryTask("anyOne", MlxReduce::any, oneNonZero, anyOne) //
+                .libraryTask("anyZeros", MlxReductions::any, zeros, anyZeros) //
+                .libraryTask("anyOne", MlxReductions::any, oneNonZero, anyOne) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, anyZeros, anyOne);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -326,7 +325,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("argmin", MlxReduce::argmin, x, output) //
+                .libraryTask("argmin", MlxReductions::argmin, x, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -346,7 +345,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("argmax", Mlx::argmax, x, output) //
+                .libraryTask("argmax", MlxReductions::argmax, x, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -360,42 +359,42 @@ public class TestMlxReductions extends MlxTestBase {
 
     @Test
     public void testSumAxis() throws TornadoExecutionPlanException {
-        axis(MlxReduce::sumAxis, TestMlxReductions::sumJava, -1, 1, 1e-4, 1e-3);
+        axis(MlxReductions::sumAxis, TestMlxReductions::sumJava, -1, 1, 1e-4, 1e-3);
     }
 
     @Test
     public void testProdAxis() throws TornadoExecutionPlanException {
-        axis(MlxReduce::prodAxis, TestMlxReductions::prodJava, 0.99f, 1.01f, 1e-4, 1e-4);
+        axis(MlxReductions::prodAxis, TestMlxReductions::prodJava, 0.99f, 1.01f, 1e-4, 1e-4);
     }
 
     @Test
     public void testMaxAxis() throws TornadoExecutionPlanException {
-        axis(MlxReduce::maxAxis, TestMlxReductions::maxJava, -1, 1, 0, 0);
+        axis(MlxReductions::maxAxis, TestMlxReductions::maxJava, -1, 1, 0, 0);
     }
 
     @Test
     public void testMinAxis() throws TornadoExecutionPlanException {
-        axis(MlxReduce::minAxis, TestMlxReductions::minJava, -1, 1, 0, 0);
+        axis(MlxReductions::minAxis, TestMlxReductions::minJava, -1, 1, 0, 0);
     }
 
     @Test
     public void testMeanAxis() throws TornadoExecutionPlanException {
-        axis(MlxReduce::meanAxis, TestMlxReductions::meanJava, -1, 1, 1e-4, 1e-5);
+        axis(MlxReductions::meanAxis, TestMlxReductions::meanJava, -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testVarAxis() throws TornadoExecutionPlanException {
-        axis((x, out, o, l, i) -> MlxReduce.varAxis(x, out, o, l, i, 0), v -> varJava(v, 0), -1, 1, 1e-4, 1e-5);
+        axis((x, out, o, l, i) -> MlxReductions.varAxis(x, out, o, l, i, 0), v -> varJava(v, 0), -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testStdAxis() throws TornadoExecutionPlanException {
-        axis((x, out, o, l, i) -> MlxReduce.stdAxis(x, out, o, l, i, 1), v -> Math.sqrt(varJava(v, 1)), -1, 1, 1e-4, 1e-5);
+        axis((x, out, o, l, i) -> MlxReductions.stdAxis(x, out, o, l, i, 1), v -> Math.sqrt(varJava(v, 1)), -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testLogsumexpAxis() throws TornadoExecutionPlanException {
-        axis(MlxReduce::logsumexpAxis, TestMlxReductions::logsumexpJava, -5, 5, 1e-5, 1e-5);
+        axis(MlxReductions::logsumexpAxis, TestMlxReductions::logsumexpJava, -5, 5, 1e-5, 1e-5);
     }
 
     @Test
@@ -412,8 +411,8 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("all", MlxReduce::allAxis, x, all, OUTER, len, 1) //
-                .libraryTask("any", MlxReduce::anyAxis, x, any, OUTER, len, 1) //
+                .libraryTask("all", MlxReductions::allAxis, x, all, OUTER, len, 1) //
+                .libraryTask("any", MlxReductions::anyAxis, x, any, OUTER, len, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, all, any);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -432,7 +431,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("argmin", MlxReduce::argminAxis, x, output, OUTER, LEN, 1) //
+                .libraryTask("argmin", MlxReductions::argminAxis, x, output, OUTER, LEN, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -454,7 +453,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("argmax", Mlx::argmaxRows, x, output, rows, cols) //
+                .libraryTask("argmax", MlxReductions::argmaxRows, x, output, rows, cols) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -470,42 +469,42 @@ public class TestMlxReductions extends MlxTestBase {
 
     @Test
     public void testSumAxes() throws TornadoExecutionPlanException {
-        axes(MlxReduce::sumAxes, TestMlxReductions::sumJava, -1, 1, 1e-4, 1e-3);
+        axes(MlxReductions::sumAxes, TestMlxReductions::sumJava, -1, 1, 1e-4, 1e-3);
     }
 
     @Test
     public void testProdAxes() throws TornadoExecutionPlanException {
-        axes(MlxReduce::prodAxes, TestMlxReductions::prodJava, 0.99f, 1.01f, 1e-4, 1e-4);
+        axes(MlxReductions::prodAxes, TestMlxReductions::prodJava, 0.99f, 1.01f, 1e-4, 1e-4);
     }
 
     @Test
     public void testMaxAxes() throws TornadoExecutionPlanException {
-        axes(MlxReduce::maxAxes, TestMlxReductions::maxJava, -1, 1, 0, 0);
+        axes(MlxReductions::maxAxes, TestMlxReductions::maxJava, -1, 1, 0, 0);
     }
 
     @Test
     public void testMinAxes() throws TornadoExecutionPlanException {
-        axes(MlxReduce::minAxes, TestMlxReductions::minJava, -1, 1, 0, 0);
+        axes(MlxReductions::minAxes, TestMlxReductions::minJava, -1, 1, 0, 0);
     }
 
     @Test
     public void testMeanAxes() throws TornadoExecutionPlanException {
-        axes(MlxReduce::meanAxes, TestMlxReductions::meanJava, -1, 1, 1e-4, 1e-5);
+        axes(MlxReductions::meanAxes, TestMlxReductions::meanJava, -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testVarAxes() throws TornadoExecutionPlanException {
-        axes((x, out, o, l1, l2, i) -> MlxReduce.varAxes(x, out, o, l1, l2, i, 0), v -> varJava(v, 0), -1, 1, 1e-4, 1e-5);
+        axes((x, out, o, l1, l2, i) -> MlxReductions.varAxes(x, out, o, l1, l2, i, 0), v -> varJava(v, 0), -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testStdAxes() throws TornadoExecutionPlanException {
-        axes((x, out, o, l1, l2, i) -> MlxReduce.stdAxes(x, out, o, l1, l2, i, 1), v -> Math.sqrt(varJava(v, 1)), -1, 1, 1e-4, 1e-5);
+        axes((x, out, o, l1, l2, i) -> MlxReductions.stdAxes(x, out, o, l1, l2, i, 1), v -> Math.sqrt(varJava(v, 1)), -1, 1, 1e-4, 1e-5);
     }
 
     @Test
     public void testLogsumexpAxes() throws TornadoExecutionPlanException {
-        axes(MlxReduce::logsumexpAxes, TestMlxReductions::logsumexpJava, -5, 5, 1e-5, 1e-5);
+        axes(MlxReductions::logsumexpAxes, TestMlxReductions::logsumexpJava, -5, 5, 1e-5, 1e-5);
     }
 
     @Test
@@ -522,8 +521,8 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("all", MlxReduce::allAxes, x, all, OUTER, len1, len2, 1) //
-                .libraryTask("any", MlxReduce::anyAxes, x, any, OUTER, len1, len2, 1) //
+                .libraryTask("all", MlxReductions::allAxes, x, all, OUTER, len1, len2, 1) //
+                .libraryTask("any", MlxReductions::anyAxes, x, any, OUTER, len1, len2, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, all, any);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -544,7 +543,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("softmax", Mlx::softmax, x, output) //
+                .libraryTask("softmax", MlxReductions::softmax, x, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -564,7 +563,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("softmax", Mlx::softmaxRows, x, output, rows, cols) //
+                .libraryTask("softmax", MlxReductions::softmaxRows, x, output, rows, cols) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -585,7 +584,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("softmax", Mlx::softmaxLastTwoAxes, x, output, d0, d1, d2) //
+                .libraryTask("softmax", MlxReductions::softmaxLastTwoAxes, x, output, d0, d1, d2) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -604,7 +603,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("softmax", Mlx::softmax, x, output) //
+                .libraryTask("softmax", MlxReductions::softmax, x, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -623,7 +622,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("sum", MlxReduce::sumAxis, x, output, outer, len, 1) //
+                .libraryTask("sum", MlxReductions::sumAxis, x, output, outer, len, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -641,7 +640,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("logsumexp", MlxReduce::logsumexp, x, output) //
+                .libraryTask("logsumexp", MlxReductions::logsumexp, x, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -666,7 +665,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("sum", MlxReduce::sumAxes, x, output, outer, len1, len2, 1) //
+                .libraryTask("sum", MlxReductions::sumAxes, x, output, outer, len1, len2, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -694,7 +693,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("sum", MlxReduce::sumAxis, x, output, outer, len, inner) //
+                .libraryTask("sum", MlxReductions::sumAxis, x, output, outer, len, inner) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -722,7 +721,7 @@ public class TestMlxReductions extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("median", MlxReduce::median, x, output, OUTER, len, 1) //
+                .libraryTask("median", MlxReductions::median, x, output, OUTER, len, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {

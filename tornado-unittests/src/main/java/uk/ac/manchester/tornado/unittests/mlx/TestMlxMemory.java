@@ -28,7 +28,9 @@ import uk.ac.manchester.tornado.api.annotations.Parallel;
 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
-import uk.ac.manchester.tornado.mlx.Mlx;
+import uk.ac.manchester.tornado.mlx.MlxArithmetic;
+import uk.ac.manchester.tornado.mlx.MlxLinearAlgebra;
+import uk.ac.manchester.tornado.mlx.MlxNeuralNetwork;
 import uk.ac.manchester.tornado.mlx.provider.MlxLibraryProvider;
 
 /**
@@ -59,9 +61,9 @@ public class TestMlxMemory extends MlxTestBase {
         return new TaskGraph(name) //
                 .transferToDevice(DataTransferMode.FIRST_EXECUTION, x, norm, weight) //
                 .task("scale", TestMlxMemory::scale, x, xs) //
-                .libraryTask("norm", Mlx::rmsNorm, xs, norm, h, m, k, 1e-5f) //
-                .libraryTask("proj", Mlx::matmulTransposed, h, weight, y, m, k, k) //
-                .libraryTask("residual", Mlx::add, y, xs, out) //
+                .libraryTask("norm", MlxNeuralNetwork::rmsNorm, xs, norm, h, m, k, 1e-5f) //
+                .libraryTask("proj", MlxLinearAlgebra::matmulTransposed, h, weight, y, m, k, k) //
+                .libraryTask("residual", MlxArithmetic::add, y, xs, out) //
                 .transferToHost(DataTransferMode.UNDER_DEMAND, out);
     }
 

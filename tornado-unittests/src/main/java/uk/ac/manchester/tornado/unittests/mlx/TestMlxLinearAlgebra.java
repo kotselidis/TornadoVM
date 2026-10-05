@@ -33,10 +33,7 @@ import uk.ac.manchester.tornado.api.types.arrays.ByteArray;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
-import uk.ac.manchester.tornado.mlx.Mlx;
-import uk.ac.manchester.tornado.mlx.MlxIndex;
-import uk.ac.manchester.tornado.mlx.MlxLinalg;
-import uk.ac.manchester.tornado.mlx.MlxProducts;
+import uk.ac.manchester.tornado.mlx.MlxLinearAlgebra;
 import java.util.Random;
 
 /**
@@ -87,7 +84,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("matmul", Mlx::matmul, a, b, c, m, k, n) //
+                .libraryTask("matmul", MlxLinearAlgebra::matmul, a, b, c, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -110,7 +107,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, w) //
-                .libraryTask("matmul", Mlx::matmulTransposed, a, w, c, m, k, n) //
+                .libraryTask("matmul", MlxLinearAlgebra::matmulTransposed, a, w, c, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -137,7 +134,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, cIn, a, b) //
-                .libraryTask("addmm", Mlx::addmm, cIn, a, b, output, m, k, n, alpha, beta) //
+                .libraryTask("addmm", MlxLinearAlgebra::addmm, cIn, a, b, output, m, k, n, alpha, beta) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -166,7 +163,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("einsum", MlxProducts::einsumBatchedMatmul, a, b, output, batch, m, k, n) //
+                .libraryTask("einsum", MlxLinearAlgebra::einsumBatchedMatmul, a, b, output, batch, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -193,7 +190,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("tensordot", MlxProducts::tensordot, a, b, output, m, 4, 8, n) //
+                .libraryTask("tensordot", MlxLinearAlgebra::tensordot, a, b, output, m, 4, 8, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -216,7 +213,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("tensordot", MlxProducts::tensordotAxis, a, b, output, m, k, n) //
+                .libraryTask("tensordot", MlxLinearAlgebra::tensordotAxis, a, b, output, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -237,7 +234,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("inner", MlxProducts::inner, a, b, output) //
+                .libraryTask("inner", MlxLinearAlgebra::inner, a, b, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -263,7 +260,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("outer", MlxProducts::outer, a, b, output) //
+                .libraryTask("outer", MlxLinearAlgebra::outer, a, b, output) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -288,7 +285,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("kron", MlxProducts::kron, a, b, output, 5, 4, 3, 6) //
+                .libraryTask("kron", MlxLinearAlgebra::kron, a, b, output, 5, 4, 3, 6) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -320,7 +317,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, segments, a, b) //
-                .libraryTask("segmentedMm", MlxProducts::segmentedMm, a, b, segments, output, m, k, n) //
+                .libraryTask("segmentedMm", MlxLinearAlgebra::segmentedMm, a, b, segments, output, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -362,7 +359,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b, lhsIndices, rhsIndices) //
-                .libraryTask("gatherMm", MlxIndex::gatherMm, a, b, lhsIndices, rhsIndices, output, batchesA, batchesB, m, k, n) //
+                .libraryTask("gatherMm", MlxLinearAlgebra::gatherMm, a, b, lhsIndices, rhsIndices, output, batchesA, batchesB, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -387,7 +384,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("cross", MlxLinalg::cross, a, b, output, count) //
+                .libraryTask("cross", MlxLinearAlgebra::cross, a, b, output, count) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -415,7 +412,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
             TaskGraph taskGraph = new TaskGraph("g") //
                     .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                    .libraryTask("norm", MlxLinalg::norm, x, output, rows, cols, ord) //
+                    .libraryTask("norm", MlxLinearAlgebra::norm, x, output, rows, cols, ord) //
                     .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
             try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -445,7 +442,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("l2Norm", MlxLinalg::l2Norm, x, output, rows, cols) //
+                .libraryTask("l2Norm", MlxLinearAlgebra::l2Norm, x, output, rows, cols) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -474,7 +471,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("frobenius", MlxLinalg::frobeniusNorm, x, output, batch, rows, cols) //
+                .libraryTask("frobenius", MlxLinearAlgebra::frobeniusNorm, x, output, batch, rows, cols) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -507,7 +504,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, w, x) //
-                .libraryTask("gemv", Mlx::matmulTransposed, x, w, y, 1, cols, rows) //
+                .libraryTask("gemv", MlxLinearAlgebra::matmulTransposed, x, w, y, 1, cols, rows) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -528,7 +525,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("matmul", Mlx::matmul, a, b, c, m, k, n) //
+                .libraryTask("matmul", MlxLinearAlgebra::matmul, a, b, c, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -549,7 +546,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("matmul", Mlx::matmul, a, b, c, m, k, n) //
+                .libraryTask("matmul", MlxLinearAlgebra::matmul, a, b, c, m, k, n) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -569,7 +566,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, w, x) //
-                .libraryTask("gemv", Mlx::matmulTransposed, x, w, y, 1, cols, rows) //
+                .libraryTask("gemv", MlxLinearAlgebra::matmulTransposed, x, w, y, 1, cols, rows) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -588,7 +585,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("cross", MlxLinalg::cross, a, b, output, count) //
+                .libraryTask("cross", MlxLinearAlgebra::cross, a, b, output, count) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -617,7 +614,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .libraryTask("matmul", Mlx::matmul, a, b, c, 1, 8, 1) //
+                .libraryTask("matmul", MlxLinearAlgebra::matmul, a, b, c, 1, 8, 1) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -654,7 +651,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b, maskOut, maskLhs, maskRhs) //
-                .libraryTask("blockMaskedMm", MlxProducts::blockMaskedMm, a, b, maskOut, maskLhs, maskRhs, output, m, k, n, bs) //
+                .libraryTask("blockMaskedMm", MlxLinearAlgebra::blockMaskedMm, a, b, maskOut, maskLhs, maskRhs, output, m, k, n, bs) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -690,7 +687,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, x) //
-                .libraryTask("hadamard", MlxProducts::hadamardTransform, x, output, rows, n, scale) //
+                .libraryTask("hadamard", MlxLinearAlgebra::hadamardTransform, x, output, rows, n, scale) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -973,7 +970,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
             TaskGraph taskGraph = new TaskGraph("g") //
                     .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                    .libraryTask("cholesky", MlxLinalg::cholesky, input, output, BATCH, ORDER, upper) //
+                    .libraryTask("cholesky", MlxLinearAlgebra::cholesky, input, output, BATCH, ORDER, upper) //
                     .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
             try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -994,7 +991,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, factor) //
-                .libraryTask("choleskyInv", MlxLinalg::choleskyInv, factor, output, BATCH, ORDER, false) //
+                .libraryTask("choleskyInv", MlxLinearAlgebra::choleskyInv, factor, output, BATCH, ORDER, false) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1014,7 +1011,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
             TaskGraph taskGraph = new TaskGraph("g") //
                     .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                    .libraryTask("triInv", MlxLinalg::triInv, input, output, BATCH, ORDER, upper) //
+                    .libraryTask("triInv", MlxLinearAlgebra::triInv, input, output, BATCH, ORDER, upper) //
                     .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
             try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1033,7 +1030,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("inv", MlxLinalg::inv, input, output, BATCH, ORDER) //
+                .libraryTask("inv", MlxLinearAlgebra::inv, input, output, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1054,7 +1051,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input, b) //
-                .libraryTask("solve", MlxLinalg::solve, input, b, x, BATCH, ORDER, nrhs) //
+                .libraryTask("solve", MlxLinearAlgebra::solve, input, b, x, BATCH, ORDER, nrhs) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, x);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1075,7 +1072,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input, b) //
-                .libraryTask("solveTriangular", MlxLinalg::solveTriangular, input, b, x, BATCH, ORDER, nrhs, true) //
+                .libraryTask("solveTriangular", MlxLinearAlgebra::solveTriangular, input, b, x, BATCH, ORDER, nrhs, true) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, x);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1096,7 +1093,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("lu", MlxLinalg::lu, input, perm, l, u, BATCH, ORDER) //
+                .libraryTask("lu", MlxLinearAlgebra::lu, input, perm, l, u, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, perm, l, u);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1130,7 +1127,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("luFactor", MlxLinalg::luFactor, input, lu, pivots, BATCH, ORDER) //
+                .libraryTask("luFactor", MlxLinearAlgebra::luFactor, input, lu, pivots, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, lu, pivots);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1170,7 +1167,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("qr", MlxLinalg::qr, input, q, r, BATCH, ORDER) //
+                .libraryTask("qr", MlxLinearAlgebra::qr, input, q, r, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, q, r);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1198,7 +1195,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("eigh", MlxLinalg::eigh, input, values, vectors, BATCH, ORDER, false) //
+                .libraryTask("eigh", MlxLinearAlgebra::eigh, input, values, vectors, BATCH, ORDER, false) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, values, vectors);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1228,7 +1225,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("eigvalsh", MlxLinalg::eigvalsh, input, values, BATCH, ORDER, true) //
+                .libraryTask("eigvalsh", MlxLinearAlgebra::eigvalsh, input, values, BATCH, ORDER, true) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, values);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1260,7 +1257,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("svd", MlxLinalg::svd, input, u, s, vt, BATCH, ORDER) //
+                .libraryTask("svd", MlxLinearAlgebra::svd, input, u, s, vt, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, u, s, vt);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1288,7 +1285,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("singularValues", MlxLinalg::singularValues, input, s, BATCH, ORDER) //
+                .libraryTask("singularValues", MlxLinearAlgebra::singularValues, input, s, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, s);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1307,7 +1304,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("pinv", MlxLinalg::pinv, input, output, BATCH, ORDER) //
+                .libraryTask("pinv", MlxLinearAlgebra::pinv, input, output, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1352,7 +1349,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("eig", MlxLinalg::eig, input, values, vectors, BATCH, ORDER) //
+                .libraryTask("eig", MlxLinearAlgebra::eig, input, values, vectors, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, values, vectors);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
@@ -1380,7 +1377,7 @@ public class TestMlxLinearAlgebra extends MlxTestBase {
 
         TaskGraph taskGraph = new TaskGraph("g") //
                 .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .libraryTask("eigvals", MlxLinalg::eigvals, input, values, BATCH, ORDER) //
+                .libraryTask("eigvals", MlxLinearAlgebra::eigvals, input, values, BATCH, ORDER) //
                 .transferToHost(DataTransferMode.EVERY_EXECUTION, values);
 
         try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {

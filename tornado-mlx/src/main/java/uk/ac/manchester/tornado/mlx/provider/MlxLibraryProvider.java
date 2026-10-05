@@ -34,6 +34,7 @@ import uk.ac.manchester.tornado.api.enums.TornadoVMBackendType;
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
 import uk.ac.manchester.tornado.mlx.Mlx;
 import uk.ac.manchester.tornado.mlx.MlxOptions;
+import uk.ac.manchester.tornado.mlx.provider.MlxNativeLib.MlxCall;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 import uk.ac.manchester.tornado.runtime.library.spi.LibraryContext;
 import uk.ac.manchester.tornado.runtime.library.spi.LibraryInvocation;
@@ -63,9 +64,9 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
     private static final AtomicLong COPY_FALLBACKS = new AtomicLong();
 
     /** Operations MLX only implements on the CPU stream. */
-    private static final Set<String> CPU_ONLY = Set.of("linalg_cholesky", "linalg_cholesky_inv", "linalg_tri_inv", "linalg_inv", "linalg_solve", "linalg_solve_triangular",
-            "linalg_lu", "linalg_lu_factor", "linalg_qr", "linalg_eigh", "linalg_eigvalsh", "linalg_svd", "linalg_svd_values", "linalg_pinv", "linalg_eig", "linalg_eigvals",
-            "random_multivariate_normal");
+    private static final Set<String> CPU_ONLY = Set.of("mlx_linalg_cholesky", "mlx_linalg_cholesky_inv", "mlx_linalg_tri_inv", "mlx_linalg_inv", "mlx_linalg_solve",
+            "mlx_linalg_solve_triangular", "mlx_linalg_lu", "mlx_linalg_lu_factor", "mlx_linalg_qr", "mlx_linalg_eigh", "mlx_linalg_eigvalsh", "mlx_linalg_svd",
+            "mlx_linalg_svd_values", "mlx_linalg_pinv", "mlx_linalg_eig", "mlx_linalg_eigvals", "mlx_random_multivariate_normal");
 
     private interface Unary {
         int apply(MemorySegment res, MemorySegment a, MemorySegment stream);
@@ -126,344 +127,344 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
 
     private static final Map<String, Consumer<MlxCall>> OPERATIONS = Map.ofEntries(
             // Element-wise binary: (a, b, out), all the same length.
-            entry("add", c -> binary(c, "mlx_add", MlxC::mlx_add)), //
-            entry("subtract", c -> binary(c, "mlx_subtract", MlxC::mlx_subtract)), //
-            entry("multiply", c -> binary(c, "mlx_multiply", MlxC::mlx_multiply)), //
-            entry("divide", c -> binary(c, "mlx_divide", MlxC::mlx_divide)), //
-            entry("maximum", c -> binary(c, "mlx_maximum", MlxC::mlx_maximum)), //
-            entry("minimum", c -> binary(c, "mlx_minimum", MlxC::mlx_minimum)), //
+            entry("mlx_add", c -> binary(c, "mlx_add", MlxC::mlx_add)), //
+            entry("mlx_subtract", c -> binary(c, "mlx_subtract", MlxC::mlx_subtract)), //
+            entry("mlx_multiply", c -> binary(c, "mlx_multiply", MlxC::mlx_multiply)), //
+            entry("mlx_divide", c -> binary(c, "mlx_divide", MlxC::mlx_divide)), //
+            entry("mlx_maximum", c -> binary(c, "mlx_maximum", MlxC::mlx_maximum)), //
+            entry("mlx_minimum", c -> binary(c, "mlx_minimum", MlxC::mlx_minimum)), //
             // Element-wise unary: (a, out).
-            entry("negative", c -> unary(c, "mlx_negative", MlxC::mlx_negative)), //
-            entry("exp", c -> unary(c, "mlx_exp", MlxC::mlx_exp)), //
-            entry("tanh", c -> unary(c, "mlx_tanh", MlxC::mlx_tanh)), //
-            entry("erf", c -> unary(c, "mlx_erf", MlxC::mlx_erf)), //
-            entry("sigmoid", c -> unary(c, "mlx_sigmoid", MlxC::mlx_sigmoid)), //
-            entry("sqrt", c -> unary(c, "mlx_sqrt", MlxC::mlx_sqrt)), //
-            entry("rsqrt", c -> unary(c, "mlx_rsqrt", MlxC::mlx_rsqrt)), //
-            entry("square", c -> unary(c, "mlx_square", MlxC::mlx_square)), //
+            entry("mlx_negative", c -> unary(c, "mlx_negative", MlxC::mlx_negative)), //
+            entry("mlx_exp", c -> unary(c, "mlx_exp", MlxC::mlx_exp)), //
+            entry("mlx_tanh", c -> unary(c, "mlx_tanh", MlxC::mlx_tanh)), //
+            entry("mlx_erf", c -> unary(c, "mlx_erf", MlxC::mlx_erf)), //
+            entry("mlx_sigmoid", c -> unary(c, "mlx_sigmoid", MlxC::mlx_sigmoid)), //
+            entry("mlx_sqrt", c -> unary(c, "mlx_sqrt", MlxC::mlx_sqrt)), //
+            entry("mlx_rsqrt", c -> unary(c, "mlx_rsqrt", MlxC::mlx_rsqrt)), //
+            entry("mlx_square", c -> unary(c, "mlx_square", MlxC::mlx_square)), //
             // Element-wise math (MlxMath).
-            entry("abs", c -> unary(c, "mlx_abs", MlxC::mlx_abs)), //
-            entry("arccos", c -> unary(c, "mlx_arccos", MlxC::mlx_arccos)), //
-            entry("arccosh", c -> unary(c, "mlx_arccosh", MlxC::mlx_arccosh)), //
-            entry("arcsin", c -> unary(c, "mlx_arcsin", MlxC::mlx_arcsin)), //
-            entry("arcsinh", c -> unary(c, "mlx_arcsinh", MlxC::mlx_arcsinh)), //
-            entry("arctan", c -> unary(c, "mlx_arctan", MlxC::mlx_arctan)), //
-            entry("arctanh", c -> unary(c, "mlx_arctanh", MlxC::mlx_arctanh)), //
-            entry("ceil", c -> unary(c, "mlx_ceil", MlxC::mlx_ceil)), //
-            entry("cos", c -> unary(c, "mlx_cos", MlxC::mlx_cos)), //
-            entry("cosh", c -> unary(c, "mlx_cosh", MlxC::mlx_cosh)), //
-            entry("degrees", c -> unary(c, "mlx_degrees", MlxC::mlx_degrees)), //
-            entry("erfinv", c -> unary(c, "mlx_erfinv", MlxC::mlx_erfinv)), //
-            entry("expm1", c -> unary(c, "mlx_expm1", MlxC::mlx_expm1)), //
-            entry("floor", c -> unary(c, "mlx_floor", MlxC::mlx_floor)), //
-            entry("log", c -> unary(c, "mlx_log", MlxC::mlx_log)), //
-            entry("log10", c -> unary(c, "mlx_log10", MlxC::mlx_log10)), //
-            entry("log1p", c -> unary(c, "mlx_log1p", MlxC::mlx_log1p)), //
-            entry("log2", c -> unary(c, "mlx_log2", MlxC::mlx_log2)), //
-            entry("radians", c -> unary(c, "mlx_radians", MlxC::mlx_radians)), //
-            entry("reciprocal", c -> unary(c, "mlx_reciprocal", MlxC::mlx_reciprocal)), //
-            entry("sign", c -> unary(c, "mlx_sign", MlxC::mlx_sign)), //
-            entry("sin", c -> unary(c, "mlx_sin", MlxC::mlx_sin)), //
-            entry("sinh", c -> unary(c, "mlx_sinh", MlxC::mlx_sinh)), //
-            entry("tan", c -> unary(c, "mlx_tan", MlxC::mlx_tan)), //
-            entry("arctan2", c -> binary(c, "mlx_arctan2", MlxC::mlx_arctan2)), //
-            entry("floor_divide", c -> binary(c, "mlx_floor_divide", MlxC::mlx_floor_divide)), //
-            entry("logaddexp", c -> binary(c, "mlx_logaddexp", MlxC::mlx_logaddexp)), //
-            entry("power", c -> binary(c, "mlx_power", MlxC::mlx_power)), //
-            entry("remainder", c -> binary(c, "mlx_remainder", MlxC::mlx_remainder)), //
-            entry("round", MlxLibraryProvider::round), //
-            entry("divmod", MlxLibraryProvider::divmod), //
-            entry("clip", MlxLibraryProvider::clip), //
-            entry("where", MlxLibraryProvider::where), //
+            entry("mlx_abs", c -> unary(c, "mlx_abs", MlxC::mlx_abs)), //
+            entry("mlx_arccos", c -> unary(c, "mlx_arccos", MlxC::mlx_arccos)), //
+            entry("mlx_arccosh", c -> unary(c, "mlx_arccosh", MlxC::mlx_arccosh)), //
+            entry("mlx_arcsin", c -> unary(c, "mlx_arcsin", MlxC::mlx_arcsin)), //
+            entry("mlx_arcsinh", c -> unary(c, "mlx_arcsinh", MlxC::mlx_arcsinh)), //
+            entry("mlx_arctan", c -> unary(c, "mlx_arctan", MlxC::mlx_arctan)), //
+            entry("mlx_arctanh", c -> unary(c, "mlx_arctanh", MlxC::mlx_arctanh)), //
+            entry("mlx_ceil", c -> unary(c, "mlx_ceil", MlxC::mlx_ceil)), //
+            entry("mlx_cos", c -> unary(c, "mlx_cos", MlxC::mlx_cos)), //
+            entry("mlx_cosh", c -> unary(c, "mlx_cosh", MlxC::mlx_cosh)), //
+            entry("mlx_degrees", c -> unary(c, "mlx_degrees", MlxC::mlx_degrees)), //
+            entry("mlx_erfinv", c -> unary(c, "mlx_erfinv", MlxC::mlx_erfinv)), //
+            entry("mlx_expm1", c -> unary(c, "mlx_expm1", MlxC::mlx_expm1)), //
+            entry("mlx_floor", c -> unary(c, "mlx_floor", MlxC::mlx_floor)), //
+            entry("mlx_log", c -> unary(c, "mlx_log", MlxC::mlx_log)), //
+            entry("mlx_log10", c -> unary(c, "mlx_log10", MlxC::mlx_log10)), //
+            entry("mlx_log1p", c -> unary(c, "mlx_log1p", MlxC::mlx_log1p)), //
+            entry("mlx_log2", c -> unary(c, "mlx_log2", MlxC::mlx_log2)), //
+            entry("mlx_radians", c -> unary(c, "mlx_radians", MlxC::mlx_radians)), //
+            entry("mlx_reciprocal", c -> unary(c, "mlx_reciprocal", MlxC::mlx_reciprocal)), //
+            entry("mlx_sign", c -> unary(c, "mlx_sign", MlxC::mlx_sign)), //
+            entry("mlx_sin", c -> unary(c, "mlx_sin", MlxC::mlx_sin)), //
+            entry("mlx_sinh", c -> unary(c, "mlx_sinh", MlxC::mlx_sinh)), //
+            entry("mlx_tan", c -> unary(c, "mlx_tan", MlxC::mlx_tan)), //
+            entry("mlx_arctan2", c -> binary(c, "mlx_arctan2", MlxC::mlx_arctan2)), //
+            entry("mlx_floor_divide", c -> binary(c, "mlx_floor_divide", MlxC::mlx_floor_divide)), //
+            entry("mlx_logaddexp", c -> binary(c, "mlx_logaddexp", MlxC::mlx_logaddexp)), //
+            entry("mlx_power", c -> binary(c, "mlx_power", MlxC::mlx_power)), //
+            entry("mlx_remainder", c -> binary(c, "mlx_remainder", MlxC::mlx_remainder)), //
+            entry("mlx_round", MlxLibraryProvider::round), //
+            entry("mlx_divmod", MlxLibraryProvider::divmod), //
+            entry("mlx_clip", MlxLibraryProvider::clip), //
+            entry("mlx_where", MlxLibraryProvider::where), //
             // Reductions (MlxReduce).
-            entry("sum", c -> reduce(c, "mlx_sum", MlxC::mlx_sum)), //
-            entry("sum_axis", c -> reduceAxis(c, "mlx_sum_axis", MlxC::mlx_sum_axis)), //
-            entry("sum_axes", c -> reduceAxes(c, "mlx_sum_axes", MlxC::mlx_sum_axes)), //
-            entry("prod", c -> reduce(c, "mlx_prod", MlxC::mlx_prod)), //
-            entry("prod_axis", c -> reduceAxis(c, "mlx_prod_axis", MlxC::mlx_prod_axis)), //
-            entry("prod_axes", c -> reduceAxes(c, "mlx_prod_axes", MlxC::mlx_prod_axes)), //
-            entry("max", c -> reduce(c, "mlx_max", MlxC::mlx_max)), //
-            entry("max_axis", c -> reduceAxis(c, "mlx_max_axis", MlxC::mlx_max_axis)), //
-            entry("max_axes", c -> reduceAxes(c, "mlx_max_axes", MlxC::mlx_max_axes)), //
-            entry("min", c -> reduce(c, "mlx_min", MlxC::mlx_min)), //
-            entry("min_axis", c -> reduceAxis(c, "mlx_min_axis", MlxC::mlx_min_axis)), //
-            entry("min_axes", c -> reduceAxes(c, "mlx_min_axes", MlxC::mlx_min_axes)), //
-            entry("mean", c -> reduce(c, "mlx_mean", MlxC::mlx_mean)), //
-            entry("mean_axis", c -> reduceAxis(c, "mlx_mean_axis", MlxC::mlx_mean_axis)), //
-            entry("mean_axes", c -> reduceAxes(c, "mlx_mean_axes", MlxC::mlx_mean_axes)), //
-            entry("logsumexp", c -> reduce(c, "mlx_logsumexp", MlxC::mlx_logsumexp)), //
-            entry("logsumexp_axis", c -> reduceAxis(c, "mlx_logsumexp_axis", MlxC::mlx_logsumexp_axis)), //
-            entry("logsumexp_axes", c -> reduceAxes(c, "mlx_logsumexp_axes", MlxC::mlx_logsumexp_axes)), //
-            entry("var", c -> reduce(c, "mlx_var", (r, a, k, s) -> MlxC.mlx_var(r, a, k, c.intArg(2), s))), //
-            entry("var_axis", c -> reduceAxis(c, "mlx_var_axis", (r, a, ax, k, s) -> MlxC.mlx_var_axis(r, a, ax, k, c.intArg(5), s))), //
-            entry("var_axes", c -> reduceAxes(c, "mlx_var_axes", (r, a, axes, n, k, s) -> MlxC.mlx_var_axes(r, a, axes, n, k, c.intArg(6), s))), //
-            entry("std", c -> reduce(c, "mlx_std", (r, a, k, s) -> MlxC.mlx_std(r, a, k, c.intArg(2), s))), //
-            entry("std_axis", c -> reduceAxis(c, "mlx_std_axis", (r, a, ax, k, s) -> MlxC.mlx_std_axis(r, a, ax, k, c.intArg(5), s))), //
-            entry("std_axes", c -> reduceAxes(c, "mlx_std_axes", (r, a, axes, n, k, s) -> MlxC.mlx_std_axes(r, a, axes, n, k, c.intArg(6), s))), //
-            entry("all", c -> reduce(c, "mlx_all", MlxC::mlx_all)), //
-            entry("all_axis", c -> reduceAxis(c, "mlx_all_axis", MlxC::mlx_all_axis)), //
-            entry("all_axes", c -> reduceAxes(c, "mlx_all_axes", MlxC::mlx_all_axes)), //
-            entry("any", c -> reduce(c, "mlx_any", MlxC::mlx_any)), //
-            entry("any_axis", c -> reduceAxis(c, "mlx_any_axis", MlxC::mlx_any_axis)), //
-            entry("any_axes", c -> reduceAxes(c, "mlx_any_axes", MlxC::mlx_any_axes)), //
-            entry("argmin", c -> reduce(c, "mlx_argmin", MlxC::mlx_argmin)), //
-            entry("argmin_axis", c -> reduceAxis(c, "mlx_argmin_axis", MlxC::mlx_argmin_axis)), //
-            entry("cumsum", c -> scan(c, "mlx_cumsum", MlxC::mlx_cumsum)), //
-            entry("cumprod", c -> scan(c, "mlx_cumprod", MlxC::mlx_cumprod)), //
-            entry("cummax", c -> scan(c, "mlx_cummax", MlxC::mlx_cummax)), //
-            entry("cummin", c -> scan(c, "mlx_cummin", MlxC::mlx_cummin)), //
-            entry("logcumsumexp", c -> scan(c, "mlx_logcumsumexp", MlxC::mlx_logcumsumexp)), //
-            entry("median", c -> reduceAxes(c, "mlx_median", (r, a, axes, n, k, s) -> MlxC.mlx_median(r, a, axes, n, k, s), true)), //
+            entry("mlx_sum", c -> reduce(c, "mlx_sum", MlxC::mlx_sum)), //
+            entry("mlx_sum_axis", c -> reduceAxis(c, "mlx_sum_axis", MlxC::mlx_sum_axis)), //
+            entry("mlx_sum_axes", c -> reduceAxes(c, "mlx_sum_axes", MlxC::mlx_sum_axes)), //
+            entry("mlx_prod", c -> reduce(c, "mlx_prod", MlxC::mlx_prod)), //
+            entry("mlx_prod_axis", c -> reduceAxis(c, "mlx_prod_axis", MlxC::mlx_prod_axis)), //
+            entry("mlx_prod_axes", c -> reduceAxes(c, "mlx_prod_axes", MlxC::mlx_prod_axes)), //
+            entry("mlx_max", c -> reduce(c, "mlx_max", MlxC::mlx_max)), //
+            entry("mlx_max_axis", c -> reduceAxis(c, "mlx_max_axis", MlxC::mlx_max_axis)), //
+            entry("mlx_max_axes", c -> reduceAxes(c, "mlx_max_axes", MlxC::mlx_max_axes)), //
+            entry("mlx_min", c -> reduce(c, "mlx_min", MlxC::mlx_min)), //
+            entry("mlx_min_axis", c -> reduceAxis(c, "mlx_min_axis", MlxC::mlx_min_axis)), //
+            entry("mlx_min_axes", c -> reduceAxes(c, "mlx_min_axes", MlxC::mlx_min_axes)), //
+            entry("mlx_mean", c -> reduce(c, "mlx_mean", MlxC::mlx_mean)), //
+            entry("mlx_mean_axis", c -> reduceAxis(c, "mlx_mean_axis", MlxC::mlx_mean_axis)), //
+            entry("mlx_mean_axes", c -> reduceAxes(c, "mlx_mean_axes", MlxC::mlx_mean_axes)), //
+            entry("mlx_logsumexp", c -> reduce(c, "mlx_logsumexp", MlxC::mlx_logsumexp)), //
+            entry("mlx_logsumexp_axis", c -> reduceAxis(c, "mlx_logsumexp_axis", MlxC::mlx_logsumexp_axis)), //
+            entry("mlx_logsumexp_axes", c -> reduceAxes(c, "mlx_logsumexp_axes", MlxC::mlx_logsumexp_axes)), //
+            entry("mlx_var", c -> reduce(c, "mlx_var", (r, a, k, s) -> MlxC.mlx_var(r, a, k, c.intArg(2), s))), //
+            entry("mlx_var_axis", c -> reduceAxis(c, "mlx_var_axis", (r, a, ax, k, s) -> MlxC.mlx_var_axis(r, a, ax, k, c.intArg(5), s))), //
+            entry("mlx_var_axes", c -> reduceAxes(c, "mlx_var_axes", (r, a, axes, n, k, s) -> MlxC.mlx_var_axes(r, a, axes, n, k, c.intArg(6), s))), //
+            entry("mlx_std", c -> reduce(c, "mlx_std", (r, a, k, s) -> MlxC.mlx_std(r, a, k, c.intArg(2), s))), //
+            entry("mlx_std_axis", c -> reduceAxis(c, "mlx_std_axis", (r, a, ax, k, s) -> MlxC.mlx_std_axis(r, a, ax, k, c.intArg(5), s))), //
+            entry("mlx_std_axes", c -> reduceAxes(c, "mlx_std_axes", (r, a, axes, n, k, s) -> MlxC.mlx_std_axes(r, a, axes, n, k, c.intArg(6), s))), //
+            entry("mlx_all", c -> reduce(c, "mlx_all", MlxC::mlx_all)), //
+            entry("mlx_all_axis", c -> reduceAxis(c, "mlx_all_axis", MlxC::mlx_all_axis)), //
+            entry("mlx_all_axes", c -> reduceAxes(c, "mlx_all_axes", MlxC::mlx_all_axes)), //
+            entry("mlx_any", c -> reduce(c, "mlx_any", MlxC::mlx_any)), //
+            entry("mlx_any_axis", c -> reduceAxis(c, "mlx_any_axis", MlxC::mlx_any_axis)), //
+            entry("mlx_any_axes", c -> reduceAxes(c, "mlx_any_axes", MlxC::mlx_any_axes)), //
+            entry("mlx_argmin", c -> reduce(c, "mlx_argmin", MlxC::mlx_argmin)), //
+            entry("mlx_argmin_axis", c -> reduceAxis(c, "mlx_argmin_axis", MlxC::mlx_argmin_axis)), //
+            entry("mlx_cumsum", c -> scan(c, "mlx_cumsum", MlxC::mlx_cumsum)), //
+            entry("mlx_cumprod", c -> scan(c, "mlx_cumprod", MlxC::mlx_cumprod)), //
+            entry("mlx_cummax", c -> scan(c, "mlx_cummax", MlxC::mlx_cummax)), //
+            entry("mlx_cummin", c -> scan(c, "mlx_cummin", MlxC::mlx_cummin)), //
+            entry("mlx_logcumsumexp", c -> scan(c, "mlx_logcumsumexp", MlxC::mlx_logcumsumexp)), //
+            entry("mlx_median", c -> reduceAxes(c, "mlx_median", (r, a, axes, n, k, s) -> MlxC.mlx_median(r, a, axes, n, k, s), true)), //
             // Sorting and partitioning (MlxSort).
-            entry("sort", c -> whole(c, (r, a, s) -> MlxC.mlx_sort(r, a, s), "mlx_sort")), //
-            entry("argsort", c -> whole(c, (r, a, s) -> MlxC.mlx_argsort(r, a, s), "mlx_argsort")), //
-            entry("partition", c -> whole(c, (r, a, s) -> MlxC.mlx_partition(r, a, c.intArg(2), s), "mlx_partition")), //
-            entry("argpartition", c -> whole(c, (r, a, s) -> MlxC.mlx_argpartition(r, a, c.intArg(2), s), "mlx_argpartition")), //
-            entry("sort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_sort_axis(r, a, 1, s), "mlx_sort_axis")), //
-            entry("argsort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argsort_axis(r, a, 1, s), "mlx_argsort_axis")), //
-            entry("partition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_partition_axis(r, a, c.intArg(5), 1, s), "mlx_partition_axis")), //
-            entry("argpartition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argpartition_axis(r, a, c.intArg(5), 1, s), "mlx_argpartition_axis")), //
+            entry("mlx_sort", c -> whole(c, (r, a, s) -> MlxC.mlx_sort(r, a, s), "mlx_sort")), //
+            entry("mlx_argsort", c -> whole(c, (r, a, s) -> MlxC.mlx_argsort(r, a, s), "mlx_argsort")), //
+            entry("mlx_partition", c -> whole(c, (r, a, s) -> MlxC.mlx_partition(r, a, c.intArg(2), s), "mlx_partition")), //
+            entry("mlx_argpartition", c -> whole(c, (r, a, s) -> MlxC.mlx_argpartition(r, a, c.intArg(2), s), "mlx_argpartition")), //
+            entry("mlx_sort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_sort_axis(r, a, 1, s), "mlx_sort_axis")), //
+            entry("mlx_argsort_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argsort_axis(r, a, 1, s), "mlx_argsort_axis")), //
+            entry("mlx_partition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_partition_axis(r, a, c.intArg(5), 1, s), "mlx_partition_axis")), //
+            entry("mlx_argpartition_axis", c -> alongAxis(c, (r, a, s) -> MlxC.mlx_argpartition_axis(r, a, c.intArg(5), 1, s), "mlx_argpartition_axis")), //
             // Indexing (MlxIndex).
-            entry("take", MlxLibraryProvider::take), //
-            entry("take_axis", MlxLibraryProvider::takeAxis), //
-            entry("take_along_axis", MlxLibraryProvider::takeAlongAxis), //
-            entry("put_along_axis", c -> alongAxisUpdate(c, "mlx_put_along_axis", MlxC::mlx_put_along_axis)), //
-            entry("scatter_add_axis", c -> alongAxisUpdate(c, "mlx_scatter_add_axis", MlxC::mlx_scatter_add_axis)), //
-            entry("gather", MlxLibraryProvider::gather), //
-            entry("gather_single", MlxLibraryProvider::gatherRows), //
-            entry("scatter", c -> scatterPoints(c, "mlx_scatter", MlxC::mlx_scatter)), //
-            entry("scatter_add", c -> scatterPoints(c, "mlx_scatter_add", MlxC::mlx_scatter_add)), //
-            entry("scatter_max", c -> scatterPoints(c, "mlx_scatter_max", MlxC::mlx_scatter_max)), //
-            entry("scatter_min", c -> scatterPoints(c, "mlx_scatter_min", MlxC::mlx_scatter_min)), //
-            entry("scatter_prod", c -> scatterPoints(c, "mlx_scatter_prod", MlxC::mlx_scatter_prod)), //
-            entry("scatter_single", c -> scatterRows(c, "mlx_scatter_single", MlxC::mlx_scatter_single)), //
-            entry("scatter_add_single", c -> scatterRows(c, "mlx_scatter_add_single", MlxC::mlx_scatter_add_single)), //
-            entry("scatter_max_single", c -> scatterRows(c, "mlx_scatter_max_single", MlxC::mlx_scatter_max_single)), //
-            entry("scatter_min_single", c -> scatterRows(c, "mlx_scatter_min_single", MlxC::mlx_scatter_min_single)), //
-            entry("scatter_prod_single", c -> scatterRows(c, "mlx_scatter_prod_single", MlxC::mlx_scatter_prod_single)), //
-            entry("slice", MlxLibraryProvider::slice), //
-            entry("slice_dynamic", MlxLibraryProvider::sliceDynamic), //
-            entry("slice_update", c -> sliceUpdate(c, "mlx_slice_update", MlxC::mlx_slice_update)), //
-            entry("slice_update_add", c -> sliceUpdate(c, "mlx_slice_update_add", MlxC::mlx_slice_update_add)), //
-            entry("slice_update_max", c -> sliceUpdate(c, "mlx_slice_update_max", MlxC::mlx_slice_update_max)), //
-            entry("slice_update_min", c -> sliceUpdate(c, "mlx_slice_update_min", MlxC::mlx_slice_update_min)), //
-            entry("slice_update_prod", c -> sliceUpdate(c, "mlx_slice_update_prod", MlxC::mlx_slice_update_prod)), //
-            entry("slice_update_dynamic", MlxLibraryProvider::sliceUpdateDynamic), //
-            entry("masked_scatter", MlxLibraryProvider::maskedScatter), //
-            entry("gather_mm", MlxLibraryProvider::gatherMm), //
+            entry("mlx_take", MlxLibraryProvider::take), //
+            entry("mlx_take_axis", MlxLibraryProvider::takeAxis), //
+            entry("mlx_take_along_axis", MlxLibraryProvider::takeAlongAxis), //
+            entry("mlx_put_along_axis", c -> alongAxisUpdate(c, "mlx_put_along_axis", MlxC::mlx_put_along_axis)), //
+            entry("mlx_scatter_add_axis", c -> alongAxisUpdate(c, "mlx_scatter_add_axis", MlxC::mlx_scatter_add_axis)), //
+            entry("mlx_gather", MlxLibraryProvider::gather), //
+            entry("mlx_gather_single", MlxLibraryProvider::gatherRows), //
+            entry("mlx_scatter", c -> scatterPoints(c, "mlx_scatter", MlxC::mlx_scatter)), //
+            entry("mlx_scatter_add", c -> scatterPoints(c, "mlx_scatter_add", MlxC::mlx_scatter_add)), //
+            entry("mlx_scatter_max", c -> scatterPoints(c, "mlx_scatter_max", MlxC::mlx_scatter_max)), //
+            entry("mlx_scatter_min", c -> scatterPoints(c, "mlx_scatter_min", MlxC::mlx_scatter_min)), //
+            entry("mlx_scatter_prod", c -> scatterPoints(c, "mlx_scatter_prod", MlxC::mlx_scatter_prod)), //
+            entry("mlx_scatter_single", c -> scatterRows(c, "mlx_scatter_single", MlxC::mlx_scatter_single)), //
+            entry("mlx_scatter_add_single", c -> scatterRows(c, "mlx_scatter_add_single", MlxC::mlx_scatter_add_single)), //
+            entry("mlx_scatter_max_single", c -> scatterRows(c, "mlx_scatter_max_single", MlxC::mlx_scatter_max_single)), //
+            entry("mlx_scatter_min_single", c -> scatterRows(c, "mlx_scatter_min_single", MlxC::mlx_scatter_min_single)), //
+            entry("mlx_scatter_prod_single", c -> scatterRows(c, "mlx_scatter_prod_single", MlxC::mlx_scatter_prod_single)), //
+            entry("mlx_slice", MlxLibraryProvider::slice), //
+            entry("mlx_slice_dynamic", MlxLibraryProvider::sliceDynamic), //
+            entry("mlx_slice_update", c -> sliceUpdate(c, "mlx_slice_update", MlxC::mlx_slice_update)), //
+            entry("mlx_slice_update_add", c -> sliceUpdate(c, "mlx_slice_update_add", MlxC::mlx_slice_update_add)), //
+            entry("mlx_slice_update_max", c -> sliceUpdate(c, "mlx_slice_update_max", MlxC::mlx_slice_update_max)), //
+            entry("mlx_slice_update_min", c -> sliceUpdate(c, "mlx_slice_update_min", MlxC::mlx_slice_update_min)), //
+            entry("mlx_slice_update_prod", c -> sliceUpdate(c, "mlx_slice_update_prod", MlxC::mlx_slice_update_prod)), //
+            entry("mlx_slice_update_dynamic", MlxLibraryProvider::sliceUpdateDynamic), //
+            entry("mlx_masked_scatter", MlxLibraryProvider::maskedScatter), //
+            entry("mlx_gather_mm", MlxLibraryProvider::gatherMm), //
             // Convolutions (MlxConv).
-            entry("conv1d", MlxLibraryProvider::conv1d), //
-            entry("conv2d", MlxLibraryProvider::conv2d), //
-            entry("conv3d", MlxLibraryProvider::conv3d), //
-            entry("conv_transpose1d", MlxLibraryProvider::convTranspose1d), //
-            entry("conv_transpose2d", MlxLibraryProvider::convTranspose2d), //
-            entry("conv_transpose3d", MlxLibraryProvider::convTranspose3d), //
-            entry("conv_general", MlxLibraryProvider::convGeneral), //
+            entry("mlx_conv1d", MlxLibraryProvider::conv1d), //
+            entry("mlx_conv2d", MlxLibraryProvider::conv2d), //
+            entry("mlx_conv3d", MlxLibraryProvider::conv3d), //
+            entry("mlx_conv_transpose1d", MlxLibraryProvider::convTranspose1d), //
+            entry("mlx_conv_transpose2d", MlxLibraryProvider::convTranspose2d), //
+            entry("mlx_conv_transpose3d", MlxLibraryProvider::convTranspose3d), //
+            entry("mlx_conv_general", MlxLibraryProvider::convGeneral), //
             // Linear algebra (MlxLinalg).
-            entry("linalg_cross", MlxLibraryProvider::cross), //
-            entry("linalg_norm", MlxLibraryProvider::norm), //
-            entry("linalg_norm_l2", MlxLibraryProvider::l2Norm), //
-            entry("linalg_norm_matrix", MlxLibraryProvider::frobeniusNorm), //
-            entry("linalg_cholesky", c -> matrixUpper(c, "mlx_linalg_cholesky", MlxC::mlx_linalg_cholesky)), //
-            entry("linalg_cholesky_inv", c -> matrixUpper(c, "mlx_linalg_cholesky_inv", MlxC::mlx_linalg_cholesky_inv)), //
-            entry("linalg_tri_inv", c -> matrixUpper(c, "mlx_linalg_tri_inv", MlxC::mlx_linalg_tri_inv)), //
-            entry("linalg_inv", MlxLibraryProvider::inv), //
-            entry("linalg_solve", MlxLibraryProvider::solve), //
-            entry("linalg_solve_triangular", MlxLibraryProvider::solveTriangular), //
-            entry("linalg_lu", MlxLibraryProvider::lu), //
-            entry("linalg_lu_factor", MlxLibraryProvider::luFactor), //
-            entry("linalg_qr", MlxLibraryProvider::qr), //
-            entry("linalg_eigh", MlxLibraryProvider::eigh), //
-            entry("linalg_eigvalsh", MlxLibraryProvider::eigvalsh), //
-            entry("linalg_svd", c -> svd(c, true)), //
-            entry("linalg_svd_values", c -> svd(c, false)), //
-            entry("linalg_pinv", MlxLibraryProvider::pinv), //
-            entry("linalg_eig", MlxLibraryProvider::eig), //
-            entry("linalg_eigvals", MlxLibraryProvider::eigvals), //
+            entry("mlx_linalg_cross", MlxLibraryProvider::cross), //
+            entry("mlx_linalg_norm", MlxLibraryProvider::norm), //
+            entry("mlx_linalg_norm_l2", MlxLibraryProvider::l2Norm), //
+            entry("mlx_linalg_norm_matrix", MlxLibraryProvider::frobeniusNorm), //
+            entry("mlx_linalg_cholesky", c -> matrixUpper(c, "mlx_linalg_cholesky", MlxC::mlx_linalg_cholesky)), //
+            entry("mlx_linalg_cholesky_inv", c -> matrixUpper(c, "mlx_linalg_cholesky_inv", MlxC::mlx_linalg_cholesky_inv)), //
+            entry("mlx_linalg_tri_inv", c -> matrixUpper(c, "mlx_linalg_tri_inv", MlxC::mlx_linalg_tri_inv)), //
+            entry("mlx_linalg_inv", MlxLibraryProvider::inv), //
+            entry("mlx_linalg_solve", MlxLibraryProvider::solve), //
+            entry("mlx_linalg_solve_triangular", MlxLibraryProvider::solveTriangular), //
+            entry("mlx_linalg_lu", MlxLibraryProvider::lu), //
+            entry("mlx_linalg_lu_factor", MlxLibraryProvider::luFactor), //
+            entry("mlx_linalg_qr", MlxLibraryProvider::qr), //
+            entry("mlx_linalg_eigh", MlxLibraryProvider::eigh), //
+            entry("mlx_linalg_eigvalsh", MlxLibraryProvider::eigvalsh), //
+            entry("mlx_linalg_svd", c -> svd(c, true)), //
+            entry("mlx_linalg_svd_values", c -> svd(c, false)), //
+            entry("mlx_linalg_pinv", MlxLibraryProvider::pinv), //
+            entry("mlx_linalg_eig", MlxLibraryProvider::eig), //
+            entry("mlx_linalg_eigvals", MlxLibraryProvider::eigvals), //
             // FFT (MlxFft).
-            entry("fft_fft", c -> fft1d(c, "mlx_fft_fft", MlxC::mlx_fft_fft, true, true)), //
-            entry("fft_ifft", c -> fft1d(c, "mlx_fft_ifft", MlxC::mlx_fft_ifft, true, true)), //
-            entry("fft_rfft", c -> fft1d(c, "mlx_fft_rfft", MlxC::mlx_fft_rfft, false, true)), //
-            entry("fft_irfft", c -> fft1d(c, "mlx_fft_irfft", MlxC::mlx_fft_irfft, true, false)), //
-            entry("fft_fft2", c -> fftNd(c, "mlx_fft_fft2", MlxC::mlx_fft_fft2, 2, true, true, false)), //
-            entry("fft_ifft2", c -> fftNd(c, "mlx_fft_ifft2", MlxC::mlx_fft_ifft2, 2, true, true, false)), //
-            entry("fft_rfft2", c -> fftNd(c, "mlx_fft_rfft2", MlxC::mlx_fft_rfft2, 2, false, true, false)), //
-            entry("fft_irfft2", c -> fftNd(c, "mlx_fft_irfft2", MlxC::mlx_fft_irfft2, 2, true, false, true)), //
-            entry("fft_fftn", c -> fftNd(c, "mlx_fft_fftn", MlxC::mlx_fft_fftn, 3, true, true, false)), //
-            entry("fft_ifftn", c -> fftNd(c, "mlx_fft_ifftn", MlxC::mlx_fft_ifftn, 3, true, true, false)), //
-            entry("fft_rfftn", c -> fftNd(c, "mlx_fft_rfftn", MlxC::mlx_fft_rfftn, 3, false, true, false)), //
-            entry("fft_irfftn", c -> fftNd(c, "mlx_fft_irfftn", MlxC::mlx_fft_irfftn, 3, true, false, true)), //
-            entry("fft_fftshift", c -> fftShift(c, "mlx_fft_fftshift", MlxC::mlx_fft_fftshift)), //
-            entry("fft_ifftshift", c -> fftShift(c, "mlx_fft_ifftshift", MlxC::mlx_fft_ifftshift)), //
-            entry("fft_fftfreq", c -> c.store(c.op("mlx_fft_fftfreq", res -> MlxC.mlx_fft_fftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
-            entry("fft_rfftfreq", c -> c.store(c.op("mlx_fft_rfftfreq", res -> MlxC.mlx_fft_rfftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
+            entry("mlx_fft_fft", c -> fft1d(c, "mlx_fft_fft", MlxC::mlx_fft_fft, true, true)), //
+            entry("mlx_fft_ifft", c -> fft1d(c, "mlx_fft_ifft", MlxC::mlx_fft_ifft, true, true)), //
+            entry("mlx_fft_rfft", c -> fft1d(c, "mlx_fft_rfft", MlxC::mlx_fft_rfft, false, true)), //
+            entry("mlx_fft_irfft", c -> fft1d(c, "mlx_fft_irfft", MlxC::mlx_fft_irfft, true, false)), //
+            entry("mlx_fft_fft2", c -> fftNd(c, "mlx_fft_fft2", MlxC::mlx_fft_fft2, 2, true, true, false)), //
+            entry("mlx_fft_ifft2", c -> fftNd(c, "mlx_fft_ifft2", MlxC::mlx_fft_ifft2, 2, true, true, false)), //
+            entry("mlx_fft_rfft2", c -> fftNd(c, "mlx_fft_rfft2", MlxC::mlx_fft_rfft2, 2, false, true, false)), //
+            entry("mlx_fft_irfft2", c -> fftNd(c, "mlx_fft_irfft2", MlxC::mlx_fft_irfft2, 2, true, false, true)), //
+            entry("mlx_fft_fftn", c -> fftNd(c, "mlx_fft_fftn", MlxC::mlx_fft_fftn, 3, true, true, false)), //
+            entry("mlx_fft_ifftn", c -> fftNd(c, "mlx_fft_ifftn", MlxC::mlx_fft_ifftn, 3, true, true, false)), //
+            entry("mlx_fft_rfftn", c -> fftNd(c, "mlx_fft_rfftn", MlxC::mlx_fft_rfftn, 3, false, true, false)), //
+            entry("mlx_fft_irfftn", c -> fftNd(c, "mlx_fft_irfftn", MlxC::mlx_fft_irfftn, 3, true, false, true)), //
+            entry("mlx_fft_fftshift", c -> fftShift(c, "mlx_fft_fftshift", MlxC::mlx_fft_fftshift)), //
+            entry("mlx_fft_ifftshift", c -> fftShift(c, "mlx_fft_ifftshift", MlxC::mlx_fft_ifftshift)), //
+            entry("mlx_fft_fftfreq", c -> c.store(c.op("mlx_fft_fftfreq", res -> MlxC.mlx_fft_fftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
+            entry("mlx_fft_rfftfreq", c -> c.store(c.op("mlx_fft_rfftfreq", res -> MlxC.mlx_fft_rfftfreq(res, c.intArg(1), c.floatArg(2), c.stream())), 0)), //
             // Comparisons, logic, bitwise and complex parts (MlxLogic).
-            entry("equal", c -> binary(c, "mlx_equal", MlxC::mlx_equal)), //
-            entry("not_equal", c -> binary(c, "mlx_not_equal", MlxC::mlx_not_equal)), //
-            entry("greater", c -> binary(c, "mlx_greater", MlxC::mlx_greater)), //
-            entry("greater_equal", c -> binary(c, "mlx_greater_equal", MlxC::mlx_greater_equal)), //
-            entry("less", c -> binary(c, "mlx_less", MlxC::mlx_less)), //
-            entry("less_equal", c -> binary(c, "mlx_less_equal", MlxC::mlx_less_equal)), //
-            entry("bitwise_and", c -> binary(c, "mlx_bitwise_and", MlxC::mlx_bitwise_and)), //
-            entry("bitwise_or", c -> binary(c, "mlx_bitwise_or", MlxC::mlx_bitwise_or)), //
-            entry("bitwise_xor", c -> binary(c, "mlx_bitwise_xor", MlxC::mlx_bitwise_xor)), //
-            entry("left_shift", c -> binary(c, "mlx_left_shift", MlxC::mlx_left_shift)), //
-            entry("right_shift", c -> binary(c, "mlx_right_shift", MlxC::mlx_right_shift)), //
-            entry("isfinite", c -> unary(c, "mlx_isfinite", MlxC::mlx_isfinite)), //
-            entry("isinf", c -> unary(c, "mlx_isinf", MlxC::mlx_isinf)), //
-            entry("isnan", c -> unary(c, "mlx_isnan", MlxC::mlx_isnan)), //
-            entry("isneginf", c -> unary(c, "mlx_isneginf", MlxC::mlx_isneginf)), //
-            entry("isposinf", c -> unary(c, "mlx_isposinf", MlxC::mlx_isposinf)), //
-            entry("bitwise_invert", c -> unary(c, "mlx_bitwise_invert", MlxC::mlx_bitwise_invert)), //
-            entry("isclose", MlxLibraryProvider::isclose), //
-            entry("allclose", MlxLibraryProvider::allclose), //
-            entry("array_equal", MlxLibraryProvider::arrayEqual), //
-            entry("logical_and", c -> logical(c, "mlx_logical_and", MlxC::mlx_logical_and)), //
-            entry("logical_or", c -> logical(c, "mlx_logical_or", MlxC::mlx_logical_or)), //
-            entry("logical_not", MlxLibraryProvider::logicalNot), //
-            entry("nan_to_num", MlxLibraryProvider::nanToNum), //
-            entry("real", c -> complexPart(c, "mlx_real", MlxC::mlx_real, false)), //
-            entry("imag", c -> complexPart(c, "mlx_imag", MlxC::mlx_imag, false)), //
-            entry("conjugate", c -> complexPart(c, "mlx_conjugate", MlxC::mlx_conjugate, true)), //
+            entry("mlx_equal", c -> binary(c, "mlx_equal", MlxC::mlx_equal)), //
+            entry("mlx_not_equal", c -> binary(c, "mlx_not_equal", MlxC::mlx_not_equal)), //
+            entry("mlx_greater", c -> binary(c, "mlx_greater", MlxC::mlx_greater)), //
+            entry("mlx_greater_equal", c -> binary(c, "mlx_greater_equal", MlxC::mlx_greater_equal)), //
+            entry("mlx_less", c -> binary(c, "mlx_less", MlxC::mlx_less)), //
+            entry("mlx_less_equal", c -> binary(c, "mlx_less_equal", MlxC::mlx_less_equal)), //
+            entry("mlx_bitwise_and", c -> binary(c, "mlx_bitwise_and", MlxC::mlx_bitwise_and)), //
+            entry("mlx_bitwise_or", c -> binary(c, "mlx_bitwise_or", MlxC::mlx_bitwise_or)), //
+            entry("mlx_bitwise_xor", c -> binary(c, "mlx_bitwise_xor", MlxC::mlx_bitwise_xor)), //
+            entry("mlx_left_shift", c -> binary(c, "mlx_left_shift", MlxC::mlx_left_shift)), //
+            entry("mlx_right_shift", c -> binary(c, "mlx_right_shift", MlxC::mlx_right_shift)), //
+            entry("mlx_isfinite", c -> unary(c, "mlx_isfinite", MlxC::mlx_isfinite)), //
+            entry("mlx_isinf", c -> unary(c, "mlx_isinf", MlxC::mlx_isinf)), //
+            entry("mlx_isnan", c -> unary(c, "mlx_isnan", MlxC::mlx_isnan)), //
+            entry("mlx_isneginf", c -> unary(c, "mlx_isneginf", MlxC::mlx_isneginf)), //
+            entry("mlx_isposinf", c -> unary(c, "mlx_isposinf", MlxC::mlx_isposinf)), //
+            entry("mlx_bitwise_invert", c -> unary(c, "mlx_bitwise_invert", MlxC::mlx_bitwise_invert)), //
+            entry("mlx_isclose", MlxLibraryProvider::isclose), //
+            entry("mlx_allclose", MlxLibraryProvider::allclose), //
+            entry("mlx_array_equal", MlxLibraryProvider::arrayEqual), //
+            entry("mlx_logical_and", c -> logical(c, "mlx_logical_and", MlxC::mlx_logical_and)), //
+            entry("mlx_logical_or", c -> logical(c, "mlx_logical_or", MlxC::mlx_logical_or)), //
+            entry("mlx_logical_not", MlxLibraryProvider::logicalNot), //
+            entry("mlx_nan_to_num", MlxLibraryProvider::nanToNum), //
+            entry("mlx_real", c -> complexPart(c, "mlx_real", MlxC::mlx_real, false)), //
+            entry("mlx_imag", c -> complexPart(c, "mlx_imag", MlxC::mlx_imag, false)), //
+            entry("mlx_conjugate", c -> complexPart(c, "mlx_conjugate", MlxC::mlx_conjugate, true)), //
             // Construction and matrix structure (MlxCreate).
-            entry("arange", MlxLibraryProvider::arange), //
-            entry("linspace", c -> c.store(c.op("mlx_linspace", res -> MlxC.mlx_linspace(res, c.floatArg(1), c.floatArg(2), c.length(0), c.dtype(0), c.stream())), 0)), //
-            entry("eye", c -> c.store(c.op("mlx_eye", res -> MlxC.mlx_eye(res, c.intArg(1), c.intArg(2), c.intArg(3), c.dtype(0), c.stream())), 0)), //
-            entry("identity", c -> c.store(c.op("mlx_identity", res -> MlxC.mlx_identity(res, c.intArg(1), c.dtype(0), c.stream())), 0)), //
-            entry("tri", c -> c.store(c.op("mlx_tri", res -> MlxC.mlx_tri(res, c.intArg(1), c.intArg(2), c.intArg(3), c.dtype(0), c.stream())), 0)), //
-            entry("full", c -> c.store(c.op("mlx_full", res -> MlxC.mlx_full(res, c.ints(c.length(0)), 1, c.scalar(c.floatArg(1)), c.dtype(0), c.stream())), 0)), //
-            entry("full_like", c -> c.store(c.op("mlx_full_like", res -> MlxC.mlx_full_like(res, c.input(0, c.length(0)), c.scalar(c.floatArg(2)), c.dtype(1), c.stream())), 1)), //
-            entry("zeros", c -> c.store(c.op("mlx_zeros", res -> MlxC.mlx_zeros(res, c.ints(c.length(0)), 1, c.dtype(0), c.stream())), 0)), //
-            entry("zeros_like", c -> c.store(c.op("mlx_zeros_like", res -> MlxC.mlx_zeros_like(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("ones", c -> c.store(c.op("mlx_ones", res -> MlxC.mlx_ones(res, c.ints(c.length(0)), 1, c.dtype(0), c.stream())), 0)), //
-            entry("ones_like", c -> c.store(c.op("mlx_ones_like", res -> MlxC.mlx_ones_like(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("bartlett", c -> c.store(c.op("mlx_bartlett", res -> MlxC.mlx_bartlett(res, c.length(0), c.stream())), 0)), //
-            entry("blackman", c -> c.store(c.op("mlx_blackman", res -> MlxC.mlx_blackman(res, c.length(0), c.stream())), 0)), //
-            entry("hamming", c -> c.store(c.op("mlx_hamming", res -> MlxC.mlx_hamming(res, c.length(0), c.stream())), 0)), //
-            entry("hanning", c -> c.store(c.op("mlx_hanning", res -> MlxC.mlx_hanning(res, c.length(0), c.stream())), 0)), //
-            entry("meshgrid", MlxLibraryProvider::meshgrid), //
-            entry("diag", c -> c.store(c.op("mlx_diag", res -> MlxC.mlx_diag(res, c.input(0, c.length(0)), c.intArg(2), c.stream())), 1)), //
-            entry("diagonal", c -> c.store(c.op("mlx_diagonal", res -> MlxC.mlx_diagonal(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.stream())), 1)), //
-            entry("trace", c -> c.store(c.op("mlx_trace", res -> MlxC.mlx_trace(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.dtype(1), c.stream())), 1)), //
-            entry("tril", c -> c.store(c.op("mlx_tril", res -> MlxC.mlx_tril(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
-            entry("triu", c -> c.store(c.op("mlx_triu", res -> MlxC.mlx_triu(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
+            entry("mlx_arange", MlxLibraryProvider::arange), //
+            entry("mlx_linspace", c -> c.store(c.op("mlx_linspace", res -> MlxC.mlx_linspace(res, c.floatArg(1), c.floatArg(2), c.length(0), c.dtype(0), c.stream())), 0)), //
+            entry("mlx_eye", c -> c.store(c.op("mlx_eye", res -> MlxC.mlx_eye(res, c.intArg(1), c.intArg(2), c.intArg(3), c.dtype(0), c.stream())), 0)), //
+            entry("mlx_identity", c -> c.store(c.op("mlx_identity", res -> MlxC.mlx_identity(res, c.intArg(1), c.dtype(0), c.stream())), 0)), //
+            entry("mlx_tri", c -> c.store(c.op("mlx_tri", res -> MlxC.mlx_tri(res, c.intArg(1), c.intArg(2), c.intArg(3), c.dtype(0), c.stream())), 0)), //
+            entry("mlx_full", c -> c.store(c.op("mlx_full", res -> MlxC.mlx_full(res, c.ints(c.length(0)), 1, c.scalar(c.floatArg(1)), c.dtype(0), c.stream())), 0)), //
+            entry("mlx_full_like", c -> c.store(c.op("mlx_full_like", res -> MlxC.mlx_full_like(res, c.input(0, c.length(0)), c.scalar(c.floatArg(2)), c.dtype(1), c.stream())), 1)), //
+            entry("mlx_zeros", c -> c.store(c.op("mlx_zeros", res -> MlxC.mlx_zeros(res, c.ints(c.length(0)), 1, c.dtype(0), c.stream())), 0)), //
+            entry("mlx_zeros_like", c -> c.store(c.op("mlx_zeros_like", res -> MlxC.mlx_zeros_like(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_ones", c -> c.store(c.op("mlx_ones", res -> MlxC.mlx_ones(res, c.ints(c.length(0)), 1, c.dtype(0), c.stream())), 0)), //
+            entry("mlx_ones_like", c -> c.store(c.op("mlx_ones_like", res -> MlxC.mlx_ones_like(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_bartlett", c -> c.store(c.op("mlx_bartlett", res -> MlxC.mlx_bartlett(res, c.length(0), c.stream())), 0)), //
+            entry("mlx_blackman", c -> c.store(c.op("mlx_blackman", res -> MlxC.mlx_blackman(res, c.length(0), c.stream())), 0)), //
+            entry("mlx_hamming", c -> c.store(c.op("mlx_hamming", res -> MlxC.mlx_hamming(res, c.length(0), c.stream())), 0)), //
+            entry("mlx_hanning", c -> c.store(c.op("mlx_hanning", res -> MlxC.mlx_hanning(res, c.length(0), c.stream())), 0)), //
+            entry("mlx_meshgrid", MlxLibraryProvider::meshgrid), //
+            entry("mlx_diag", c -> c.store(c.op("mlx_diag", res -> MlxC.mlx_diag(res, c.input(0, c.length(0)), c.intArg(2), c.stream())), 1)), //
+            entry("mlx_diagonal", c -> c.store(c.op("mlx_diagonal", res -> MlxC.mlx_diagonal(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.stream())), 1)), //
+            entry("mlx_trace", c -> c.store(c.op("mlx_trace", res -> MlxC.mlx_trace(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, 1, c.dtype(1), c.stream())), 1)), //
+            entry("mlx_tril", c -> c.store(c.op("mlx_tril", res -> MlxC.mlx_tril(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
+            entry("mlx_triu", c -> c.store(c.op("mlx_triu", res -> MlxC.mlx_triu(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.stream())), 1)), //
             // Shape and layout (MlxShape).
-            entry("reshape", c -> c.store(c.op("mlx_reshape", res -> MlxC.mlx_reshape(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
-            entry("flatten", c -> c.store(c.op("mlx_flatten", res -> MlxC.mlx_flatten(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), 1, 2, c.stream())), 1)), //
-            entry("unflatten", c -> c.store(c.op("mlx_unflatten", res -> MlxC.mlx_unflatten(res, c.input(0, c.length(0)), 0, c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
-            entry("squeeze", c -> c.store(c.op("mlx_squeeze", res -> MlxC.mlx_squeeze(res, c.input(0, c.intArg(2), 1, c.intArg(3)), c.stream())), 1)), //
-            entry("squeeze_axis", c -> c.store(c.op("mlx_squeeze_axis", res -> MlxC.mlx_squeeze_axis(res, c.input(0, c.intArg(2), 1, c.intArg(3)), 1, c.stream())), 1)), //
-            entry("squeeze_axes", c -> c.store(c.op("mlx_squeeze_axes", res -> MlxC.mlx_squeeze_axes(res, c.input(0, 1, c.intArg(2), 1, c.intArg(3)), c.ints(0, 2), 2, c.stream())), 1)), //
-            entry("expand_dims", c -> c.store(c.op("mlx_expand_dims", res -> MlxC.mlx_expand_dims(res, c.input(0, c.intArg(2), c.intArg(3)), 1, c.stream())), 1)), //
-            entry("expand_dims_axes", c -> c.store(c.op("mlx_expand_dims_axes", res -> MlxC.mlx_expand_dims_axes(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(0, 2), 2,
+            entry("mlx_reshape", c -> c.store(c.op("mlx_reshape", res -> MlxC.mlx_reshape(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
+            entry("mlx_flatten", c -> c.store(c.op("mlx_flatten", res -> MlxC.mlx_flatten(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), 1, 2, c.stream())), 1)), //
+            entry("mlx_unflatten", c -> c.store(c.op("mlx_unflatten", res -> MlxC.mlx_unflatten(res, c.input(0, c.length(0)), 0, c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
+            entry("mlx_squeeze", c -> c.store(c.op("mlx_squeeze", res -> MlxC.mlx_squeeze(res, c.input(0, c.intArg(2), 1, c.intArg(3)), c.stream())), 1)), //
+            entry("mlx_squeeze_axis", c -> c.store(c.op("mlx_squeeze_axis", res -> MlxC.mlx_squeeze_axis(res, c.input(0, c.intArg(2), 1, c.intArg(3)), 1, c.stream())), 1)), //
+            entry("mlx_squeeze_axes", c -> c.store(c.op("mlx_squeeze_axes", res -> MlxC.mlx_squeeze_axes(res, c.input(0, 1, c.intArg(2), 1, c.intArg(3)), c.ints(0, 2), 2, c.stream())), 1)), //
+            entry("mlx_expand_dims", c -> c.store(c.op("mlx_expand_dims", res -> MlxC.mlx_expand_dims(res, c.input(0, c.intArg(2), c.intArg(3)), 1, c.stream())), 1)), //
+            entry("mlx_expand_dims_axes", c -> c.store(c.op("mlx_expand_dims_axes", res -> MlxC.mlx_expand_dims_axes(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(0, 2), 2,
                     c.stream())), 1)), //
-            entry("atleast_1d", c -> c.store(c.op("mlx_atleast_1d", res -> MlxC.mlx_atleast_1d(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("atleast_2d", c -> c.store(c.op("mlx_atleast_2d", res -> MlxC.mlx_atleast_2d(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("atleast_3d", c -> c.store(c.op("mlx_atleast_3d", res -> MlxC.mlx_atleast_3d(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("transpose_axes", c -> c.store(c.op("mlx_transpose_axes", res -> MlxC.mlx_transpose_axes(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.ints(c.intArg(5),
+            entry("mlx_atleast_1d", c -> c.store(c.op("mlx_atleast_1d", res -> MlxC.mlx_atleast_1d(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_atleast_2d", c -> c.store(c.op("mlx_atleast_2d", res -> MlxC.mlx_atleast_2d(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_atleast_3d", c -> c.store(c.op("mlx_atleast_3d", res -> MlxC.mlx_atleast_3d(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_transpose_axes", c -> c.store(c.op("mlx_transpose_axes", res -> MlxC.mlx_transpose_axes(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.ints(c.intArg(5),
                     c.intArg(6), c.intArg(7)), 3, c.stream())), 1)), //
-            entry("swapaxes", c -> c.store(c.op("mlx_swapaxes", res -> MlxC.mlx_swapaxes(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.intArg(5), c.intArg(6), c.stream())),
+            entry("mlx_swapaxes", c -> c.store(c.op("mlx_swapaxes", res -> MlxC.mlx_swapaxes(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.intArg(5), c.intArg(6), c.stream())),
                     1)), //
-            entry("moveaxis", c -> c.store(c.op("mlx_moveaxis", res -> MlxC.mlx_moveaxis(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.intArg(5), c.intArg(6), c.stream())),
+            entry("mlx_moveaxis", c -> c.store(c.op("mlx_moveaxis", res -> MlxC.mlx_moveaxis(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.intArg(5), c.intArg(6), c.stream())),
                     1)), //
-            entry("broadcast_to", c -> c.store(c.op("mlx_broadcast_to", res -> MlxC.mlx_broadcast_to(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
-            entry("broadcast_arrays", MlxLibraryProvider::broadcastArrays), //
-            entry("as_strided", c -> c.store(c.op("mlx_as_strided", res -> MlxC.mlx_as_strided(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.longs(c.intArg(4),
+            entry("mlx_broadcast_to", c -> c.store(c.op("mlx_broadcast_to", res -> MlxC.mlx_broadcast_to(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.stream())), 1)), //
+            entry("mlx_broadcast_arrays", MlxLibraryProvider::broadcastArrays), //
+            entry("mlx_as_strided", c -> c.store(c.op("mlx_as_strided", res -> MlxC.mlx_as_strided(res, c.input(0, c.length(0)), c.ints(c.intArg(2), c.intArg(3)), 2, c.longs(c.intArg(4),
                     c.intArg(5)), 2, c.intArg(6), c.stream())), 1)), //
-            entry("contiguous", c -> c.store(c.op("mlx_contiguous", res -> MlxC.mlx_contiguous(res, c.input(0, c.length(0)), false, c.stream())), 1)), //
-            entry("copy", c -> c.store(c.op("mlx_copy", res -> MlxC.mlx_copy(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("astype", c -> c.store(c.op("mlx_astype", res -> MlxC.mlx_astype(res, c.input(0, c.length(0)), c.dtype(1), c.stream())), 1)), //
-            entry("view", c -> c.store(c.op("mlx_view", res -> MlxC.mlx_view(res, c.input(0, c.length(0)), c.dtype(1), c.stream())), 1)), //
-            entry("number_of_elements", c -> c.store(c.op("mlx_number_of_elements", res -> MlxC.mlx_number_of_elements(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.ints(1,
+            entry("mlx_contiguous", c -> c.store(c.op("mlx_contiguous", res -> MlxC.mlx_contiguous(res, c.input(0, c.length(0)), false, c.stream())), 1)), //
+            entry("mlx_copy", c -> c.store(c.op("mlx_copy", res -> MlxC.mlx_copy(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_astype", c -> c.store(c.op("mlx_astype", res -> MlxC.mlx_astype(res, c.input(0, c.length(0)), c.dtype(1), c.stream())), 1)), //
+            entry("mlx_view", c -> c.store(c.op("mlx_view", res -> MlxC.mlx_view(res, c.input(0, c.length(0)), c.dtype(1), c.stream())), 1)), //
+            entry("mlx_number_of_elements", c -> c.store(c.op("mlx_number_of_elements", res -> MlxC.mlx_number_of_elements(res, c.input(0, c.intArg(2), c.intArg(3), c.intArg(4)), c.ints(1,
                     2), 2, false, MlxNativeLib.MLX_INT32, c.stream())), 1)), //
-            entry("concatenate", c -> c.store(c.op("mlx_concatenate", res -> MlxC.mlx_concatenate(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), c.stream())), 2)), //
-            entry("concatenate_axis", c -> c.store(c.op("mlx_concatenate_axis", res -> MlxC.mlx_concatenate_axis(res, c.vector(c.input(0, c.intArg(3), c.intArg(4)), c.input(1,
+            entry("mlx_concatenate", c -> c.store(c.op("mlx_concatenate", res -> MlxC.mlx_concatenate(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), c.stream())), 2)), //
+            entry("mlx_concatenate_axis", c -> c.store(c.op("mlx_concatenate_axis", res -> MlxC.mlx_concatenate_axis(res, c.vector(c.input(0, c.intArg(3), c.intArg(4)), c.input(1,
                     c.intArg(3), c.intArg(5))), 1, c.stream())), 2)), //
-            entry("stack", c -> c.store(c.op("mlx_stack", res -> MlxC.mlx_stack(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), c.stream())), 2)), //
-            entry("stack_axis", c -> c.store(c.op("mlx_stack_axis", res -> MlxC.mlx_stack_axis(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), 1, c.stream())), 2)), //
-            entry("split", c -> splitTwo(c, false)), //
-            entry("split_sections", c -> splitTwo(c, true)), //
-            entry("repeat", c -> c.store(c.op("mlx_repeat", res -> MlxC.mlx_repeat(res, c.input(0, c.length(0)), c.intArg(2), c.stream())), 1)), //
-            entry("repeat_axis", c -> c.store(c.op("mlx_repeat_axis", res -> MlxC.mlx_repeat_axis(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, c.stream())), 1)), //
-            entry("tile", c -> c.store(c.op("mlx_tile", res -> MlxC.mlx_tile(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4), c.intArg(5)), 2, c.stream())), 1)), //
-            entry("roll", c -> c.store(c.op("mlx_roll", res -> MlxC.mlx_roll(res, c.input(0, c.length(0)), c.ints(c.intArg(2)), 1, c.stream())), 1)), //
-            entry("roll_axis", c -> c.store(c.op("mlx_roll_axis", res -> MlxC.mlx_roll_axis(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4)), 1, 1, c.stream())), 1)), //
-            entry("roll_axes", c -> c.store(c.op("mlx_roll_axes", res -> MlxC.mlx_roll_axes(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4), c.intArg(5)), 2, c.ints(0,
+            entry("mlx_stack", c -> c.store(c.op("mlx_stack", res -> MlxC.mlx_stack(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), c.stream())), 2)), //
+            entry("mlx_stack_axis", c -> c.store(c.op("mlx_stack_axis", res -> MlxC.mlx_stack_axis(res, c.vector(c.input(0, c.length(0)), c.input(1, c.length(1))), 1, c.stream())), 2)), //
+            entry("mlx_split", c -> splitTwo(c, false)), //
+            entry("mlx_split_sections", c -> splitTwo(c, true)), //
+            entry("mlx_repeat", c -> c.store(c.op("mlx_repeat", res -> MlxC.mlx_repeat(res, c.input(0, c.length(0)), c.intArg(2), c.stream())), 1)), //
+            entry("mlx_repeat_axis", c -> c.store(c.op("mlx_repeat_axis", res -> MlxC.mlx_repeat_axis(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), 0, c.stream())), 1)), //
+            entry("mlx_tile", c -> c.store(c.op("mlx_tile", res -> MlxC.mlx_tile(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4), c.intArg(5)), 2, c.stream())), 1)), //
+            entry("mlx_roll", c -> c.store(c.op("mlx_roll", res -> MlxC.mlx_roll(res, c.input(0, c.length(0)), c.ints(c.intArg(2)), 1, c.stream())), 1)), //
+            entry("mlx_roll_axis", c -> c.store(c.op("mlx_roll_axis", res -> MlxC.mlx_roll_axis(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4)), 1, 1, c.stream())), 1)), //
+            entry("mlx_roll_axes", c -> c.store(c.op("mlx_roll_axes", res -> MlxC.mlx_roll_axes(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(c.intArg(4), c.intArg(5)), 2, c.ints(0,
                     1), 2, c.stream())), 1)), //
-            entry("pad", c -> c.store(c.op("mlx_pad", res -> MlxC.mlx_pad(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(0, 1), 2, c.ints(c.intArg(4), c.intArg(6)), 2,
+            entry("mlx_pad", c -> c.store(c.op("mlx_pad", res -> MlxC.mlx_pad(res, c.input(0, c.intArg(2), c.intArg(3)), c.ints(0, 1), 2, c.ints(c.intArg(4), c.intArg(6)), 2,
                     c.ints(c.intArg(5), c.intArg(7)), 2, c.scalar(c.floatArg(8)), c.cString("constant"), c.stream())), 1)), //
-            entry("pad_symmetric", c -> c.store(c.op("mlx_pad_symmetric", res -> MlxC.mlx_pad_symmetric(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.scalar(c.floatArg(5)),
+            entry("mlx_pad_symmetric", c -> c.store(c.op("mlx_pad_symmetric", res -> MlxC.mlx_pad_symmetric(res, c.input(0, c.intArg(2), c.intArg(3)), c.intArg(4), c.scalar(c.floatArg(5)),
                     c.cString("constant"), c.stream())), 1)), //
             // Tensor and special products (MlxProducts).
-            entry("einsum_bmm", c -> c.store(c.op("mlx_einsum", res -> MlxC.mlx_einsum(res, c.cString("bij,bjk->bik"), c.vector(c.input(0, c.intArg(3), c.intArg(4), c.intArg(5)),
+            entry("mlx_einsum_bmm", c -> c.store(c.op("mlx_einsum", res -> MlxC.mlx_einsum(res, c.cString("bij,bjk->bik"), c.vector(c.input(0, c.intArg(3), c.intArg(4), c.intArg(5)),
                     c.input(1, c.intArg(3), c.intArg(5), c.intArg(6))), c.stream())), 2)), //
-            entry("inner", c -> c.store(c.op("mlx_inner", res -> MlxC.mlx_inner(res, c.input(0, c.length(0)), c.input(1, c.length(1)), c.stream())), 2)), //
-            entry("outer", c -> c.store(c.op("mlx_outer", res -> MlxC.mlx_outer(res, c.input(0, c.length(0)), c.input(1, c.length(1)), c.stream())), 2)), //
-            entry("kron", c -> c.store(c.op("mlx_kron", res -> MlxC.mlx_kron(res, c.input(0, c.intArg(3), c.intArg(4)), c.input(1, c.intArg(5), c.intArg(6)), c.stream())), 2)), //
-            entry("tensordot", c -> c.store(c.op("mlx_tensordot", res -> MlxC.mlx_tensordot(res, c.input(0, c.intArg(3), c.intArg(4), c.intArg(5)),
+            entry("mlx_inner", c -> c.store(c.op("mlx_inner", res -> MlxC.mlx_inner(res, c.input(0, c.length(0)), c.input(1, c.length(1)), c.stream())), 2)), //
+            entry("mlx_outer", c -> c.store(c.op("mlx_outer", res -> MlxC.mlx_outer(res, c.input(0, c.length(0)), c.input(1, c.length(1)), c.stream())), 2)), //
+            entry("mlx_kron", c -> c.store(c.op("mlx_kron", res -> MlxC.mlx_kron(res, c.input(0, c.intArg(3), c.intArg(4)), c.input(1, c.intArg(5), c.intArg(6)), c.stream())), 2)), //
+            entry("mlx_tensordot", c -> c.store(c.op("mlx_tensordot", res -> MlxC.mlx_tensordot(res, c.input(0, c.intArg(3), c.intArg(4), c.intArg(5)),
                     c.input(1, c.intArg(4), c.intArg(5), c.intArg(6)), c.ints(1, 2), 2, c.ints(0, 1), 2, c.stream())), 2)), //
-            entry("tensordot_axis", c -> c.store(c.op("mlx_tensordot_axis", res -> MlxC.mlx_tensordot_axis(res, c.input(0, c.intArg(3), c.intArg(4)), c.input(1, c.intArg(4), c.intArg(5)), 1,
+            entry("mlx_tensordot_axis", c -> c.store(c.op("mlx_tensordot_axis", res -> MlxC.mlx_tensordot_axis(res, c.input(0, c.intArg(3), c.intArg(4)), c.input(1, c.intArg(4), c.intArg(5)), 1,
                     c.stream())), 2)), //
-            entry("block_masked_mm", MlxLibraryProvider::blockMaskedMm), //
-            entry("segmented_mm", MlxLibraryProvider::segmentedMm), //
-            entry("hadamard_transform", c -> c.store(c.op("mlx_hadamard_transform", res -> MlxC.mlx_hadamard_transform(res, c.input(0, c.intArg(2), c.intArg(3)), c.optionalFloat(c.floatArg(4)),
+            entry("mlx_block_masked_mm", MlxLibraryProvider::blockMaskedMm), //
+            entry("mlx_segmented_mm", MlxLibraryProvider::segmentedMm), //
+            entry("mlx_hadamard_transform", c -> c.store(c.op("mlx_hadamard_transform", res -> MlxC.mlx_hadamard_transform(res, c.input(0, c.intArg(2), c.intArg(3)), c.optionalFloat(c.floatArg(4)),
                     c.stream())), 1)), //
-            entry("to_fp8", c -> c.storeRaw(c.op("mlx_to_fp8", res -> MlxC.mlx_to_fp8(res, c.input(0, c.length(0)), c.stream())), 1)), //
-            entry("from_fp8", c -> c.store(c.op("mlx_from_fp8", res -> MlxC.mlx_from_fp8(res, c.input(0, c.length(0)), MlxNativeLib.MLX_FLOAT32, c.stream())), 1)), //
-            entry("qqmm", MlxLibraryProvider::qqmm), //
-            entry("quantize_mx", MlxLibraryProvider::quantizeMx), //
+            entry("mlx_to_fp8", c -> c.storeRaw(c.op("mlx_to_fp8", res -> MlxC.mlx_to_fp8(res, c.input(0, c.length(0)), c.stream())), 1)), //
+            entry("mlx_from_fp8", c -> c.store(c.op("mlx_from_fp8", res -> MlxC.mlx_from_fp8(res, c.input(0, c.length(0)), MlxNativeLib.MLX_FLOAT32, c.stream())), 1)), //
+            entry("mlx_qqmm", MlxLibraryProvider::qqmm), //
+            entry("mlx_quantize_mx", MlxLibraryProvider::quantizeMx), //
             // Random sampling (MlxRandom).
-            entry("random_bits", c -> c.storeRaw(c.op("mlx_random_bits", res -> MlxC.mlx_random_bits(res, c.ints(c.length(0)), 1, 4, randomKey(c, 1), c.stream())), 0)), //
-            entry("random_uniform", c -> c.store(c.op("mlx_random_uniform", res -> MlxC.mlx_random_uniform(res, c.scalar(c.floatArg(1)), c.scalar(c.floatArg(2)), c.ints(c.length(0)), 1,
+            entry("mlx_random_bits", c -> c.storeRaw(c.op("mlx_random_bits", res -> MlxC.mlx_random_bits(res, c.ints(c.length(0)), 1, 4, randomKey(c, 1), c.stream())), 0)), //
+            entry("mlx_random_uniform", c -> c.store(c.op("mlx_random_uniform", res -> MlxC.mlx_random_uniform(res, c.scalar(c.floatArg(1)), c.scalar(c.floatArg(2)), c.ints(c.length(0)), 1,
                     MlxNativeLib.MLX_FLOAT32, randomKey(c, 3), c.stream())), 0)), //
-            entry("random_normal", c -> c.store(c.op("mlx_random_normal", res -> MlxC.mlx_random_normal(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, c.floatArg(1), c.floatArg(2),
+            entry("mlx_random_normal", c -> c.store(c.op("mlx_random_normal", res -> MlxC.mlx_random_normal(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, c.floatArg(1), c.floatArg(2),
                     randomKey(c, 3), c.stream())), 0)), //
-            entry("random_normal_broadcast", c -> c.store(c.op("mlx_random_normal_broadcast", res -> MlxC.mlx_random_normal_broadcast(res, c.ints(c.length(2)), 1, MlxNativeLib.MLX_FLOAT32,
+            entry("mlx_random_normal_broadcast", c -> c.store(c.op("mlx_random_normal_broadcast", res -> MlxC.mlx_random_normal_broadcast(res, c.ints(c.length(2)), 1, MlxNativeLib.MLX_FLOAT32,
                     c.input(0, c.length(0)), c.input(1, c.length(1)), randomKey(c, 3), c.stream())), 2)), //
-            entry("random_bernoulli", c -> c.store(c.op("mlx_random_bernoulli", res -> MlxC.mlx_random_bernoulli(res, c.input(0, c.length(0)), c.ints(c.length(1)), 1, randomKey(c, 2),
+            entry("mlx_random_bernoulli", c -> c.store(c.op("mlx_random_bernoulli", res -> MlxC.mlx_random_bernoulli(res, c.input(0, c.length(0)), c.ints(c.length(1)), 1, randomKey(c, 2),
                     c.stream())), 1)), //
-            entry("random_randint", c -> c.store(c.op("mlx_random_randint", res -> MlxC.mlx_random_randint(res, c.scalar(c.intArg(1)), c.scalar(c.intArg(2)), c.ints(c.length(0)), 1,
+            entry("mlx_random_randint", c -> c.store(c.op("mlx_random_randint", res -> MlxC.mlx_random_randint(res, c.scalar(c.intArg(1)), c.scalar(c.intArg(2)), c.ints(c.length(0)), 1,
                     MlxNativeLib.MLX_INT32, randomKey(c, 3), c.stream())), 0)), //
-            entry("random_truncated_normal", c -> c.store(c.op("mlx_random_truncated_normal", res -> MlxC.mlx_random_truncated_normal(res, c.scalar(c.floatArg(1)), c.scalar(c.floatArg(2)),
+            entry("mlx_random_truncated_normal", c -> c.store(c.op("mlx_random_truncated_normal", res -> MlxC.mlx_random_truncated_normal(res, c.scalar(c.floatArg(1)), c.scalar(c.floatArg(2)),
                     c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 3), c.stream())), 0)), //
-            entry("random_gumbel", c -> c.store(c.op("mlx_random_gumbel", res -> MlxC.mlx_random_gumbel(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 1), c.stream())),
+            entry("mlx_random_gumbel", c -> c.store(c.op("mlx_random_gumbel", res -> MlxC.mlx_random_gumbel(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 1), c.stream())),
                     0)), //
-            entry("random_laplace", c -> c.store(c.op("mlx_random_laplace", res -> MlxC.mlx_random_laplace(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, c.floatArg(1), c.floatArg(2),
+            entry("mlx_random_laplace", c -> c.store(c.op("mlx_random_laplace", res -> MlxC.mlx_random_laplace(res, c.ints(c.length(0)), 1, MlxNativeLib.MLX_FLOAT32, c.floatArg(1), c.floatArg(2),
                     randomKey(c, 3), c.stream())), 0)), //
-            entry("random_categorical", c -> c.store(c.op("mlx_random_categorical", res -> MlxC.mlx_random_categorical(res, c.input(0, c.intArg(2), c.intArg(3)), 1, randomKey(c, 4),
+            entry("mlx_random_categorical", c -> c.store(c.op("mlx_random_categorical", res -> MlxC.mlx_random_categorical(res, c.input(0, c.intArg(2), c.intArg(3)), 1, randomKey(c, 4),
                     c.stream())), 1)), //
-            entry("random_categorical_num_samples", c -> c.store(c.op("mlx_random_categorical_num_samples", res -> MlxC.mlx_random_categorical_num_samples(res, c.input(0, c.intArg(2),
+            entry("mlx_random_categorical_num_samples", c -> c.store(c.op("mlx_random_categorical_num_samples", res -> MlxC.mlx_random_categorical_num_samples(res, c.input(0, c.intArg(2),
                     c.intArg(3)), 1, c.intArg(4), randomKey(c, 5), c.stream())), 1)), //
-            entry("random_categorical_shape", c -> c.store(c.op("mlx_random_categorical_shape", res -> MlxC.mlx_random_categorical_shape(res, c.input(0, c.intArg(2), c.intArg(3)), 1,
+            entry("mlx_random_categorical_shape", c -> c.store(c.op("mlx_random_categorical_shape", res -> MlxC.mlx_random_categorical_shape(res, c.input(0, c.intArg(2), c.intArg(3)), 1,
                     c.ints(c.intArg(4), c.intArg(2)), 2, randomKey(c, 5), c.stream())), 1)), //
-            entry("random_multivariate_normal", c -> c.store(c.op("mlx_random_multivariate_normal", res -> MlxC.mlx_random_multivariate_normal(res, c.input(0, c.intArg(4)), c.input(1,
+            entry("mlx_random_multivariate_normal", c -> c.store(c.op("mlx_random_multivariate_normal", res -> MlxC.mlx_random_multivariate_normal(res, c.input(0, c.intArg(4)), c.input(1,
                     c.intArg(4), c.intArg(4)), c.ints(c.intArg(3)), 1, MlxNativeLib.MLX_FLOAT32, randomKey(c, 5), c.stream())), 2)), //
-            entry("random_permutation", c -> c.store(c.op("mlx_random_permutation", res -> MlxC.mlx_random_permutation(res, c.input(0, c.length(0)), 0, randomKey(c, 2), c.stream())), 1)), //
-            entry("random_permutation_arange", c -> c.store(c.op("mlx_random_permutation_arange", res -> MlxC.mlx_random_permutation_arange(res, c.length(0), randomKey(c, 1), c.stream())),
+            entry("mlx_random_permutation", c -> c.store(c.op("mlx_random_permutation", res -> MlxC.mlx_random_permutation(res, c.input(0, c.length(0)), 0, randomKey(c, 2), c.stream())), 1)), //
+            entry("mlx_random_permutation_arange", c -> c.store(c.op("mlx_random_permutation_arange", res -> MlxC.mlx_random_permutation_arange(res, c.length(0), randomKey(c, 1), c.stream())),
                     0)), //
             // Linear algebra.
-            entry("matmul", MlxLibraryProvider::matmul), //
-            entry("matmul_transposed", MlxLibraryProvider::matmulTransposed), //
-            entry("addmm", MlxLibraryProvider::addmm), //
+            entry("mlx_matmul", MlxLibraryProvider::matmul), //
+            entry("mlx_matmul_transposed", MlxLibraryProvider::matmulTransposed), //
+            entry("mlx_addmm", MlxLibraryProvider::addmm), //
             // Affine group quantization.
-            entry("quantized_matmul", MlxLibraryProvider::quantizedMatmul), //
-            entry("gather_qmm", MlxLibraryProvider::gatherQmm), //
-            entry("quantize", MlxLibraryProvider::quantize), //
-            entry("dequantize", MlxLibraryProvider::dequantize), //
+            entry("mlx_quantized_matmul", MlxLibraryProvider::quantizedMatmul), //
+            entry("mlx_gather_qmm", MlxLibraryProvider::gatherQmm), //
+            entry("mlx_quantize", MlxLibraryProvider::quantize), //
+            entry("mlx_dequantize", MlxLibraryProvider::dequantize), //
             // mlx.fast
-            entry("fast_rms_norm", MlxLibraryProvider::rmsNorm), //
-            entry("fast_layer_norm", MlxLibraryProvider::layerNorm), //
-            entry("fast_rope", MlxLibraryProvider::rope), //
-            entry("fast_rope_dynamic", MlxLibraryProvider::ropeDynamic), //
-            entry("fast_scaled_dot_product_attention", MlxLibraryProvider::sdpa), //
+            entry("mlx_fast_rms_norm", MlxLibraryProvider::rmsNorm), //
+            entry("mlx_fast_layer_norm", MlxLibraryProvider::layerNorm), //
+            entry("mlx_fast_rope", MlxLibraryProvider::rope), //
+            entry("mlx_fast_rope_dynamic", MlxLibraryProvider::ropeDynamic), //
+            entry("mlx_fast_scaled_dot_product_attention", MlxLibraryProvider::sdpa), //
             // Softmax, argmax, top-k.
-            entry("softmax", MlxLibraryProvider::softmax), //
-            entry("softmax_axis", MlxLibraryProvider::softmaxRows), //
-            entry("softmax_axes", MlxLibraryProvider::softmaxLastTwoAxes), //
-            entry("argmax", MlxLibraryProvider::argmax), //
-            entry("argmax_axis", MlxLibraryProvider::argmaxRows), //
-            entry("topk", MlxLibraryProvider::topk), //
-            entry("topk_axis", MlxLibraryProvider::topkRows));
+            entry("mlx_softmax", MlxLibraryProvider::softmax), //
+            entry("mlx_softmax_axis", MlxLibraryProvider::softmaxRows), //
+            entry("mlx_softmax_axes", MlxLibraryProvider::softmaxLastTwoAxes), //
+            entry("mlx_argmax", MlxLibraryProvider::argmax), //
+            entry("mlx_argmax_axis", MlxLibraryProvider::argmaxRows), //
+            entry("mlx_topk", MlxLibraryProvider::topk), //
+            entry("mlx_topk_axis", MlxLibraryProvider::topkRows));
 
     /** Affine group quantization mode (scales and biases per group), as used by MLX-LM. */
     private static final String AFFINE = "affine";
@@ -503,11 +504,6 @@ public final class MlxLibraryProvider implements TornadoLibraryProvider {
             MlxNativeLib.check(MlxC.mlx_get_active_memory(bytes), "mlx_get_active_memory");
             return bytes.get(ValueLayout.JAVA_LONG, 0);
         }
-    }
-
-    /** Names of the operations this provider dispatches, e.g. "add". */
-    public static Set<String> operations() {
-        return OPERATIONS.keySet();
     }
 
     private record WrapKey(long address, List<Integer> shape, int dtype) {

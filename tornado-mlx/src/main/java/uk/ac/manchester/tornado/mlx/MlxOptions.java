@@ -22,7 +22,7 @@ package uk.ac.manchester.tornado.mlx;
  * {@code LibraryTaskDescriptor.withTuning(...)}:
  *
  * <pre>
- * Mlx.add(a, b, c).withTuning(MlxOptions.cpu())
+ * MlxArithmetic.add(a, b, c).withTuning(MlxOptions.cpu())
  * </pre>
  *
  * <p>
