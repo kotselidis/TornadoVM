@@ -336,8 +336,6 @@ Link the **Tornado-API** (Apache 2.0) into your application.
 | Tornado-Runtime, Tornado-Drivers | [GPLv2 with Classpath Exception](LICENSE_GPLv2CE) |
 | Graal compiler, GraalVM SDK and other bundled libraries | See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) |
 
-Each source file's header states its license. Four runtime and driver files are derived from the OpenJDK JVMCI sources, which have no Classpath Exception; their headers say GPLv2 only, and the exception does not apply to them.
-
 ## Acknowledgments
 
 Partially funded by [Intel Corporation](https://www.intel.com/) and by EU & UKRI grants (most recent first): [AERO](https://aero-project.eu/) (101092850), [P2CODE](https://p2code-project.eu/) (101093069), [ENCRYPT](https://encrypt-project.eu) (101070670), [TANGO](https://tango-project.eu) (101070052), [ELEGANT](https://www.elegant-h2020.eu/) (957286), [E2Data](https://e2data.eu) (780245), [ACTiCLOUD](https://acticloud.eu) (732366); and EPSRC grants [PAMELA](http://apt.cs.manchester.ac.uk/projects/PAMELA/) (EP/K008730/1) and [AnyScale Apps](https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/L000725/1) (EP/L000725/1).
