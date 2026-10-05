@@ -7,7 +7,6 @@
     "inScope": 292,
     "bound": 292,
     "tested": 292,
-    "benchmarked": 0,
     "remaining": 0,
     "llm": {
       "inScope": 32,
@@ -81,7 +80,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -100,7 +98,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -119,7 +116,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -137,7 +133,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -157,7 +152,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -177,7 +171,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -197,7 +190,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -216,7 +208,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -236,7 +227,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -256,7 +246,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -276,7 +265,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -295,7 +283,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -313,7 +300,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -331,7 +317,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -349,7 +334,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -367,7 +351,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -385,7 +368,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -403,7 +385,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -421,7 +402,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -440,7 +420,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -459,7 +438,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -478,7 +456,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -497,7 +474,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -516,7 +492,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -535,7 +510,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -554,7 +528,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -573,7 +546,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -593,7 +565,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -612,7 +583,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -631,7 +601,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -650,7 +619,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -669,7 +637,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -688,7 +655,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -704,7 +670,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -720,7 +685,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -736,7 +700,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -752,7 +715,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -768,7 +730,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -784,7 +745,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -803,7 +763,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -822,7 +781,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -841,7 +799,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -859,7 +816,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -878,7 +834,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -897,7 +852,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -916,7 +870,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -932,7 +885,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -951,7 +903,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -969,7 +920,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -987,7 +937,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1005,7 +954,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1023,7 +971,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1041,7 +988,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1059,7 +1005,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1077,7 +1022,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1096,7 +1040,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1114,7 +1057,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1132,7 +1074,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1151,7 +1092,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1170,7 +1110,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1189,7 +1128,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1208,7 +1146,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1226,7 +1163,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and scheduling markers with no effect on values outside an MLX transform"
     },
     {
@@ -1237,7 +1173,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1256,7 +1191,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1275,7 +1209,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1294,7 +1227,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1313,7 +1245,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1332,7 +1263,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1350,7 +1280,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1370,7 +1299,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1388,7 +1316,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1406,7 +1333,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1424,7 +1350,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1443,7 +1368,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1462,7 +1386,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1480,7 +1403,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1499,7 +1421,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1518,7 +1439,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1536,7 +1456,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1555,7 +1474,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32",
         "uint8"
@@ -1572,7 +1490,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1591,7 +1508,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1610,7 +1526,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1629,7 +1544,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1648,7 +1562,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1667,7 +1580,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1686,7 +1598,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1706,7 +1617,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1726,7 +1636,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1744,7 +1653,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -1760,7 +1668,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -1776,7 +1683,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1795,7 +1701,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -1811,7 +1716,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1829,7 +1733,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1848,7 +1751,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1867,7 +1769,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1886,7 +1787,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1905,7 +1805,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1924,7 +1823,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1943,7 +1841,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1961,7 +1858,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -1977,7 +1873,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -1997,7 +1892,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2017,7 +1911,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2035,7 +1928,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2053,7 +1945,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2071,7 +1962,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2089,7 +1979,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2107,7 +1996,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2125,7 +2013,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2143,7 +2030,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "uint8"
       ],
@@ -2159,7 +2045,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "uint8"
       ],
@@ -2175,7 +2060,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "uint8"
       ],
@@ -2191,7 +2075,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2209,7 +2092,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2227,7 +2109,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2245,7 +2126,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2265,7 +2145,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2283,7 +2162,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2302,7 +2180,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2321,7 +2198,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2340,7 +2216,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2359,7 +2234,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2377,7 +2251,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2395,7 +2268,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2413,7 +2285,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2431,7 +2302,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2450,7 +2320,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2469,7 +2338,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2488,7 +2356,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2507,7 +2374,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2526,7 +2392,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2545,7 +2410,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2564,7 +2428,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2582,7 +2445,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2601,7 +2463,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2621,7 +2482,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2640,7 +2500,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2659,7 +2518,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2678,7 +2536,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2696,7 +2553,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2715,7 +2571,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2734,7 +2589,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2753,7 +2607,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2772,7 +2625,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2790,7 +2642,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2809,7 +2660,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2828,7 +2678,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2847,7 +2696,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2866,7 +2714,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32",
         "int32",
@@ -2884,7 +2731,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2905,7 +2751,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2924,7 +2769,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2942,7 +2786,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -2958,7 +2801,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2976,7 +2818,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -2995,7 +2836,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3014,7 +2854,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3033,7 +2872,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3052,7 +2890,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -3068,7 +2905,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3087,7 +2923,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3106,7 +2941,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3125,7 +2959,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3143,7 +2976,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3161,7 +2993,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3180,7 +3011,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3199,7 +3029,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3218,7 +3047,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3237,7 +3065,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3256,7 +3083,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3275,7 +3101,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3294,7 +3119,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3313,7 +3137,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3332,7 +3155,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3351,7 +3173,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3370,7 +3191,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3389,7 +3209,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3407,7 +3226,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3426,7 +3244,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3444,7 +3261,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3462,7 +3278,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3481,7 +3296,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3500,7 +3314,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3519,7 +3332,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3538,7 +3350,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3557,7 +3368,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3576,7 +3386,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3595,7 +3404,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3614,7 +3422,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3632,7 +3439,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3650,7 +3456,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3668,7 +3473,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3687,7 +3491,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3706,7 +3509,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3725,7 +3527,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3744,7 +3545,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3762,7 +3562,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3781,7 +3580,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3800,7 +3598,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3819,7 +3616,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3838,7 +3634,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3857,7 +3652,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3876,7 +3670,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3894,7 +3687,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3912,7 +3704,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3930,7 +3721,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and scheduling markers with no effect on values outside an MLX transform"
     },
     {
@@ -3941,7 +3731,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3960,7 +3749,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3979,7 +3767,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -3998,7 +3785,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4017,7 +3803,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4036,7 +3821,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4055,7 +3839,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4074,7 +3857,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4093,7 +3875,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4111,7 +3892,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4129,7 +3909,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4147,7 +3926,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4165,7 +3943,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4184,7 +3961,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32",
         "uint8"
@@ -4201,7 +3977,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4219,7 +3994,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4237,7 +4011,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4256,7 +4029,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4275,7 +4047,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4293,7 +4064,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4312,7 +4082,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4331,7 +4100,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4350,7 +4118,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4369,7 +4136,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4387,7 +4153,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4405,7 +4170,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4423,7 +4187,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32",
         "int32"
@@ -4440,7 +4203,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4460,7 +4222,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4479,7 +4240,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4498,7 +4258,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4509,7 +4268,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4520,7 +4278,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4531,7 +4288,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4542,7 +4298,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4553,7 +4308,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4564,7 +4318,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4575,7 +4328,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4586,7 +4338,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4597,7 +4348,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4608,7 +4358,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4619,7 +4368,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4630,7 +4378,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "CUDA custom-kernel builder; tornado-mlx targets the Metal backend, and TornadoVM already runs CUDA kernels natively"
     },
     {
@@ -4641,7 +4388,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4659,7 +4405,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4670,7 +4415,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4681,7 +4425,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4692,7 +4435,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4703,7 +4445,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4714,7 +4455,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4725,7 +4465,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4736,7 +4475,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4747,7 +4485,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4758,7 +4495,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4769,7 +4505,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4780,7 +4515,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4791,7 +4525,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Custom Metal kernel builder rather than an operation; TornadoVM's JIT and prebuiltTask already cover user-written kernels"
     },
     {
@@ -4802,7 +4535,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4820,7 +4552,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4838,7 +4569,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4857,7 +4587,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4875,7 +4604,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -4891,7 +4619,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -4907,7 +4634,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -4925,7 +4651,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -4941,7 +4666,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -4957,7 +4681,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -4973,7 +4696,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -4989,7 +4711,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5005,7 +4726,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32",
         "int32"
@@ -5022,7 +4742,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32",
         "int32"
@@ -5039,7 +4758,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5057,7 +4775,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5075,7 +4792,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5093,7 +4809,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5109,7 +4824,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5125,7 +4839,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5141,7 +4854,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5157,7 +4869,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5173,7 +4884,6 @@
       "device": "cpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5189,7 +4899,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5205,7 +4914,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5221,7 +4929,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5237,7 +4944,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5253,7 +4959,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5271,7 +4976,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5287,7 +4991,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5303,7 +5006,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5319,7 +5021,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5337,7 +5038,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5353,7 +5053,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5369,7 +5068,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5385,7 +5083,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5401,7 +5098,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5417,7 +5113,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5433,7 +5128,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5449,7 +5143,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5468,7 +5161,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -5484,7 +5176,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5503,7 +5194,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5522,7 +5212,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5541,7 +5230,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5559,7 +5247,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
     },
     {
@@ -5570,7 +5257,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5588,7 +5274,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "float32"
       ],
@@ -5604,7 +5289,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5622,7 +5306,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5640,7 +5323,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5659,7 +5341,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -5675,7 +5356,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "int32"
       ],
@@ -5691,7 +5371,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
     },
     {
@@ -5702,7 +5381,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
     },
     {
@@ -5713,7 +5391,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "PRNG key management; the random factories derive keys from MlxOptions instead of exposing keys as tasks"
     },
     {
@@ -5724,7 +5401,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5742,7 +5418,6 @@
       "device": "gpu",
       "bound": true,
       "tested": true,
-      "benchmarked": false,
       "dtypes": [
         "bfloat16",
         "float16",
@@ -5760,7 +5435,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5771,7 +5445,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5782,7 +5455,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5793,7 +5465,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5804,7 +5475,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5815,7 +5485,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5826,7 +5495,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     },
     {
@@ -5837,7 +5505,6 @@
       "device": "gpu",
       "bound": false,
       "tested": false,
-      "benchmarked": false,
       "excluded": "Autodiff and graph transforms take closures over MLX computations; they are not data-parallel library tasks"
     }
   ]
