@@ -24,7 +24,8 @@
                 <include>LICENSE_APACHE2</include>
                 <include>LICENSE_GPLv2CE</include>
                 <include>LICENSE_GPLv2</include>
-                <include>LICENSE_MIT</include>
+                <include>LICENSE_UPL</include>
+                <include>THIRD_PARTY_LICENSES.md</include>
             </includes>
             <outputDirectory>./</outputDirectory>
             <fileMode>0444</fileMode>

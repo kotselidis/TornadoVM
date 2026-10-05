@@ -1,12 +1,28 @@
 /*
- * Copyright (c) 2018, 2020, APT Group, Department of Computer Science,
+ * Copyright (c) 2018, 2020, 2026, APT Group, Department of Computer Science,
  * The University of Manchester. All rights reserved.
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.
+ *
+ * Linking this library statically or dynamically with other modules is
+ * making a combined work based on this library. Thus, the terms and
+ * conditions of the GNU General Public License cover the whole
+ * combination.
+ *
+ * As a special exception, the copyright holders of this library give you
+ * permission to link this library with independent modules to produce an
+ * executable, regardless of the license terms of these independent
+ * modules, and to copy and distribute the resulting executable under
+ * terms of your choice, provided that you also meet, for each linked
+ * independent module, the terms and conditions of the license of that
+ * module. An independent module is a module which is not derived from
+ * or based on this library. If you modify this library, you may extend
+ * this exception to your version of the library, but you are not
+ * obligated to do so. If you do not wish to do so, delete this
+ * exception statement from your version.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,18 +39,19 @@ package uk.ac.manchester.tornado.runtime.graal.compiler;
 
 import tornado.graal.compiler.core.common.CompilationIdentifier;
 
-public class TornadoCompilerIdentifier implements CompilationIdentifier {
+/**
+ * Names one kernel compilation in Graal's debug output: the kernel name followed by a sequence number.
+ */
+public final class TornadoCompilerIdentifier implements CompilationIdentifier {
 
-    private final int id;
-    private final String name;
+    private final String label;
 
     public TornadoCompilerIdentifier(String name, int id) {
-        this.name = name;
-        this.id = id;
+        this.label = name + "-" + id;
     }
 
     @Override
     public String toString(Verbosity verbosity) {
-        return name + "-" + id;
+        return label;
     }
 }
