@@ -45,11 +45,11 @@ This builds the Metal backend and the `tornado-mlx` Java module, which binds str
 ## Supported operations
 
 All factories are static methods used as the second argument of
-`taskGraph.libraryTask(id, factory, args...)`, one class per category. Each task's function name is
-the mlx-c name of the operation it runs (`mlx_add`, `mlx_sum_axis`, ...).
-Operations are grouped by category, as in the coverage manifest of
-[TornadoMLXBenchmarks](https://github.com/kotselidis/TornadoMLXBenchmarks), which also lists the 40 deliberately excluded mlx-c
-functions (autodiff transforms, custom-kernel builders, PRNG key management) with reasons.
+`taskGraph.libraryTask(id, factory, args...)`, one class per category, as in the coverage manifest of
+[TornadoMLXBenchmarks](https://github.com/kotselidis/TornadoMLXBenchmarks).
+That manifest also lists the 40 mlx-c functions left out on purpose (autodiff transforms,
+custom-kernel builders, PRNG key management), with reasons. Each task's function name is the mlx-c
+name of the operation it runs (`mlx_add`, `mlx_sum_axis`, ...).
 
 | Category | Factory class | Operations |
 |---|---|---|
@@ -135,8 +135,8 @@ tornado-test --mlx                                                      # all ML
 tornado-test -V uk.ac.manchester.tornado.unittests.mlx.TestMlxLinearAlgebra
 ```
 
-Every bound operation has a test. [TornadoMLXBenchmarks](https://github.com/kotselidis/TornadoMLXBenchmarks) keeps the
-coverage manifest that checks it.
+Every bound operation has a test; the coverage manifest of
+[TornadoMLXBenchmarks](https://github.com/kotselidis/TornadoMLXBenchmarks) checks it.
 
 ## Benchmarks
 
