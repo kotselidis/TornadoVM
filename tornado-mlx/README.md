@@ -46,8 +46,9 @@ This builds the Metal backend and the `tornado-mlx` Java module, which binds str
 
 All factories are static methods used as the second argument of
 `taskGraph.libraryTask(id, factory, args...)`. Each carries `@MlxOp` with the mlx-c function it binds.
-Operations are grouped by category, as in `coverage.json`, which also lists the 40 deliberately
-excluded mlx-c functions (autodiff transforms, custom-kernel builders, PRNG key management) with reasons.
+Operations are grouped by category, as in the coverage manifest of
+[TornadoMLXBenchmarks](https://github.com/kotselidis/TornadoMLXBenchmarks), which also lists the 40 deliberately excluded mlx-c
+functions (autodiff transforms, custom-kernel builders, PRNG key management) with reasons.
 
 | Category | Factory classes | Operations |
 |---|---|---|
@@ -133,8 +134,8 @@ tornado-test --mlx                                                      # all ML
 tornado-test -V uk.ac.manchester.tornado.unittests.mlx.TestMlxLinearAlgebra
 ```
 
-The build enforces coverage: `scripts/update_coverage.py --check` fails if a bound operation has no
-test. After you add a factory or a test, run `python3 tornado-mlx/scripts/update_coverage.py`.
+Every bound operation has a test. [TornadoMLXBenchmarks](https://github.com/kotselidis/TornadoMLXBenchmarks) keeps the
+coverage manifest that checks it.
 
 ## Benchmarks
 
@@ -177,9 +178,7 @@ fresh run gives lower absolute times, mostly for decode-sized cases.
 |---|---|
 | `src/main/java/.../mlx/` | Factory classes, `MlxOp`, `MlxOptions` |
 | `src/main/java/.../mlx/provider/` | `MlxLibraryProvider` (the SPI provider), `MlxCall` (argument marshalling), `MlxNativeLib` (loading, wrapping, errors), `MlxC` (generated FFM bindings) |
-| `mlx-c-api.json` | Every mlx-c operation, written by `scripts/generate_bindings.py` |
-| `scripts/generate_bindings.py` | Regenerates `MlxC.java` and `mlx-c-api.json` from mlx-c's headers |
-| `coverage.json`, `coverage-overrides.json`, `scripts/update_coverage.py` | Coverage manifest: category, bound and tested per MLX operation; Maven runs the script with `--check` |
+| `scripts/generate_bindings.py` | Regenerates `MlxC.java` from mlx-c's headers |
 | `../prototypes/mlx-m0/` | The zero-copy spike and its findings (`FINDINGS.md`) |
 
 ## Adding an operation
@@ -188,8 +187,7 @@ fresh run gives lower absolute times, mostly for decode-sized cases.
 2. Add a factory that calls `Mlx.task(name, outputIndex, args...)` and annotate it with `@MlxOp`.
 3. Add an entry for `name` in `MlxLibraryProvider`'s operation table: it wraps the inputs with
    `MlxCall`, calls the `MlxC` function and stores the result.
-4. Add a test to the category's class in `tornado-unittests/.../unittests/mlx`, then run
-   `scripts/update_coverage.py`.
+4. Add a test to the category's class in `tornado-unittests/.../unittests/mlx`.
 
 For a new native library, see `HYBRID_API_GUIDE.md`; `MlxLibraryProvider` is a provider bound
 entirely through `java.lang.foreign`.

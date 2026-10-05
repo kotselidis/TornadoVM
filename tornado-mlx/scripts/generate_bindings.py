@@ -21,14 +21,13 @@ Generates the FFM bindings for mlx-c (the C API of Apple MLX) used by tornado-ml
 Reads the mlx-c headers and writes:
   * src/main/java/uk/ac/manchester/tornado/mlx/provider/MlxC.java
       one static method per mlx-c function, backed by a lazily resolved downcall;
-  * mlx-c-api.json
-      the operation list (header, name, parameters) that update_coverage.py turns
-      into the coverage manifest.
+  * with --api FILE, the operation list (header, name, parameters) as JSON, from which
+      TornadoMLXBenchmarks builds its coverage manifest.
 
-Both outputs are checked in, so building tornado-mlx does not need the headers.
+MlxC.java is checked in, so building tornado-mlx does not need the headers.
 Re-run after upgrading mlx-c:
 
-    python3 tornado-mlx/scripts/generate_bindings.py [--include /opt/homebrew/opt/mlx-c/include]
+    python3 tornado-mlx/scripts/generate_bindings.py [--include /opt/homebrew/opt/mlx-c/include] [--api FILE]
 
 The generator only understands the C types listed in this file and stops on
 anything else, so an mlx-c upgrade that introduces a new type fails loudly.
@@ -44,13 +43,12 @@ import sys
 
 MODULE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JAVA_OUT = os.path.join(MODULE_DIR, "src/main/java/uk/ac/manchester/tornado/mlx/provider/MlxC.java")
-API_OUT = os.path.join(MODULE_DIR, "mlx-c-api.json")
 
-# Headers whose functions are MLX operations: these are tracked in the coverage manifest.
+# Headers whose functions are MLX operations: these go into the --api operation list.
 OP_HEADERS = ["ops.h", "fast.h", "linalg.h", "fft.h", "random.h", "transforms.h"]
 
 # Support headers: array creation and access, streams, devices, vectors, strings, memory.
-# Bound, but not operations, so not part of the coverage manifest.
+# Bound, but not operations, so not part of the --api operation list.
 SUPPORT_HEADERS = ["array.h", "stream.h", "device.h", "vector.h", "string.h", "memory.h", "metal.h", "version.h", "error.h"]
 
 # Functions in the headers above that are not bound, with the reason. They take C callbacks
@@ -392,7 +390,7 @@ public final class MlxC {
         fh.write("\n".join(out) + "\n")
 
 
-def write_api(functions, version, digest):
+def write_api(path, functions, version, digest):
     ops = []
     for header, is_op, name, ret, params in functions:
         if not is_op:
@@ -408,7 +406,7 @@ def write_api(functions, version, digest):
         "headersDigest": digest,
         "operations": ops,
     }
-    with open(API_OUT, "w") as fh:
+    with open(path, "w") as fh:
         json.dump(data, fh, indent=2)
         fh.write("\n")
     return len(ops)
@@ -417,12 +415,16 @@ def write_api(functions, version, digest):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--include", default=default_include(), help="mlx-c include directory (contains mlx/c/*.h)")
+    parser.add_argument("--api", metavar="FILE", help="also write the operation list as JSON to FILE")
     args = parser.parse_args()
     functions, version, digest = generate(args.include)
     write_java(functions, version, digest)
-    n_ops = write_api(functions, version, digest)
-    print("[generate_bindings] mlx-c %s: %d functions bound (%d operations), %d skipped -> %s, %s" % (version, len(functions), n_ops, len(SKIPPED), os.path.relpath(JAVA_OUT),
-                                                                                                          os.path.relpath(API_OUT)))
+    n_ops = sum(1 for f in functions if f[1])
+    outputs = [os.path.relpath(JAVA_OUT)]
+    if args.api:
+        write_api(args.api, functions, version, digest)
+        outputs.append(os.path.relpath(args.api))
+    print("[generate_bindings] mlx-c %s: %d functions bound (%d operations), %d skipped -> %s" % (version, len(functions), n_ops, len(SKIPPED), ", ".join(outputs)))
 
 
 if __name__ == "__main__":
