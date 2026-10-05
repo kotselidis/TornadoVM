@@ -13,8 +13,9 @@
     <description>TornadoVM Runtime: A dynamic execution engine for heterogeneous acceleration of managed languages</description>
     <licenses>
         <license>
-            <name>GNU General Public License, Version 2</name>
-            <url>https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html</url>
+            <name>GNU General Public License, version 2, with the Classpath Exception</name>
+            <url>https://openjdk.org/legal/gplv2+ce.html</url>
+            <comments>SPDX-License-Identifier: GPL-2.0-only WITH Classpath-exception-2.0</comments>
             <distribution>repo</distribution>
         </license>
     </licenses>
