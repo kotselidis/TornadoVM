@@ -87,6 +87,12 @@ public class CUDAEvent implements Event {
         CUDACommandExecutionStatus executionStatus = CL_COMPLETE;
         if (event != null) {
             executionStatus = CUDADriverAPI.cuEventQuery(event.event()) == CUDADriverAPI.CUDA_SUCCESS ? CL_COMPLETE : CUDACommandExecutionStatus.CL_RUNNING;
+        } else {
+            // A stream event is complete once its stream has been drained.
+            CUDAHandles.StreamEvent streamEvent = CUDAHandles.resolve(eventId, CUDAHandles.StreamEvent.class);
+            if (streamEvent != null && streamEvent.queue().isPending()) {
+                executionStatus = CUDACommandExecutionStatus.CL_RUNNING;
+            }
         }
         ByteBuffer.wrap(buffer).order(CUDADriver.BYTE_ORDER).putInt(executionStatus.getValue());
     }
@@ -116,6 +122,7 @@ public class CUDAEvent implements Event {
         for (long handle : events) {
             CUDAHandles.Event event = CUDAHandles.resolve(handle, CUDAHandles.Event.class);
             if (event == null) {
+                waitForStreamEvent(handle);
                 continue;
             }
             int result = CUDADriverAPI.cuEventSynchronize(event.event());
@@ -127,7 +134,23 @@ public class CUDAEvent implements Event {
         }
     }
 
+    /** Waiting on a stream event synchronises its stream; any other handle is ignored. */
+    private static void waitForStreamEvent(long handle) throws CUDAException {
+        CUDAHandles.StreamEvent streamEvent = CUDAHandles.resolve(handle, CUDAHandles.StreamEvent.class);
+        if (streamEvent == null) {
+            return;
+        }
+        int result = CUDACommandQueue.drain(streamEvent.queue());
+        if (result != CUDADriverAPI.CUDA_SUCCESS) {
+            throw new CUDAException(CUDADriverAPI.describe("cuStreamSynchronize", result));
+        }
+    }
+
     static void clReleaseEvent(long eventId) throws CUDAException {
+        if (CUDAHandles.resolve(eventId, CUDAHandles.StreamEvent.class) != null) {
+            // Owned by its queue and shared by every operation on it.
+            return;
+        }
         CUDAHandles.Event event = (CUDAHandles.Event) CUDAHandles.release(eventId);
         if (event == null) {
             return;

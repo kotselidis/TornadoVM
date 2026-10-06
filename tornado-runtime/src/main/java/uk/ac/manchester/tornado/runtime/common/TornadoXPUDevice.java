@@ -215,6 +215,19 @@ public interface TornadoXPUDevice extends TornadoDevice {
     }
 
     /**
+     * Tells the backend whether anything in the coming execution of the plan will wait on, or
+     * time, the completion event of an individual operation: dependency wait lists and the
+     * profiler do. When nothing will, a backend may skip creating per-operation events. Called by
+     * the interpreter before issuing a plan's bytecodes. No-op by default.
+     *
+     * @param executionPlanId the execution plan
+     * @param required whether per-operation events are needed
+     */
+    default void setEventTracking(long executionPlanId, boolean required) {
+        // no-op by default
+    }
+
+    /**
      * Whether this backend implements intra-plan concurrency (role streams and cross-stream
      * event dependencies). When false, a plan-level {@code withIntraPlanConcurrency()} request
      * is ignored and the plan runs on the backend's default single-queue path.

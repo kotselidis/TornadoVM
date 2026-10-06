@@ -717,6 +717,11 @@ public class CUDATornadoDevice implements TornadoXPUDevice, TornadoNativeStreamS
     }
 
     @Override
+    public void setEventTracking(long executionPlanId, boolean required) {
+        getDeviceContext().setEventTracking(executionPlanId, required);
+    }
+
+    @Override
     public void setStagedTransfers(boolean enabled) {
         getDeviceContext().setStagedTransfers(enabled);
     }

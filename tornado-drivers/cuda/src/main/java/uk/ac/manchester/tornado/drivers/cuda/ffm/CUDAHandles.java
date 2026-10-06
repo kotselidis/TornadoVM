@@ -114,6 +114,8 @@ public final class CUDAHandles {
         private final int device;
         private final long properties;
         private volatile boolean pending;
+        private volatile boolean eventsRequired = true;
+        private volatile long streamEvent;
 
         public Queue(long stream, long context, int device, long properties) {
             this.stream = stream;
@@ -151,6 +153,56 @@ public final class CUDAHandles {
         public boolean isPending() {
             return pending;
         }
+
+        /**
+         * Whether operations on this queue need their own completion event. When nothing will wait
+         * on, or time, an individual operation (no profiler, no dependency lists, a single stream),
+         * operations return the queue's shared {@link #streamEvent()} instead of creating, recording
+         * and later destroying a {@code CUevent} each. Starts as {@code true}, so a queue only skips
+         * events once the backend has been told it may.
+         */
+        public boolean eventsRequired() {
+            return eventsRequired;
+        }
+
+        /** Sets whether operations need their own event and returns the previous setting. */
+        public boolean setEventsRequired(boolean required) {
+            boolean previous = eventsRequired;
+            eventsRequired = required;
+            return previous;
+        }
+
+        /**
+         * The handle of this queue's {@link StreamEvent}, registered on first use. Waiting on it
+         * synchronises the whole stream, which is ordering-equivalent to waiting on the last
+         * operation issued to it.
+         */
+        public long streamEvent() {
+            long handle = streamEvent;
+            if (handle == 0) {
+                synchronized (this) {
+                    if (streamEvent == 0) {
+                        streamEvent = register(new StreamEvent(this));
+                    }
+                    handle = streamEvent;
+                }
+            }
+            return handle;
+        }
+
+        /** The registered stream-event handle, or {@code 0} if none was ever handed out. */
+        public long registeredStreamEvent() {
+            return streamEvent;
+        }
+    }
+
+    /**
+     * The event an operation returns when its queue does not need per-operation events. It stands
+     * for "everything issued to this queue so far": waits synchronise the stream, status reflects
+     * whether the stream has work outstanding, and it carries no timing. One per queue, owned by the
+     * queue, so releasing it as an operation's event is a no-op.
+     */
+    public record StreamEvent(Queue queue) {
     }
 
     /**

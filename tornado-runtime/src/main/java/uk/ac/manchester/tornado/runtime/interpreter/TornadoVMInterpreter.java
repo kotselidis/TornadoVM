@@ -342,6 +342,10 @@ public class TornadoVMInterpreter {
         // dependency DAG (waitList -> cross-stream events) would never engage for concurrent plans.
         useDependencies = VM_USE_DEPS || isIntraPlanConcurrencyActive();
 
+        // Per-operation events are only needed when something waits on or times one operation:
+        // dependency wait lists and the profiler. Recomputed per execution for the same reason.
+        interpreterDevice.setEventTracking(graphExecutionContext.getExecutionPlanId(), useDependencies || TornadoOptions.isProfilerEnabled());
+
         // Batched plans: reset the per-object chunk counters so every execution behaves like the
         // first (per-chunk DEALLOCs stay no-ops until the last even chunk). Without this reset the
         // counters keep growing across execute() calls, so on re-execution every per-chunk DEALLOC
