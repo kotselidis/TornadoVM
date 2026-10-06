@@ -112,6 +112,16 @@ public class TornadoVMInterpreter {
     private final List<Object> constants;
     private final List<SchedulableTask> taskExecutionContexts;
     private final List<SchedulableTask> localTaskList;
+    /*
+     * Global task index -> index in localTaskList, so a LAUNCH does not scan both task lists.
+     * globalToLocalTasks keeps the task each entry was computed for: the execution context can
+     * replace a task (setTask) or append one (addTask) after this interpreter is built, and any
+     * mismatch rebuilds the table. localTaskList is this interpreter's own copy, so its size is
+     * the only thing that can change.
+     */
+    private int[] globalToLocalIndexes;
+    private SchedulableTask[] globalToLocalTasks;
+    private int globalToLocalLocalCount;
     private final TornadoExecutionContext graphExecutionContext;
     private final TornadoVMBytecodeResult bytecodeResult;
     private TornadoProfiler timeProfiler;
@@ -201,6 +211,7 @@ public class TornadoVMInterpreter {
 
         constants = graphExecutionContext.getConstants();
         taskExecutionContexts = graphExecutionContext.getTasks();
+        rebuildGlobalToLocalTable();
 
         logger.debug("interpreter for device %s is ready to go", device.toString());
 
@@ -1178,8 +1189,8 @@ public class TornadoVMInterpreter {
         resetEventIndexes(eventId);
     }
 
-    private boolean isRecompilationNeededForLastBatch(int taskIndex, SchedulableTask task, long batchThreads) {
-        return (!shouldCompile(installedCodes[globalToLocalTaskIndex(taskIndex)]) && task.getBatchThreads() != 0 && task.getBatchThreads() != batchThreads);
+    private boolean isRecompilationNeededForLastBatch(int localTaskIndex, SchedulableTask task, long batchThreads) {
+        return (!shouldCompile(installedCodes[localTaskIndex]) && task.getBatchThreads() != 0 && task.getBatchThreads() != batchThreads);
     }
 
     private boolean currentBatchUsesThreadId(int currentBatch, boolean indexInWrite) {
@@ -1253,6 +1264,7 @@ public class TornadoVMInterpreter {
         }
 
         final KernelStackFrame kernelStackFrame = resolveCallWrapper(callWrapperIndex, numArgs, this.kernelStackFrame, interpreterDevice, redeployOnDevice);
+        final int localTaskIndex = globalToLocalTaskIndex(taskIndex);
 
         int currentBatch = task.getBatchNumber();
         TaskContextInterface meta = task.meta();
@@ -1262,9 +1274,9 @@ public class TornadoVMInterpreter {
         // Check if a different batch size was used for the same kernel or
         // if the loop index is written in the output buffer, and we are not in the first batch.
         // If any is true, then the kernel needs to be recompiled.
-        if (isRecompilationNeededForLastBatch(taskIndex, task, batchThreads) || currentBatchUsesThreadId(currentBatch, indexInWrite)) {
+        if (isRecompilationNeededForLastBatch(localTaskIndex, task, batchThreads) || currentBatchUsesThreadId(currentBatch, indexInWrite)) {
             task.forceCompilation();
-            installedCodes[globalToLocalTaskIndex(taskIndex)].invalidate();
+            installedCodes[localTaskIndex].invalidate();
         }
 
         updateBatchThreads(task, batchThreads, indexInWrite, currentBatch);
@@ -1283,7 +1295,7 @@ public class TornadoVMInterpreter {
             timeProfiler.registerDeviceName(task.getId(), task.getDevice().getPhysicalDevice().getDeviceName());
         }
 
-        if (shouldCompile(installedCodes[globalToLocalTaskIndex(taskIndex)])) {
+        if (shouldCompile(installedCodes[localTaskIndex])) {
             task.setDevice(interpreterDevice);
             try {
                 task.attachProfiler(timeProfiler);
@@ -1293,7 +1305,7 @@ public class TornadoVMInterpreter {
                     task.forceCompilation();
                 }
 
-                installedCodes[globalToLocalTaskIndex(taskIndex)] = interpreterDevice.installCode(graphExecutionContext.getExecutionPlanId(), task);
+                installedCodes[localTaskIndex] = interpreterDevice.installCode(graphExecutionContext.getExecutionPlanId(), task);
                 profilerUpdateForPreCompiledTask(task);
                 // After the compilation has been completed, increment
                 // the batch number of the task and update it.
@@ -1329,14 +1341,15 @@ public class TornadoVMInterpreter {
 
         KernelStackFrame stackFrame = executionFrame.stackFrame;
         int[] waitList = executionFrame.waitList;
+        final int localTaskIndex = globalToLocalTaskIndex(taskIndex);
 
-        if (installedCodes[globalToLocalTaskIndex(taskIndex)] == null) {
+        if (installedCodes[localTaskIndex] == null) {
             // After warming-up, it is possible to get a null pointer in the task-cache due
             // to lazy compilation. In that case, we check again the code cache.
-            installedCodes[globalToLocalTaskIndex(taskIndex)] = interpreterDevice.getCodeFromCache(graphExecutionContext.getExecutionPlanId(), task);
+            installedCodes[localTaskIndex] = interpreterDevice.getCodeFromCache(graphExecutionContext.getExecutionPlanId(), task);
         }
 
-        final TornadoInstalledCode installedCode = installedCodes[globalToLocalTaskIndex(taskIndex)];
+        final TornadoInstalledCode installedCode = installedCodes[localTaskIndex];
 
         if (installedCode == null) {
             throw new TornadoBailoutRuntimeException("Code generator Failed");
@@ -1629,7 +1642,34 @@ public class TornadoVMInterpreter {
      * @return The corresponding local task index, or 0 if the task is not found in the local task list.
      */
     private int globalToLocalTaskIndex(int taskIndex) {
-        return localTaskList.indexOf(taskExecutionContexts.get(taskIndex)) == -1 ? 0 : localTaskList.indexOf(taskExecutionContexts.get(taskIndex));
+        if (!isGlobalToLocalEntryValid(taskIndex)) {
+            rebuildGlobalToLocalTable();
+        }
+        return globalToLocalIndexes[taskIndex];
+    }
+
+    /**
+     * An entry is valid while both task lists keep their sizes and the global list still holds
+     * the same task object at that index.
+     */
+    private boolean isGlobalToLocalEntryValid(int taskIndex) {
+        return globalToLocalIndexes.length == taskExecutionContexts.size() && globalToLocalLocalCount == localTaskList.size() && globalToLocalTasks[taskIndex] == taskExecutionContexts.get(
+                taskIndex);
+    }
+
+    private void rebuildGlobalToLocalTable() {
+        final int taskCount = taskExecutionContexts.size();
+        final int[] indexes = new int[taskCount];
+        final SchedulableTask[] tasks = new SchedulableTask[taskCount];
+        for (int i = 0; i < taskCount; i++) {
+            final SchedulableTask task = taskExecutionContexts.get(i);
+            final int localIndex = localTaskList.indexOf(task);
+            tasks[i] = task;
+            indexes[i] = localIndex == -1 ? 0 : localIndex;
+        }
+        globalToLocalTasks = tasks;
+        globalToLocalIndexes = indexes;
+        globalToLocalLocalCount = localTaskList.size();
     }
 
     private void profilerUpdateForPreCompiledTask(SchedulableTask task) {
