@@ -61,6 +61,7 @@ import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 import uk.ac.manchester.tornado.drivers.cuda.CUDADeviceContextInterface;
 import uk.ac.manchester.tornado.drivers.cuda.graal.asm.CUDAAssembler;
+import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDADynamicSharedMemory;
 import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDAPreamble;
 import uk.ac.manchester.tornado.drivers.cuda.graal.lir.CUDAControlFlow;
 import uk.ac.manchester.tornado.drivers.cuda.graal.lir.CUDAControlFlow.LoopConditionOp;
@@ -271,6 +272,12 @@ public class CUDACompilationResultBuilder extends CompilationResultBuilder {
         // casts are the only fp16 constructs in such a kernel. See CUDAPreamble for why the
         // includes are not unconditional.
         String source = new String(code);
+        // Shared arrays above the 48 KB static limit move to dynamic shared memory. Only for a
+        // kernel launched from the host: the launch is what passes the dynamic size, and a
+        // device-launched child or a tile kernel is launched by other means.
+        if (isKernel && !getResult().isDeviceLaunched() && !source.contains("__tile_global__")) {
+            source = CUDADynamicSharedMemory.rewrite(source, compilationResult.getName());
+        }
         // cuda_fp8.h before the fp16 check: the fp8 include is emitted together with the
         // fp16 one (its conversions produce __half values), and both prepends keep the
         // fp16 include first because cuda_fp8.h builds on cuda_fp16.h types.
