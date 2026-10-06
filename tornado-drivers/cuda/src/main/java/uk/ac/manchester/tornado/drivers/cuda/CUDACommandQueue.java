@@ -462,7 +462,7 @@ public class CUDACommandQueue extends CommandQueue {
             long start = beginEvent(queue);
             queue.markPending();
             long dispatchStart = System.nanoTime();
-            int result = CUDADriverAPI.cuLaunchKernel(kernel.function, grid[0], grid[1], grid[2], block[0], block[1], block[2], 0, queue.stream(), kernelParameters(arena, kernel),
+            int result = CUDADriverAPI.cuLaunchKernel(kernel.function, grid[0], grid[1], grid[2], block[0], block[1], block[2], kernel.dynamicSharedMemoryBytes, queue.stream(), kernelParameters(arena, kernel),
                     MemorySegment.NULL);
             long launchEvent = endEvent(start, queue, dispatchStart);
             // A failed launch leaves the kernel's outputs untouched. Surfacing it makes the caller

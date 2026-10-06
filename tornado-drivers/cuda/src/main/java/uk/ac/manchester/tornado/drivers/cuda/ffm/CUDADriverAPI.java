@@ -79,6 +79,10 @@ public final class CUDADriverAPI {
     public static final int CU_DEVICE_ATTRIBUTE_ASYNC_ENGINE_COUNT = 40;
     public static final int CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75;
     public static final int CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR = 76;
+    public static final int CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN = 97;
+
+    /** {@code CUfunction_attribute}: the largest dynamic shared memory a launch of the function may request. */
+    public static final int CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES = 8;
 
     /** CUjit_option values used to capture the driver's JIT diagnostics on a module load. */
     public static final int CU_JIT_ERROR_LOG_BUFFER = 5;
@@ -143,6 +147,7 @@ public final class CUDADriverAPI {
     private static final MethodHandle CU_MODULE_UNLOAD;
     private static final MethodHandle CU_LAUNCH_KERNEL;
     private static final MethodHandle CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE;
+    private static final MethodHandle CU_FUNC_SET_ATTRIBUTE;
 
     private static final MethodHandle CU_LINK_CREATE;
     private static final MethodHandle CU_LINK_ADD_DATA;
@@ -200,6 +205,7 @@ public final class CUDADriverAPI {
             CU_MODULE_UNLOAD = null;
             CU_LAUNCH_KERNEL = null;
             CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE = null;
+            CU_FUNC_SET_ATTRIBUTE = null;
             CU_LINK_CREATE = null;
             CU_LINK_ADD_DATA = null;
             CU_LINK_ADD_FILE = null;
@@ -261,6 +267,7 @@ public final class CUDADriverAPI {
             CU_MODULE_UNLOAD = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_LONG), "cuModuleUnload");
             CU_LAUNCH_KERNEL = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_LONG, C_INT, C_INT, C_INT, C_INT, C_INT, C_INT, C_INT, C_LONG, C_POINTER, C_POINTER), "cuLaunchKernel");
             CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER, C_LONG, C_LONG, C_LONG, C_INT), "cuOccupancyMaxPotentialBlockSize");
+            CU_FUNC_SET_ATTRIBUTE = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_LONG, C_INT, C_INT), "cuFuncSetAttribute");
 
             // Linker, used only for modules that launch kernels from the device: their relocatable
             // image has to be linked against libcudadevrt before it can be loaded.
@@ -648,6 +655,14 @@ public final class CUDADriverAPI {
     public static int cuOccupancyMaxPotentialBlockSize(MemorySegment minGridSize, MemorySegment blockSize, long function, long blockSizeToDynamicSMemSize, long dynamicSMemSize, int blockSizeLimit) {
         try {
             return (int) CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE.invokeExact(minGridSize, blockSize, function, blockSizeToDynamicSMemSize, dynamicSMemSize, blockSizeLimit);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static int cuFuncSetAttribute(long function, int attribute, int value) {
+        try {
+            return (int) CU_FUNC_SET_ATTRIBUTE.invokeExact(function, attribute, value);
         } catch (Throwable t) {
             throw rethrow(t);
         }

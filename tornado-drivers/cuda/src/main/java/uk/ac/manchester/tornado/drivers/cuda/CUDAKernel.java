@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import uk.ac.manchester.tornado.api.exceptions.TornadoMemoryException;
 import uk.ac.manchester.tornado.drivers.cuda.enums.CUDAKernelInfo;
 import uk.ac.manchester.tornado.drivers.cuda.exceptions.CUDAException;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDADriverAPI;
@@ -116,12 +117,37 @@ public class CUDAKernel {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment minGridSize = FFMSupport.allocateInt(arena);
             MemorySegment blockSize = FFMSupport.allocateInt(arena);
-            int result = CUDADriverAPI.cuOccupancyMaxPotentialBlockSize(minGridSize, blockSize, kernel.function, 0, 0, 0);
+            int result = CUDADriverAPI.cuOccupancyMaxPotentialBlockSize(minGridSize, blockSize, kernel.function, 0, kernel.dynamicSharedMemoryBytes, 0);
             if (result != CUDADriverAPI.CUDA_SUCCESS) {
                 return 0;
             }
             return blockSize.get(FFMSupport.C_INT, 0);
         }
+    }
+
+    /**
+     * Grants the kernel {@code bytes} of dynamic shared memory and makes every launch request
+     * them. Above 48 KB a function must opt in through
+     * {@code CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES}, up to the device's opt-in limit.
+     */
+    public void setDynamicSharedMemory(int bytes) {
+        CUDAHandles.Kernel kernel = CUDAHandles.resolve(oclKernelID, CUDAHandles.Kernel.class);
+        if (kernel == null) {
+            return;
+        }
+        if (deviceContext.getDevice() instanceof CUDADevice device) {
+            int limit = device.getMaxSharedMemoryPerBlockOptin();
+            if (limit > 0 && bytes > limit) {
+                throw new TornadoMemoryException(String.format("Kernel %s needs %d bytes of shared memory per block, but %s allows at most %d bytes.", kernel.name, bytes,
+                        device.getDeviceName(), limit));
+            }
+        }
+        int result = CUDADriverAPI.cuFuncSetAttribute(kernel.function, CUDADriverAPI.CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, bytes);
+        if (result != CUDADriverAPI.CUDA_SUCCESS) {
+            throw new TornadoMemoryException(String.format("Kernel %s cannot use %d bytes of shared memory per block: %s", kernel.name, bytes, CUDADriverAPI.describe("cuFuncSetAttribute",
+                    result)));
+        }
+        kernel.dynamicSharedMemoryBytes = bytes;
     }
 
     private int maxPotentialBlockSize = -1;
