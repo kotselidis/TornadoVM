@@ -126,6 +126,20 @@ public class TestLargeTaskGraphs extends TornadoTestBase {
         }
     }
 
+    public static void doubleWithContext(KernelContext context, IntArray a) {
+        int i = context.globalIdx;
+        if (i < a.getSize()) {
+            a.set(i, a.get(i) * 2);
+        }
+    }
+
+    public static void tripleMinusOneWithContext(KernelContext context, IntArray a) {
+        int i = context.globalIdx;
+        if (i < a.getSize()) {
+            a.set(i, a.get(i) * 3 - 1);
+        }
+    }
+
     private static WorkerGrid workerGrid() {
         WorkerGrid grid = new WorkerGrid1D(N);
         grid.setLocalWork(LOCAL, 1, 1);
@@ -188,6 +202,52 @@ public class TestLargeTaskGraphs extends TornadoTestBase {
             assertEquals(2 * tasks, a.get(i));
             assertEquals(4 * tasks, b.get(i));
             assertEquals(6 * tasks, c.get(i));
+        }
+    }
+
+    /**
+     * Three different kernels interleaved over 48 tasks. The result depends on the order of the
+     * kernels, so a launch that ran the compiled code of another task would change it. The plan
+     * runs three times to cover the launches that reuse the installed code.
+     */
+    @Test
+    public void testInterleavedKernelsKeepTheirCode() throws TornadoExecutionPlanException {
+        final int tasks = 48;
+        final int executions = 3;
+        IntArray a = new IntArray(N);
+        a.init(1);
+        KernelContext context = new KernelContext();
+        GridScheduler grid = new GridScheduler();
+        TaskGraph graph = new TaskGraph("s0").transferToDevice(DataTransferMode.FIRST_EXECUTION, a);
+        for (int t = 0; t < tasks; t++) {
+            switch (t % 3) {
+                case 0 -> graph.task("t" + t, TestLargeTaskGraphs::incrementWithContext, context, a);
+                case 1 -> graph.task("t" + t, TestLargeTaskGraphs::doubleWithContext, context, a);
+                default -> graph.task("t" + t, TestLargeTaskGraphs::tripleMinusOneWithContext, context, a);
+            }
+            grid.addWorkerGrid("s0.t" + t, workerGrid());
+        }
+        graph.transferToHost(DataTransferMode.EVERY_EXECUTION, a);
+
+        int expected = 1;
+        for (int e = 0; e < executions; e++) {
+            for (int t = 0; t < tasks; t++) {
+                expected = switch (t % 3) {
+                    case 0 -> expected + 1;
+                    case 1 -> expected * 2;
+                    default -> expected * 3 - 1;
+                };
+            }
+        }
+
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(graph.snapshot())) {
+            plan.withGridScheduler(grid);
+            for (int e = 0; e < executions; e++) {
+                plan.execute();
+            }
+        }
+        for (int i = 0; i < N; i++) {
+            assertEquals(expected, a.get(i));
         }
     }
 }
