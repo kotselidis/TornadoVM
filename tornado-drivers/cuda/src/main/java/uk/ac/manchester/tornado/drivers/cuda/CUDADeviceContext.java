@@ -373,6 +373,17 @@ public class CUDADeviceContext implements CUDADeviceContextInterface {
         }
     }
 
+    /**
+     * Only the plan's default queue skips per-operation events. Role queues and the compute pool
+     * are only used with intra-plan concurrency, whose cross-stream waits need real events, so
+     * they keep creating them; for the same reason the default queue keeps them while the plan
+     * runs on several streams.
+     */
+    @Override
+    public void setEventTracking(long executionPlanId, boolean required) {
+        getCommandQueue(executionPlanId).setEventsRequired(required || isMultiStreamEnabled(executionPlanId));
+    }
+
     @Override
     public void setStagedTransfers(boolean enabled) {
         stagedTransfersEnabled = enabled;
@@ -502,6 +513,21 @@ public class CUDADeviceContext implements CUDADeviceContextInterface {
         CUDAEventPool eventPool = getCUDAEventPool(executionPlanId);
         ensureStagedRing();
         long[] firstChunkWaits = eventPool.serialiseEvents(waitEvents, commandQueue, isMultiStreamEnabled(executionPlanId)) ? eventPool.waitEventsBuffer : null;
+        // Slot reuse waits on the chunk that last used the slot, which needs that chunk's own
+        // event: a stream event would wait for every chunk and remove the overlap.
+        boolean eventsRequired = commandQueue.setEventsRequired(true);
+        try {
+            stageChunks(commandQueue, bufferId, deviceOffset, bytes, hostPointer, hostOffset, firstChunkWaits);
+        } finally {
+            commandQueue.setEventsRequired(eventsRequired);
+        }
+        // The dependency event handed back to the caller is a pool-registered marker enqueued
+        // AFTER all chunks (the queue is in-order, so it is ordering-equivalent to the last
+        // chunk's event). The pool owns this marker; the ring keeps owning the chunk events.
+        return eventPool.registerEvent(commandQueue.enqueueMarker(), EventDescriptor.DESC_WRITE_SEGMENT, commandQueue);
+    }
+
+    private void stageChunks(CUDACommandQueue commandQueue, long bufferId, long deviceOffset, long bytes, long hostPointer, long hostOffset, long[] firstChunkWaits) {
         long offset = 0;
         int chunkIndex = 0;
         while (offset < bytes) {
@@ -527,10 +553,6 @@ public class CUDADeviceContext implements CUDADeviceContextInterface {
             offset += chunkBytes;
             chunkIndex++;
         }
-        // The dependency event handed back to the caller is a pool-registered marker enqueued
-        // AFTER all chunks (the queue is in-order, so it is ordering-equivalent to the last
-        // chunk's event). The pool owns this marker; the ring keeps owning the chunk events.
-        return eventPool.registerEvent(commandQueue.enqueueMarker(), EventDescriptor.DESC_WRITE_SEGMENT, commandQueue);
     }
 
     private void ensureStagedRing() {

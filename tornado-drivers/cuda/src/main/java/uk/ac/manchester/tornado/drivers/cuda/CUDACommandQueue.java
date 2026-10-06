@@ -110,6 +110,9 @@ public class CUDACommandQueue extends CommandQueue {
     static void clReleaseCommandQueue(long queueId) throws CUDAException {
         CUDAHandles.Queue queue = (CUDAHandles.Queue) CUDAHandles.release(queueId);
         if (queue != null) {
+            if (queue.registeredStreamEvent() != 0) {
+                CUDAHandles.release(queue.registeredStreamEvent());
+            }
             CUDADriverAPI.cuStreamDestroy(queue.stream());
         }
     }
@@ -171,6 +174,21 @@ public class CUDACommandQueue extends CommandQueue {
 
     private static int eventFlags() {
         return timingEnabled ? CU_EVENT_DEFAULT : CU_EVENT_DISABLE_TIMING;
+    }
+
+    /**
+     * {@code -Dtornado.cuda.events=always} keeps a {@code CUevent} for every operation even when
+     * nothing waits on it; the default, {@code auto}, creates them only when the plan needs them.
+     */
+    private static final boolean EVENTS_ALWAYS = "always".equalsIgnoreCase(System.getProperty("tornado.cuda.events", "auto"));
+
+    /**
+     * Sets whether operations on this queue need their own completion event (see
+     * {@link CUDAHandles.Queue#eventsRequired()}) and returns the previous setting.
+     */
+    public boolean setEventsRequired(boolean required) {
+        CUDAHandles.Queue queue = CUDAHandles.resolve(commandQueuePtr, CUDAHandles.Queue.class);
+        return queue == null || queue.setEventsRequired(required || EVENTS_ALWAYS);
     }
 
     /**
@@ -243,6 +261,9 @@ public class CUDACommandQueue extends CommandQueue {
      * bracket a timed operation.
      */
     private static long recordEvent(CUDAHandles.Queue queue) throws CUDAException {
+        if (!queue.eventsRequired()) {
+            return queue.streamEvent();
+        }
         long event = createEvent(eventFlags(), "cuEventCreate");
         queue.markPending();
         int result = CUDADriverAPI.cuEventRecord(event, queue.stream());
@@ -284,13 +305,17 @@ public class CUDACommandQueue extends CommandQueue {
     /**
      * Records the completion event for an operation opened with {@link #beginEvent} and returns the
      * handle carrying both. This event doubles as the operation's dependency handle, for
-     * {@code cuStreamWaitEvent} and status queries, so it is always created.
+     * {@code cuStreamWaitEvent} and status queries. When the queue does not need per-operation
+     * events and no start was recorded, the queue's shared stream event is returned instead.
      *
      * @param dispatchStart
      *     {@code System.nanoTime()} taken just before the driver call that issued the operation; the
      *     time since then is kept as the event's driver dispatch time when timing is on.
      */
     private static long endEvent(long start, CUDAHandles.Queue queue, long dispatchStart) throws CUDAException {
+        if (start == 0 && !queue.eventsRequired()) {
+            return queue.streamEvent();
+        }
         long dispatchTime = timingEnabled ? System.nanoTime() - dispatchStart : 0;
         long end;
         try {
@@ -321,6 +346,9 @@ public class CUDACommandQueue extends CommandQueue {
      * driver rather than leaking when the caller unwinds instead of returning it.
      */
     private static void discardEvent(long handle) {
+        if (CUDAHandles.resolve(handle, CUDAHandles.StreamEvent.class) != null) {
+            return;
+        }
         CUDAHandles.Event event = (CUDAHandles.Event) CUDAHandles.release(handle);
         if (event != null) {
             destroyEvent(event.start());
@@ -343,6 +371,14 @@ public class CUDACommandQueue extends CommandQueue {
             if (event != null) {
                 queue.markPending();
                 CUDADriverAPI.cuStreamWaitEvent(queue.stream(), event.event(), 0);
+            } else {
+                // A stream event from another queue has no CUevent to wait on GPU-side, so the
+                // other stream is drained from the host instead. One from this queue is already
+                // ordered by the stream.
+                CUDAHandles.StreamEvent streamEvent = CUDAHandles.resolve(events[i + 1], CUDAHandles.StreamEvent.class);
+                if (streamEvent != null && streamEvent.queue() != queue) {
+                    drain(streamEvent.queue());
+                }
             }
         }
     }
@@ -586,7 +622,7 @@ public class CUDACommandQueue extends CommandQueue {
      * leaves the queue marked pending and the next caller tries again rather than assuming the
      * stream drained.
      */
-    private static int drain(CUDAHandles.Queue queue) {
+    static int drain(CUDAHandles.Queue queue) {
         if (!queue.isPending()) {
             return CUDADriverAPI.CUDA_SUCCESS;
         }

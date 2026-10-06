@@ -92,6 +92,10 @@ public interface CUDADeviceContextInterface extends TornadoDeviceContext {
         // no-op by default
     }
 
+    default void setEventTracking(long executionPlanId, boolean required) {
+        // no-op by default
+    }
+
     /**
      * Records whether large one-shot H2D uploads are routed through the pinned staging ring.
      */
