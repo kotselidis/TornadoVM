@@ -24,6 +24,7 @@
 package uk.ac.manchester.tornado.unittests.kernelcontext.api;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -131,6 +132,36 @@ public class TestGridBarrier extends TornadoTestBase {
         for (int i = 0; i < n; i++) {
             assertEquals((i + 2 * rounds * BLOCK) % n + 2 * rounds, a.get(i));
         }
+    }
+
+    /**
+     * A grid far larger than the device keeps resident must be refused by the cooperative launch.
+     * Launched non-cooperatively it would hang at the first barrier instead; that is what a kernel
+     * loaded from the module cache did before the cooperative flag survived the cache, so a second
+     * run of this test, which hits the cache, guards that path too.
+     */
+    @Test
+    public void testNonResidentGridIsRefused() {
+        assertNotBackend(TornadoVMBackendType.OPENCL);
+        assertNotBackend(TornadoVMBackendType.METAL);
+
+        final int blocks = 64 * residentBlocks();
+        final int n = blocks * BLOCK;
+        IntArray a = new IntArray(n);
+        IntArray b = new IntArray(n);
+
+        TaskGraph taskGraph = new TaskGraph("gn") //
+                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+                .task("shift", TestGridBarrier::shiftRounds, new KernelContext(), a, b, 1) //
+                .transferToHost(DataTransferMode.EVERY_EXECUTION, a);
+
+        boolean refused = false;
+        try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+            plan.withGridScheduler(grid("gn.shift", blocks)).execute();
+        } catch (Exception | Error e) {
+            refused = true;
+        }
+        assertTrue("a grid of " + blocks + " blocks cannot be resident at once and must be refused", refused);
     }
 
     @Test

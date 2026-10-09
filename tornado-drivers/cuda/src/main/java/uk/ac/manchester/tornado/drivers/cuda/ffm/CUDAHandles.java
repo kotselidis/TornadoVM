@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDAPreamble;
+
 /**
  * The opaque {@code long} handles the CUDA backend's Java layer passes around, and the state each
  * one stands for.
@@ -192,10 +194,18 @@ public final class CUDAHandles {
         public long module;
         public boolean moduleLoaded;
 
+        /**
+         * Whether the program's kernels synchronise their whole grid and so must be launched
+         * cooperatively. Decided from the CUDA C source, and set explicitly for a program loaded from
+         * a binary (the module cache), whose source is not at hand.
+         */
+        public boolean cooperative;
+
         public Program(long context, String source, byte[] binary) {
             this.context = context;
             this.source = source;
             this.binary = binary == null ? new byte[0] : binary;
+            this.cooperative = source != null && CUDAPreamble.needsCooperativeLaunch(source);
         }
     }
 

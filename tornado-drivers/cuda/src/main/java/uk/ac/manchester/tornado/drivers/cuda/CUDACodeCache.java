@@ -49,6 +49,7 @@ import uk.ac.manchester.tornado.api.exceptions.TornadoDeviceTileNotSupported;
 import uk.ac.manchester.tornado.drivers.cuda.enums.CUDABuildStatus;
 import uk.ac.manchester.tornado.drivers.cuda.enums.CUDADeviceType;
 import uk.ac.manchester.tornado.drivers.cuda.graal.CUDAInstalledCode;
+import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDAPreamble;
 import uk.ac.manchester.tornado.runtime.common.RuntimeUtilities;
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
@@ -314,6 +315,12 @@ public class CUDACodeCache {
 
         CUDAKernel kernel = null;
         if (status == CL_BUILD_SUCCESS) {
+            // From the source, not the program: a module-cache hit loads a binary whose program has
+            // no source, and a grid barrier launched non-cooperatively deadlocks once the grid
+            // exceeds what the device keeps resident.
+            if (!isSPIRVBinary) {
+                program.setCooperative(CUDAPreamble.needsCooperativeLaunch(new String(source, StandardCharsets.UTF_8)));
+            }
             kernel = program.clCreateKernel(entryPoint);
             kernelAvailable = true;
         }

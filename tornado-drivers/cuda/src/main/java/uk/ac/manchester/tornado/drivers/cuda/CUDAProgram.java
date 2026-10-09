@@ -49,7 +49,6 @@ import uk.ac.manchester.tornado.drivers.cuda.exceptions.CUDAException;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDACompiler;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDADriverAPI;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDAHandles;
-import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDAPreamble;
 import uk.ac.manchester.tornado.runtime.ffm.FFMSupport;
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
@@ -70,6 +69,18 @@ public class CUDAProgram {
         this.buffer = ByteBuffer.allocate(8192);
         this.buffer.order(CUDADriver.BYTE_ORDER);
         this.logger = new TornadoLogger(this.getClass());
+    }
+
+    /**
+     * Marks the program's kernels as needing a cooperative launch. For a program loaded from a
+     * binary, which carries no source to decide it from; must be called before its kernels are
+     * created.
+     */
+    public void setCooperative(boolean cooperative) {
+        CUDAHandles.Program program = CUDAHandles.resolve(programPointer, CUDAHandles.Program.class);
+        if (program != null) {
+            program.cooperative = cooperative;
+        }
     }
 
     static void clReleaseProgram(long programId) throws CUDAException {
@@ -140,8 +151,7 @@ public class CUDAProgram {
                 return 0;
             }
             long functionPointer = function.get(FFMSupport.C_POINTER, 0).address();
-            boolean cooperative = program.source != null && CUDAPreamble.needsCooperativeLaunch(program.source);
-            return CUDAHandles.register(new CUDAHandles.Kernel(functionPointer, program.module, name, cooperative));
+            return CUDAHandles.register(new CUDAHandles.Kernel(functionPointer, program.module, name, program.cooperative));
         }
     }
 
