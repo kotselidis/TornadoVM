@@ -149,6 +149,20 @@ public class KernelContext implements ExecutionContext {
     }
 
     /**
+     * Barrier across every work-group (CUDA block) of the launch, so one kernel can run phases
+     * that otherwise need separate launches. Global-memory writes made before it are visible to
+     * every thread after it.
+     * <p>
+     * Every work-group must be resident at once and every thread must reach every barrier; see
+     * {@link ExecutionContext#gridBarrier()}. CUDA backend only.
+     * <p>
+     * CUDA equivalent: {@code cooperative_groups::this_grid().sync()} under a cooperative launch.
+     */
+    @Override
+    public void gridBarrier() {
+    }
+
+    /**
      * It allocates a single dimensional array in local memory (known as shared
      * memory in CUDA).
      *

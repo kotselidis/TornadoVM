@@ -213,10 +213,21 @@ public final class CUDAHandles {
          */
         public final List<byte[]> arguments = new ArrayList<>();
 
+        /**
+         * Whether the kernel synchronises its whole grid (see {@code KernelContext#gridBarrier}),
+         * and so must be launched with {@code cuLaunchCooperativeKernel}.
+         */
+        public final boolean cooperative;
+
         public Kernel(long function, long module, String name) {
+            this(function, module, name, false);
+        }
+
+        public Kernel(long function, long module, String name, boolean cooperative) {
             this.function = function;
             this.module = module;
             this.name = name;
+            this.cooperative = cooperative;
         }
 
         public void setArgument(int index, byte[] value) {

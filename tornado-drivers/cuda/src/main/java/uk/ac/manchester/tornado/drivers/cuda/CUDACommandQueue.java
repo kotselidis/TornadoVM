@@ -462,14 +462,18 @@ public class CUDACommandQueue extends CommandQueue {
             long start = beginEvent(queue);
             queue.markPending();
             long dispatchStart = System.nanoTime();
-            int result = CUDADriverAPI.cuLaunchKernel(kernel.function, grid[0], grid[1], grid[2], block[0], block[1], block[2], 0, queue.stream(), kernelParameters(arena, kernel),
-                    MemorySegment.NULL);
+            int result;
+            if (kernel.cooperative) {
+                result = CUDADriverAPI.cuLaunchCooperativeKernel(kernel.function, grid[0], grid[1], grid[2], block[0], block[1], block[2], 0, queue.stream(), kernelParameters(arena, kernel));
+            } else {
+                result = CUDADriverAPI.cuLaunchKernel(kernel.function, grid[0], grid[1], grid[2], block[0], block[1], block[2], 0, queue.stream(), kernelParameters(arena, kernel), MemorySegment.NULL);
+            }
             long launchEvent = endEvent(start, queue, dispatchStart);
             // A failed launch leaves the kernel's outputs untouched. Surfacing it makes the caller
             // bail out instead of returning stale buffers as a valid result.
             if (result != CUDADriverAPI.CUDA_SUCCESS) {
                 discardEvent(launchEvent);
-                throw new CUDAException(CUDADriverAPI.describe("cuLaunchKernel", result));
+                throw new CUDAException(CUDADriverAPI.describe(kernel.cooperative ? "cuLaunchCooperativeKernel" : "cuLaunchKernel", result));
             }
             return launchEvent;
         } finally {

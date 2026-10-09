@@ -267,6 +267,16 @@ public class MetalGraphBuilderPlugins {
         });
     }
 
+    private static void registerGridBarrier(Registration r) {
+        r.register(new InvocationPlugin("gridBarrier", Receiver.class) {
+            @Override
+            public boolean apply(GraphBuilderContext b, ResolvedJavaMethod targetMethod, Receiver receiver) {
+                unimplemented("KernelContext.gridBarrier() is only supported on the CUDA backend.");
+                return false;
+            }
+        });
+    }
+
     private static void registerGlobalBarrier(Registration r) {
         r.register(new InvocationPlugin("globalBarrier", Receiver.class) {
             @Override
@@ -477,6 +487,7 @@ public class MetalGraphBuilderPlugins {
 
         registerLocalBarrier(r);
         registerGlobalBarrier(r);
+        registerGridBarrier(r);
         localArraysPlugins(r);
         registerAtomicAddOperation(r);
         registerSIMDPlugins(r);

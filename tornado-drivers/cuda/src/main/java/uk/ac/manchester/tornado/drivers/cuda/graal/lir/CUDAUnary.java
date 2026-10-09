@@ -35,6 +35,7 @@ import uk.ac.manchester.tornado.drivers.cuda.graal.asm.CUDAAssembler;
 import uk.ac.manchester.tornado.drivers.cuda.graal.asm.CUDAAssembler.CUDAUnaryOp;
 import uk.ac.manchester.tornado.drivers.cuda.graal.asm.CUDAAssembler.CUDAUnaryTemplate;
 import uk.ac.manchester.tornado.drivers.cuda.graal.asm.CUDAAssemblerConstants;
+import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDAPreamble;
 import uk.ac.manchester.tornado.drivers.cuda.graal.compiler.CUDACompilationResultBuilder;
 import uk.ac.manchester.tornado.drivers.cuda.graal.meta.CUDAMemorySpace;
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDABarrierNode.CUDAMemFenceFlags;
@@ -353,6 +354,9 @@ public class CUDAUnary {
 
         @Override
         public String toString() {
+            if (flags == CUDAMemFenceFlags.GRID) {
+                return CUDAPreamble.GRID_SYNC_FUNCTION + "()";
+            }
             // CUDA C has no OpenCL barrier(...) built-in; all fences map to __syncthreads().
             return "__syncthreads()";
         }

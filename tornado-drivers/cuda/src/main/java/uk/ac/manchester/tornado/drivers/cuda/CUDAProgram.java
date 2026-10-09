@@ -49,6 +49,7 @@ import uk.ac.manchester.tornado.drivers.cuda.exceptions.CUDAException;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDACompiler;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDADriverAPI;
 import uk.ac.manchester.tornado.drivers.cuda.ffm.CUDAHandles;
+import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDAPreamble;
 import uk.ac.manchester.tornado.runtime.ffm.FFMSupport;
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
@@ -139,7 +140,8 @@ public class CUDAProgram {
                 return 0;
             }
             long functionPointer = function.get(FFMSupport.C_POINTER, 0).address();
-            return CUDAHandles.register(new CUDAHandles.Kernel(functionPointer, program.module, name));
+            boolean cooperative = program.source != null && CUDAPreamble.needsCooperativeLaunch(program.source);
+            return CUDAHandles.register(new CUDAHandles.Kernel(functionPointer, program.module, name, cooperative));
         }
     }
 

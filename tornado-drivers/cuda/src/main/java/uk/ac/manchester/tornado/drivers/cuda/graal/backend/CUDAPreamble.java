@@ -83,6 +83,46 @@ public final class CUDAPreamble {
     public static final String BF16_PREAMBLE =
         "#include <cuda_bf16.h>\n";
 
+    /** The name a grid barrier is emitted as; see {@link #GRID_SYNC_PREAMBLE}. */
+    public static final String GRID_SYNC_FUNCTION = "__tornado_grid_sync";
+
+    /**
+     * Device-side grid barrier for {@code KernelContext.gridBarrier()}, injected only when the
+     * kernel calls it.
+     *
+     * <p>One counter and one generation word per module. Thread 0 of each block publishes the
+     * block's writes ({@code __threadfence}), arrives on the counter and waits for the
+     * generation to move; the last block to arrive resets the counter before it bumps the
+     * generation, so no block can arrive at the next barrier on a stale count. The two
+     * {@code __syncthreads} hold the rest of the block on either side. Both words return to a
+     * reusable state after every barrier, so the module can be launched again.
+     *
+     * <p>It is correct only when every block of the grid is resident at once, which is why a
+     * kernel that contains it is launched with {@code cuLaunchCooperativeKernel}. Two grids of
+     * the same kernel running concurrently share the words and must not overlap.
+     */
+    public static final String GRID_SYNC_PREAMBLE =
+        "__device__ unsigned int __tornado_grid_sync_state[2];\n"
+        + "static __device__ __forceinline__ void " + GRID_SYNC_FUNCTION + "() {\n"
+        + "  __syncthreads();\n"
+        + "  if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {\n"
+        + "    volatile unsigned int *generation = &__tornado_grid_sync_state[1];\n"
+        + "    unsigned int blocks = gridDim.x * gridDim.y * gridDim.z;\n"
+        + "    unsigned int current = *generation;\n"
+        + "    __threadfence();\n"
+        + "    if (atomicAdd(&__tornado_grid_sync_state[0], 1u) == blocks - 1u) {\n"
+        + "      atomicExch(&__tornado_grid_sync_state[0], 0u);\n"
+        + "      __threadfence();\n"
+        + "      atomicAdd(&__tornado_grid_sync_state[1], 1u);\n"
+        + "    } else {\n"
+        + "      while (*generation == current) {\n"
+        + "      }\n"
+        + "    }\n"
+        + "    __threadfence();\n"
+        + "  }\n"
+        + "  __syncthreads();\n"
+        + "}\n";
+
     public static final String TILE_PREAMBLE =
         "#include \"cuda_tile.h\"\n"
         + "namespace ct = cuda::tiles;\n"
@@ -119,6 +159,21 @@ public final class CUDAPreamble {
     /** Matches the {@code cuda_bf16.h} types. */
     private static final Pattern BF16_CONSTRUCT = Pattern.compile(
         "(?<![A-Za-z0-9_])__nv_bfloat16[A-Za-z0-9_]*(?![A-Za-z0-9_])");
+
+    /**
+     * Returns whether {@code source} calls the grid barrier and does not already define it.
+     */
+    public static boolean needsGridSync(String source) {
+        return !source.contains("__tornado_grid_sync_state") && source.contains(GRID_SYNC_FUNCTION + "(");
+    }
+
+    /**
+     * Returns whether a kernel compiled from {@code source} synchronises its whole grid and so must
+     * be launched cooperatively.
+     */
+    public static boolean needsCooperativeLaunch(String source) {
+        return source.contains(GRID_SYNC_FUNCTION + "(");
+    }
 
     /**
      * Returns whether {@code source} references an fp16 construct and does not already include

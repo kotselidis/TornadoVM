@@ -60,6 +60,19 @@ public interface ExecutionContext {
     void globalBarrier();
 
     /**
+     * Barrier across every work-group of the launch: no thread continues until all threads of
+     * the grid have reached it, and the global-memory writes made before it are visible to every
+     * thread after it. It lets one kernel run phases that would otherwise be separate launches.
+     *
+     * <p>All work-groups of the grid must be resident on the device at once. The CUDA backend
+     * launches a kernel that calls it with {@code cuLaunchCooperativeKernel}, which rejects a
+     * grid larger than the device can hold rather than deadlock; size the grid from
+     * {@code TornadoTargetDevice#getDeviceMaxComputeUnits()}. Every thread must reach every
+     * barrier: a thread that returns early hangs the grid. CUDA backend only.
+     */
+    void gridBarrier();
+
+    /**
      * Array Allocation in Local Memory (OpenCL terminology).
      *
      * @param size

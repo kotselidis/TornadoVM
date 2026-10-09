@@ -312,6 +312,17 @@ public class CUDAGraphBuilderPlugins {
         });
     }
 
+    private static void registerGridBarrier(Registration r) {
+        r.register(new InvocationPlugin("gridBarrier", Receiver.class) {
+            @Override
+            public boolean apply(GraphBuilderContext b, ResolvedJavaMethod targetMethod, Receiver receiver) {
+                receiver.get(true);
+                b.add(new CUDABarrierNode(CUDABarrierNode.CUDAMemFenceFlags.GRID));
+                return true;
+            }
+        });
+    }
+
     private static void registerAtomicAddOperation(Registration r) {
         // The header offset must match the fixed device-buffer convention (PANAMA_OBJECT_HEADER_SIZE)
         // used elsewhere in this file (see registerCpAsyncCopy) and by the host-side array wrappers -
@@ -480,6 +491,7 @@ public class CUDAGraphBuilderPlugins {
 
         registerLocalBarrier(r);
         registerGlobalBarrier(r);
+        registerGridBarrier(r);
         localArraysPlugins(r);
         registerAtomicAddOperation(r);
         registerSIMDPlugins(r);

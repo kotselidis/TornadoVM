@@ -41,7 +41,9 @@ public class CUDABarrierNode extends FixedWithNextNode implements LIRLowerable, 
     public static final NodeClass<CUDABarrierNode> TYPE = NodeClass.create(CUDABarrierNode.class);
 
     public enum CUDAMemFenceFlags {
-        GLOBAL, LOCAL;
+        GLOBAL, LOCAL,
+        /** Every block of the grid; see {@code KernelContext#gridBarrier}. */
+        GRID;
     }
 
     private final CUDAMemFenceFlags flags;

@@ -314,6 +314,11 @@ public class TornadoCUDAIntrinsicsReplacements extends BasePhase<TornadoHighTier
                     graph.replaceFixed(invoke, graph.add(new CUDASimdBroadcastFirstNode(a.get(1))));
                     break;
                 }
+                case "Direct#KernelContext.gridBarrier": {
+                    CUDABarrierNode kcGridBarrier = graph.addOrUnique(new CUDABarrierNode(CUDABarrierNode.CUDAMemFenceFlags.GRID));
+                    graph.replaceFixed(invoke, kcGridBarrier);
+                    break;
+                }
                 case "Direct#KernelContext.globalBarrier": {
                     CUDABarrierNode kcGlobalBarrier = graph.addOrUnique(new CUDABarrierNode(CUDABarrierNode.CUDAMemFenceFlags.GLOBAL));
                     graph.replaceFixed(invoke, kcGlobalBarrier);

@@ -142,6 +142,8 @@ public final class CUDADriverAPI {
     private static final MethodHandle CU_MODULE_GET_FUNCTION;
     private static final MethodHandle CU_MODULE_UNLOAD;
     private static final MethodHandle CU_LAUNCH_KERNEL;
+    private static final MethodHandle CU_LAUNCH_COOPERATIVE_KERNEL;
+    private static final MethodHandle CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR;
     private static final MethodHandle CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE;
 
     private static final MethodHandle CU_LINK_CREATE;
@@ -199,6 +201,8 @@ public final class CUDADriverAPI {
             CU_MODULE_GET_FUNCTION = null;
             CU_MODULE_UNLOAD = null;
             CU_LAUNCH_KERNEL = null;
+            CU_LAUNCH_COOPERATIVE_KERNEL = null;
+            CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR = null;
             CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE = null;
             CU_LINK_CREATE = null;
             CU_LINK_ADD_DATA = null;
@@ -260,6 +264,8 @@ public final class CUDADriverAPI {
             CU_MODULE_GET_FUNCTION = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_POINTER, C_LONG, C_POINTER), "cuModuleGetFunction");
             CU_MODULE_UNLOAD = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_LONG), "cuModuleUnload");
             CU_LAUNCH_KERNEL = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_LONG, C_INT, C_INT, C_INT, C_INT, C_INT, C_INT, C_INT, C_LONG, C_POINTER, C_POINTER), "cuLaunchKernel");
+            CU_LAUNCH_COOPERATIVE_KERNEL = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_LONG, C_INT, C_INT, C_INT, C_INT, C_INT, C_INT, C_INT, C_LONG, C_POINTER), "cuLaunchCooperativeKernel");
+            CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_POINTER, C_LONG, C_INT, C_LONG), "cuOccupancyMaxActiveBlocksPerMultiprocessor");
             CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE = downcall(LIBCUDA, FunctionDescriptor.of(C_INT, C_POINTER, C_POINTER, C_LONG, C_LONG, C_LONG, C_INT), "cuOccupancyMaxPotentialBlockSize");
 
             // Linker, used only for modules that launch kernels from the device: their relocatable
@@ -640,6 +646,29 @@ public final class CUDADriverAPI {
             MemorySegment extra) {
         try {
             return (int) CU_LAUNCH_KERNEL.invokeExact(function, gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, sharedMemBytes, stream, kernelParams, extra);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    /**
+     * Launches a kernel whose blocks are all resident at once, which a grid-wide barrier needs:
+     * a block spinning at the barrier would otherwise wait for one that never gets an SM. The
+     * driver refuses a grid larger than the device can hold with
+     * {@code CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE} instead of letting it deadlock.
+     */
+    public static int cuLaunchCooperativeKernel(long function, int gridDimX, int gridDimY, int gridDimZ, int blockDimX, int blockDimY, int blockDimZ, int sharedMemBytes, long stream,
+            MemorySegment kernelParams) {
+        try {
+            return (int) CU_LAUNCH_COOPERATIVE_KERNEL.invokeExact(function, gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ, sharedMemBytes, stream, kernelParams);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static int cuOccupancyMaxActiveBlocksPerMultiprocessor(MemorySegment numBlocks, long function, int blockSize, long dynamicSMemSize) {
+        try {
+            return (int) CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR.invokeExact(numBlocks, function, blockSize, dynamicSMemSize);
         } catch (Throwable t) {
             throw rethrow(t);
         }

@@ -271,6 +271,10 @@ public class CUDACompilationResultBuilder extends CompilationResultBuilder {
         // casts are the only fp16 constructs in such a kernel. See CUDAPreamble for why the
         // includes are not unconditional.
         String source = new String(code);
+        // The grid barrier first, so the headers below end up above it.
+        if (CUDAPreamble.needsGridSync(source)) {
+            source = CUDAPreamble.GRID_SYNC_PREAMBLE + source;
+        }
         // cuda_fp8.h before the fp16 check: the fp8 include is emitted together with the
         // fp16 one (its conversions produce __half values), and both prepends keep the
         // fp16 include first because cuda_fp8.h builds on cuda_fp16.h types.
