@@ -90,33 +90,31 @@ public final class CUDAPreamble {
      * Device-side grid barrier for {@code KernelContext.gridBarrier()}, injected only when the
      * kernel calls it.
      *
-     * <p>One counter and one generation word per module. Thread 0 of each block publishes the
-     * block's writes ({@code __threadfence}), arrives on the counter and waits for the
-     * generation to move; the last block to arrive resets the counter before it bumps the
-     * generation, so no block can arrive at the next barrier on a stale count. The two
-     * {@code __syncthreads} hold the rest of the block on either side. Both words return to a
-     * reusable state after every barrier, so the module can be launched again.
+     * <p>The arrival scheme of CUDA's cooperative-groups grid sync: one word per module, and one
+     * atomic per block per barrier. Thread 0 of each block publishes the block's writes
+     * ({@code __threadfence}) and adds 1 to the word, except block 0, which adds
+     * {@code 0x80000000 - (blocks - 1)}. The adds of one barrier sum to exactly {@code 0x80000000},
+     * so the last arrival flips bit 31, and every block waits for bit 31 to differ from the value
+     * it saw on arrival. Nothing is reset, so the word is reusable after every barrier and by
+     * launches of any grid size. The two {@code __syncthreads} hold the rest of the block on
+     * either side.
      *
      * <p>It is correct only when every block of the grid is resident at once, which is why a
      * kernel that contains it is launched with {@code cuLaunchCooperativeKernel}. Two grids of
-     * the same kernel running concurrently share the words and must not overlap.
+     * the same kernel running concurrently share the word and must not overlap.
      */
     public static final String GRID_SYNC_PREAMBLE =
-        "__device__ unsigned int __tornado_grid_sync_state[2];\n"
+        "__device__ unsigned int __tornado_grid_sync_state;\n"
         + "static __device__ __forceinline__ void " + GRID_SYNC_FUNCTION + "() {\n"
         + "  __syncthreads();\n"
         + "  if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {\n"
-        + "    volatile unsigned int *generation = &__tornado_grid_sync_state[1];\n"
         + "    unsigned int blocks = gridDim.x * gridDim.y * gridDim.z;\n"
-        + "    unsigned int current = *generation;\n"
+        + "    bool first = blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0;\n"
+        + "    unsigned int add = first ? 0x80000000u - (blocks - 1u) : 1u;\n"
+        + "    volatile unsigned int *arrived = &__tornado_grid_sync_state;\n"
         + "    __threadfence();\n"
-        + "    if (atomicAdd(&__tornado_grid_sync_state[0], 1u) == blocks - 1u) {\n"
-        + "      atomicExch(&__tornado_grid_sync_state[0], 0u);\n"
-        + "      __threadfence();\n"
-        + "      atomicAdd(&__tornado_grid_sync_state[1], 1u);\n"
-        + "    } else {\n"
-        + "      while (*generation == current) {\n"
-        + "      }\n"
+        + "    unsigned int old = atomicAdd(&__tornado_grid_sync_state, add);\n"
+        + "    while (((old ^ *arrived) & 0x80000000u) == 0u) {\n"
         + "    }\n"
         + "    __threadfence();\n"
         + "  }\n"
