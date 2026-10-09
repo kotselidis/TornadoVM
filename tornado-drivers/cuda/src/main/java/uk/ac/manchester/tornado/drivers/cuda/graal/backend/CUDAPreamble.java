@@ -91,8 +91,9 @@ public final class CUDAPreamble {
      * kernel calls it.
      *
      * <p>The arrival scheme of CUDA's cooperative-groups grid sync: one word per module, and one
-     * atomic per block per barrier. Thread 0 of each block publishes the block's writes
-     * ({@code __threadfence}) and adds 1 to the word, except block 0, which adds
+     * atomic per block per barrier. Thread 0 of each block publishes the block's writes and adds 1
+     * to the word: a release atomic from sm_70, cumulative over the writes the block's
+     * {@code __syncthreads} ordered before it, and {@code __threadfence} before sm_70. Block 0 adds
      * {@code 0x80000000 - (blocks - 1)}. The adds of one barrier sum to exactly {@code 0x80000000},
      * so the last arrival flips bit 31, and every block waits for bit 31 to differ from the value
      * it saw on arrival. Nothing is reset, so the word is reusable after every barrier and by
@@ -111,12 +112,21 @@ public final class CUDAPreamble {
         + "    unsigned int blocks = gridDim.x * gridDim.y * gridDim.z;\n"
         + "    bool first = blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0;\n"
         + "    unsigned int add = first ? 0x80000000u - (blocks - 1u) : 1u;\n"
+        + "#if __CUDA_ARCH__ >= 700\n"
+        + "    unsigned int old;\n"
+        + "    unsigned int now;\n"
+        + "    asm volatile(\"atom.add.release.gpu.u32 %0, [%1], %2;\" : \"=r\"(old) : \"l\"(&__tornado_grid_sync_state), \"r\"(add) : \"memory\");\n"
+        + "    do {\n"
+        + "      asm volatile(\"ld.acquire.gpu.u32 %0, [%1];\" : \"=r\"(now) : \"l\"(&__tornado_grid_sync_state) : \"memory\");\n"
+        + "    } while (((old ^ now) & 0x80000000u) == 0u);\n"
+        + "#else\n"
         + "    volatile unsigned int *arrived = &__tornado_grid_sync_state;\n"
         + "    __threadfence();\n"
         + "    unsigned int old = atomicAdd(&__tornado_grid_sync_state, add);\n"
         + "    while (((old ^ *arrived) & 0x80000000u) == 0u) {\n"
         + "    }\n"
         + "    __threadfence();\n"
+        + "#endif\n"
         + "  }\n"
         + "  __syncthreads();\n"
         + "}\n";
