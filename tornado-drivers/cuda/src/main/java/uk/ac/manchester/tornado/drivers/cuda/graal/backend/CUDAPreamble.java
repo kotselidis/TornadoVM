@@ -83,6 +83,9 @@ public final class CUDAPreamble {
     public static final String BF16_PREAMBLE =
         "#include <cuda_bf16.h>\n";
 
+    /** Experimental: acquire/release arrival in the grid barrier (sm_70+). */
+    private static final boolean ACQUIRE_RELEASE = Boolean.getBoolean("tornado.cuda.gridSync.acquireRelease");
+
     /** The name a grid barrier is emitted as; see {@link #GRID_SYNC_PREAMBLE}. */
     public static final String GRID_SYNC_FUNCTION = "__tornado_grid_sync";
 
@@ -111,12 +114,19 @@ public final class CUDAPreamble {
         + "    unsigned int blocks = gridDim.x * gridDim.y * gridDim.z;\n"
         + "    bool first = blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0;\n"
         + "    unsigned int add = first ? 0x80000000u - (blocks - 1u) : 1u;\n"
-        + "    volatile unsigned int *arrived = &__tornado_grid_sync_state;\n"
-        + "    __threadfence();\n"
-        + "    unsigned int old = atomicAdd(&__tornado_grid_sync_state, add);\n"
-        + "    while (((old ^ *arrived) & 0x80000000u) == 0u) {\n"
-        + "    }\n"
-        + "    __threadfence();\n"
+        + (ACQUIRE_RELEASE
+            ? "    unsigned int old;\n"
+            + "    unsigned int now;\n"
+            + "    asm volatile(\"atom.add.release.gpu.u32 %0, [%1], %2;\" : \"=r\"(old) : \"l\"(&__tornado_grid_sync_state), \"r\"(add) : \"memory\");\n"
+            + "    do {\n"
+            + "      asm volatile(\"ld.acquire.gpu.u32 %0, [%1];\" : \"=r\"(now) : \"l\"(&__tornado_grid_sync_state) : \"memory\");\n"
+            + "    } while (((old ^ now) & 0x80000000u) == 0u);\n"
+            : "    volatile unsigned int *arrived = &__tornado_grid_sync_state;\n"
+            + "    __threadfence();\n"
+            + "    unsigned int old = atomicAdd(&__tornado_grid_sync_state, add);\n"
+            + "    while (((old ^ *arrived) & 0x80000000u) == 0u) {\n"
+            + "    }\n"
+            + "    __threadfence();\n")
         + "  }\n"
         + "  __syncthreads();\n"
         + "}\n";

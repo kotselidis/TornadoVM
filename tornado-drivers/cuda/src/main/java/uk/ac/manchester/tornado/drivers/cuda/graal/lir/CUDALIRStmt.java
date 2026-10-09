@@ -1358,6 +1358,9 @@ public class CUDALIRStmt {
     @Opcode("VLOAD")
     public static class VectorLoadStmt extends AbstractInstruction {
 
+        /** Experimental: {@code __half2} loads through the read-only data cache. */
+        private static final boolean LDG_HALF2 = Boolean.getBoolean("tornado.cuda.ldgHalf2");
+
         public static final LIRInstructionClass<VectorLoadStmt> TYPE = LIRInstructionClass.create(VectorLoadStmt.class);
 
         @Def
@@ -1409,7 +1412,11 @@ public class CUDALIRStmt {
                 // __half2 is only 4-byte aligned, so (unlike float4) the packed
                 // reinterpret load is safe on element-aligned buffers as long as
                 // the element index is even. Emit a single 32-bit load.
-                asm.emit("((__half2 *)(" + addr + "))[(" + idx + ")]");
+                if (LDG_HALF2) {
+                    asm.emit("__ldg(&((const __half2 *)(" + addr + "))[(" + idx + ")])");
+                } else {
+                    asm.emit("((__half2 *)(" + addr + "))[(" + idx + ")]");
+                }
                 asm.delimiter();
                 asm.eol();
                 return;
