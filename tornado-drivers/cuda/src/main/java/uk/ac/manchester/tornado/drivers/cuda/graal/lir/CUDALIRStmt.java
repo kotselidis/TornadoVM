@@ -513,9 +513,13 @@ public class CUDALIRStmt {
             asm.space();
             asm.assign();
             asm.space();
-            asm.emit("__half2float(");
+            // A __half operand converts as is. Anything else is the bit pattern of one, as
+            // Float.float16ToFloat(short) passes it: __half2float(int) would convert the integer's
+            // value (15360 -> 15360.0f) instead of reinterpreting its bits (0x3C00 -> 1.0f).
+            boolean bits = halfValue.getPlatformKind() != CUDAKind.HALF;
+            asm.emit(bits ? "__half2float(__ushort_as_half((unsigned short) (" : "__half2float(");
             asm.emitValue(crb, halfValue);
-            asm.emit(")");
+            asm.emit(bits ? ")))" : ")");
             asm.delimiter();
             asm.eol();
         }
