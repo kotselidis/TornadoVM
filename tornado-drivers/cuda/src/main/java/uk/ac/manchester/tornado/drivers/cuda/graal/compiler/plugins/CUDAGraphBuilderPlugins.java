@@ -126,6 +126,7 @@ import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDAFPBinaryIntrinsicNo
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDAFPUnaryIntrinsicNode;
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDAIntBinaryIntrinsicNode;
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDAIntUnaryIntrinsicNode;
+import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDAPrefetchL2Node;
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDASwizzledLoadFP16Stride32Node;
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.CUDASwizzledStoreFP16Stride32Node;
 import uk.ac.manchester.tornado.drivers.cuda.graal.nodes.PrintfNode;
@@ -562,6 +563,9 @@ public class CUDAGraphBuilderPlugins {
         registerCpAsyncCopy(r, ByteArray.class, JavaKind.Byte);
         registerCpAsyncCopy16(r, HalfFloatArray.class, JavaKind.Short);
         registerCpAsyncCopy16(r, ByteArray.class, JavaKind.Byte);
+        registerPrefetchL2(r, HalfFloatArray.class, JavaKind.Short);
+        registerPrefetchL2(r, FloatArray.class, JavaKind.Float);
+        registerPrefetchL2(r, ByteArray.class, JavaKind.Byte);
 
         r.register(new InvocationPlugin("asyncCopyCommit", InvocationPlugin.Receiver.class) {
             @Override
@@ -614,6 +618,17 @@ public class CUDAGraphBuilderPlugins {
                 int headerBytes = (int) TornadoOptions.PANAMA_OBJECT_HEADER_SIZE;
                 b.add(new CUDACpAsyncCopyNode(dstTile, dstIndex, srcArray, srcIndex,
                         elementKind.getByteCount(), headerBytes, 16));
+                return true;
+            }
+        });
+    }
+
+    private static void registerPrefetchL2(Registration r, Class<?> arrayClass, JavaKind elementKind) {
+        r.register(new InvocationPlugin("prefetchToL2", InvocationPlugin.Receiver.class, arrayClass, int.class) {
+            @Override
+            public boolean apply(GraphBuilderContext b, ResolvedJavaMethod targetMethod, Receiver receiver, ValueNode array, ValueNode index) {
+                receiver.get(true);
+                b.add(new CUDAPrefetchL2Node(array, index, elementKind.getByteCount(), (int) TornadoOptions.PANAMA_OBJECT_HEADER_SIZE));
                 return true;
             }
         });

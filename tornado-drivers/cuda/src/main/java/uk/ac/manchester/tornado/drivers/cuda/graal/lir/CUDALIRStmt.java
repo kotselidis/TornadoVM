@@ -2766,6 +2766,34 @@ public class CUDALIRStmt {
         }
     }
 
+    /** {@code prefetch.global.L2} of the line holding {@code array[index]}, past the array header. */
+    public static class PrefetchL2Stmt extends AbstractInstruction {
+        public static final LIRInstructionClass<PrefetchL2Stmt> TYPE = LIRInstructionClass.create(PrefetchL2Stmt.class);
+
+        @Use protected Value array;
+        @Use protected Value index;
+        private final int elemBytes;
+        private final int headerBytes;
+
+        public PrefetchL2Stmt(Value array, Value index, int elemBytes, int headerBytes) {
+            super(TYPE);
+            this.array = array;
+            this.index = index;
+            this.elemBytes = elemBytes;
+            this.headerBytes = headerBytes;
+        }
+
+        @Override
+        public void emitCode(CUDACompilationResultBuilder crb, CUDAAssembler asm) {
+            String base = asm.getStringValue(crb, array);
+            String idx = asm.getStringValue(crb, index);
+            asm.indent();
+            asm.emit("asm volatile(\"prefetch.global.L2 [%0];\" :: \"l\"((const char *) " + base + " + " + headerBytes + "u + ((long long) " + idx + ") * " + elemBytes + "))");
+            asm.delimiter();
+            asm.eol();
+        }
+    }
+
     /**
      * A kernel launch from device code (CUDA Dynamic Parallelism):
      * {@code child<<<grid, block, 0, stream>>>(ABI..., args...)}. The grid is the global size rounded

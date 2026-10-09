@@ -1193,6 +1193,23 @@ public class KernelContext implements ExecutionContext {
     }
 
     /**
+     * Hints that the cache line holding {@code array[index]} will be read soon, and should be
+     * brought into the L2 cache now (CUDA {@code prefetch.global.L2}). It changes no value the
+     * kernel computes. Useful before a barrier: the wait then overlaps the DRAM latency of the
+     * next phase's first loads. A no-op on the other backends and on the host.
+     */
+    public void prefetchToL2(HalfFloatArray array, int index) {
+    }
+
+    /** See {@link #prefetchToL2(HalfFloatArray, int)}. */
+    public void prefetchToL2(FloatArray array, int index) {
+    }
+
+    /** See {@link #prefetchToL2(HalfFloatArray, int)}. */
+    public void prefetchToL2(ByteArray array, int index) {
+    }
+
+    /**
      * Commits the cp.async copies issued since the last commit as one group
      * (CUDA {@code cp.async.commit_group}). No-op on other backends, where
      * {@link #asyncCopyToLocal(int[], int, HalfFloatArray, int)} copies synchronously.

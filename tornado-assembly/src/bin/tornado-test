@@ -255,6 +255,7 @@ __TEST_THE_WORLD__ = [
     TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestLocalArrayDynamicIndexAtomics"),
     TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestAsyncCopyToLocal"),
     TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestGridBarrier"),
+    TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestPrefetchL2"),
     TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestFlashAttentionKernelContext"),
     TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestWarpVote"),
     TestEntry("uk.ac.manchester.tornado.unittests.kernelcontext.api.TestHalfFloatLocalArray"),
