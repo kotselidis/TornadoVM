@@ -1361,6 +1361,9 @@ public class CUDALIRStmt {
         /** Experimental: {@code __half2} loads through the read-only data cache. */
         private static final boolean LDG_HALF2 = Boolean.getBoolean("tornado.cuda.ldgHalf2");
 
+        /** Experimental: {@code __half2} loads as global, coherent loads ({@code ld.global.ca}). */
+        private static final boolean LDCA_HALF2 = Boolean.getBoolean("tornado.cuda.ldcaHalf2");
+
         public static final LIRInstructionClass<VectorLoadStmt> TYPE = LIRInstructionClass.create(VectorLoadStmt.class);
 
         @Def
@@ -1414,6 +1417,8 @@ public class CUDALIRStmt {
                 // the element index is even. Emit a single 32-bit load.
                 if (LDG_HALF2) {
                     asm.emit("__ldg(&((const __half2 *)(" + addr + "))[(" + idx + ")])");
+                } else if (LDCA_HALF2) {
+                    asm.emit("__ldca(&((const __half2 *)(" + addr + "))[(" + idx + ")])");
                 } else {
                     asm.emit("((__half2 *)(" + addr + "))[(" + idx + ")]");
                 }
