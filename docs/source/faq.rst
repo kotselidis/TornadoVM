@@ -144,3 +144,20 @@ Note that this restriction also applies to low-level parallel programming models
 
 No. TornadoVM can also run on multi-core CPUs. What TornadoVM needs is a compatible driver/runtime installed in the machine.
 For example, to enable TornadoVM getting access to an Intel CPU, developers can use the `Intel CPU Runtime for OpenCL <https://www.intel.com/content/www/us/en/developer/articles/technical/intel-cpu-runtime-for-opencl-applications-with-sycl-support.html>`__ (also part of the `Intel oneAPI Base Toolkit <https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit.html>`__).
+
+
+15. Can TornadoVM use a Project Leyden AOT cache?
+------------------------------------------------------------
+
+Yes, on JDK 24 to 26 (tested on JDK 25). An AOT cache (``-XX:AOTCacheOutput`` / ``-XX:AOTCache``, JEPs 483, 514 and 515) pre-loads and pre-links the classes of the JDK, Graal and TornadoVM, and replays method profiles from a training run. This speeds up JVM start-up, TornadoVM runtime initialisation and the first kernel compilation. It does not change kernel execution time.
+
+On JDK 22 to 26 the ``tornado`` launcher overlays TornadoVM's JVMCI classes with ``--patch-module``, and the JVM disables CDS and AOT caches for patched modules. Link a JDK image with the overlay already inside it, then point ``JAVA_HOME`` at it; the launcher detects the image and drops ``--patch-module``:
+
+.. code:: bash
+
+    $TORNADOVM_HOME/bin/tornado-jvmci-jdk.py --output ~/jdk25-tornadovm    # needs a JDK that ships jmods/
+    export JAVA_HOME=~/jdk25-tornadovm
+    tornado --jvm="-XX:AOTCacheOutput=app.aot" -m <module>/<main-class>     # training run, writes app.aot
+    tornado --jvm="-XX:AOTCache=app.aot" -m <module>/<main-class>           # later runs
+
+The source JDK must ship a ``jmods/`` directory (for example Amazon Corretto or Homebrew's ``openjdk``). Some JDK 24+ builds leave it out, and ``jlink`` cannot replace ``jdk.internal.vm.ci`` without it. For the JVM to archive the full module graph, your application must not require incubator modules such as ``jdk.incubator.vector``. Run ``java -Xlog:aot`` during training to check.
