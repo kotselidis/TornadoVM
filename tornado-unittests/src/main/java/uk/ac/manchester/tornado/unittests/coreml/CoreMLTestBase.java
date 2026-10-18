@@ -25,6 +25,8 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -51,9 +53,11 @@ public abstract class CoreMLTestBase extends TornadoTestBase {
     /** The number of elements of every feature of the test model. */
     protected static final int N = 16;
 
-    private static final String[] MODEL_FILES = { "Manifest.json", "Data/com.apple.CoreML/model.mlmodel" };
+    /** The rows and columns of the input and output of the Neural Engine test model. */
+    protected static final int MLP_ROWS = 64;
+    protected static final int MLP_DIM = 256;
 
-    private static Path modelPath;
+    private static final Map<String, Path> MODELS = new HashMap<>();
 
     /**
      * Core ML tasks need the Metal backend and Core ML (macOS 13 or newer). Unavailable configurations
@@ -70,27 +74,52 @@ public abstract class CoreMLTestBase extends TornadoTestBase {
         }
     }
 
-    /** The test model, unpacked from the test resources into a temporary directory once. */
-    protected static synchronized String addMulModel() {
-        if (modelPath == null) {
+    /** A model package of the test resources, unpacked into a temporary directory once. */
+    private static synchronized String unpack(String name, String... files) {
+        Path path = MODELS.get(name);
+        if (path == null) {
             try {
-                Path dir = Files.createTempDirectory("tornado-coreml").resolve("AddMul.mlpackage");
-                for (String file : MODEL_FILES) {
-                    Path target = dir.resolve(file);
+                path = Files.createTempDirectory("tornado-coreml").resolve(name);
+                for (String file : files) {
+                    Path target = path.resolve(file);
                     Files.createDirectories(target.getParent());
-                    try (InputStream in = CoreMLTestBase.class.getResourceAsStream("AddMul.mlpackage/" + file)) {
+                    try (InputStream in = CoreMLTestBase.class.getResourceAsStream(name + "/" + file)) {
                         if (in == null) {
-                            throw new IOException("missing test resource AddMul.mlpackage/" + file);
+                            throw new IOException("missing test resource " + name + "/" + file);
                         }
                         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
                     }
                 }
-                modelPath = dir;
+                MODELS.put(name, path);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         }
-        return modelPath.toString();
+        return path.toString();
+    }
+
+    /** The element-wise test model. */
+    protected static String addMulModel() {
+        return unpack("AddMul.mlpackage", "Manifest.json", "Data/com.apple.CoreML/model.mlmodel");
+    }
+
+    /**
+     * The Neural Engine test model, {@code Mlp.mlpackage}: a float16 ML program
+     * {@code y = relu(x @ W1^T) @ W2^T} with {@code x} and {@code y} of shape [64, 256], written by
+     * {@code tornado-coreml/scripts/make_ane_model.py}. See {@link #mlpWeight1} and {@link #mlpWeight2}.
+     */
+    protected static String mlpModel() {
+        return unpack("Mlp.mlpackage", "Manifest.json", "Data/com.apple.CoreML/model.mlmodel", "Data/com.apple.CoreML/weights/weight.bin");
+    }
+
+    /** {@code W1[o][i]} of the Neural Engine test model, as stored (float16). */
+    protected static double mlpWeight1(int o, int i) {
+        return Float.float16ToFloat(Float.floatToFloat16((float) (0.0625 * Math.sin(0.37 * o + 0.11 * i))));
+    }
+
+    /** {@code W2[o][i]} of the Neural Engine test model, as stored (float16). */
+    protected static double mlpWeight2(int o, int i) {
+        return Float.float16ToFloat(Float.floatToFloat16((float) (0.0625 * Math.cos(0.23 * o - 0.17 * i))));
     }
 
     /** Uniform values in [lo, hi). */

@@ -105,3 +105,6 @@ tornado-test --coreml -V
 
 The tests load `AddMul.mlpackage` (two float32 inputs of 16 elements, outputs `prod = x * y` and
 `sum = x + y`), written by `scripts/make_test_model.py` without any Python package.
+`TestCoreMLNeuralEngine` loads `Mlp.mlpackage`, a float16 two-layer perceptron on [64, 256]
+`HalfFloatArray`s that Core ML places entirely on the Neural Engine. `scripts/make_ane_model.py`
+writes it with coremltools; `--check` prints where Core ML places each operation.
