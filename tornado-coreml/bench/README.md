@@ -33,24 +33,27 @@ override the defaults. The script writes `native.csv`, `tornado.csv` and `summar
 
 | model | units | placement | native | tornado task | overhead | tornado e2e | TFLOP/s | in place |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| Mlp_64x256x2 | CPU_ONLY | CPU | 29.8 | 115.4 | +85.6 | 72.2 | 0.15 | 551/551 |
-| Mlp_64x256x2 | CPU_AND_GPU | GPU | 172.9 | 246.4 | +73.5 | 242.3 | 0.07 | 551/551 |
-| Mlp_64x256x2 | CPU_AND_NEURAL_ENGINE | Neural Engine | 106.2 | 140.8 | +34.6 | 137.4 | 0.12 | 551/551 |
-| Mlp_64x256x2 | ALL | Neural Engine | 99.2 | 128.5 | +29.3 | 131.5 | 0.13 | 551/551 |
-| Mlp_256x1024x4 | CPU_ONLY | CPU | 468.6 | 513.1 | +44.5 | 509.8 | 4.19 | 551/551 |
-| Mlp_256x1024x4 | CPU_AND_GPU | GPU | 743.8 | 922.5 | +178.7 | 834.2 | 2.33 | 551/551 |
-| Mlp_256x1024x4 | CPU_AND_NEURAL_ENGINE | Neural Engine | 252.9 | 273.4 | +20.5 | 280.7 | 7.85 | 551/551 |
-| Mlp_256x1024x4 | ALL | Neural Engine | 251.5 | 276.9 | +25.4 | 282.6 | 7.76 | 551/551 |
-| Mlp_512x2048x8 | CPU_ONLY | CPU | 5603.5 | 5880.8 | +277.3 | 5925.9 | 5.84 | 551/551 |
-| Mlp_512x2048x8 | CPU_AND_GPU | GPU | 6502.2 | 6681.9 | +179.7 | 6727.2 | 5.14 | 551/551 |
-| Mlp_512x2048x8 | CPU_AND_NEURAL_ENGINE | Neural Engine | 2832.5 | 2841.0 | +8.5 | 2928.3 | 12.09 | 551/551 |
-| Mlp_512x2048x8 | ALL | Neural Engine | 2809.8 | 2903.0 | +93.2 | 2913.5 | 11.84 | 551/551 |
+| Mlp_64x256x2 | CPU_ONLY | CPU | 31.6 | 78.2 | +46.6 | 49.6 | 0.21 | 551/551 |
+| Mlp_64x256x2 | CPU_AND_GPU | GPU | 184.9 | 186.0 | +1.1 | 192.9 | 0.09 | 551/551 |
+| Mlp_64x256x2 | CPU_AND_NEURAL_ENGINE | Neural Engine | 106.2 | 105.6 | -0.6 | 101.5 | 0.16 | 551/551 |
+| Mlp_64x256x2 | ALL | Neural Engine | 99.7 | 99.2 | -0.5 | 100.1 | 0.17 | 551/551 |
+| Mlp_256x1024x4 | CPU_ONLY | CPU | 465.6 | 458.8 | -6.8 | 470.5 | 4.68 | 551/551 |
+| Mlp_256x1024x4 | CPU_AND_GPU | GPU | 731.8 | 953.0 | +221.2 | 831.5 | 2.25 | 551/551 |
+| Mlp_256x1024x4 | CPU_AND_NEURAL_ENGINE | Neural Engine | 238.8 | 241.3 | +2.5 | 255.2 | 8.90 | 551/551 |
+| Mlp_256x1024x4 | ALL | Neural Engine | 234.8 | 238.5 | +3.7 | 254.3 | 9.00 | 551/551 |
+| Mlp_512x2048x8 | CPU_ONLY | CPU | 5655.2 | 5739.5 | +84.3 | 5770.9 | 5.99 | 551/551 |
+| Mlp_512x2048x8 | CPU_AND_GPU | GPU | 6461.5 | 6498.5 | +37.0 | 6532.5 | 5.29 | 551/551 |
+| Mlp_512x2048x8 | CPU_AND_NEURAL_ENGINE | Neural Engine | 2787.2 | 2860.0 | +72.8 | 2885.6 | 12.01 | 551/551 |
+| Mlp_512x2048x8 | ALL | Neural Engine | 2791.9 | 2866.5 | +74.6 | 2888.4 | 11.99 | 551/551 |
 
-- On the Neural Engine the TornadoVM task costs 9–35 µs more than native Core ML: 0.3–4% for the two
-  larger models.
+- On the two smaller models the TornadoVM task is as fast as native Core ML on the Neural Engine
+  (-0.6 to +3.7 us). On the largest model the difference (+73 us, 2.5%) changes from run to run
+  (+8.5 us in an earlier run) and is not a per-call cost: timing each step of the task puts the
+  provider and the TornadoVM interpreter at under 3 us per call, plus about 10 us for the rest of
+  `execute()`.
 - The Neural Engine is 2.0x faster than the CPU and 2.3x faster than Core ML's GPU path on the
   largest model (12 TFLOP/s). Core ML's GPU path is slower than its CPU path for these models.
 - Every output, on every compute unit, was written in place.
-- With `EVERY_EXECUTION` transfers the plan adds about 90 µs on the largest model (2 MB in, 2 MB out).
-- The smallest model is noisy: its `tornado task` rows ran first after loading, so they are slower
-  than the `tornado e2e` rows that follow.
+- With `EVERY_EXECUTION` transfers the plan adds about 25 us on the largest model (2 MB in, 2 MB out).
+- The first configuration of each model (`CPU_ONLY`, `tornado task`) runs right after loading and
+  is slower than the `tornado e2e` row that follows; the GPU rows vary by up to 30% between runs.
