@@ -43,6 +43,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 
 import uk.ac.manchester.tornado.api.exceptions.TornadoLibraryTaskNotSupported;
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
@@ -78,6 +79,10 @@ public final class CoreMLRuntime {
 
     private static final boolean AVAILABLE = COREML != null && objcClass("MLModel") != 0 && supportsOutputBackings();
 
+    /** Outputs Core ML wrote straight into their TornadoVM buffers, and outputs copied there afterwards. */
+    private static final AtomicLong IN_PLACE_OUTPUTS = new AtomicLong();
+    private static final AtomicLong COPIED_OUTPUTS = new AtomicLong();
+
     private CoreMLRuntime() {
     }
 
@@ -85,6 +90,16 @@ public final class CoreMLRuntime {
     private static boolean supportsOutputBackings() {
         long options = objcClass("MLPredictionOptions");
         return options != 0 && ObjC.sendBoolean(options, "instancesRespondToSelector:", ObjC.sel("setOutputBackings:"));
+    }
+
+    /** How many outputs Core ML wrote straight into their TornadoVM buffers, since start-up. */
+    public static long inPlaceOutputs() {
+        return IN_PLACE_OUTPUTS.get();
+    }
+
+    /** How many outputs were copied into their TornadoVM buffers after the prediction, since start-up. */
+    public static long copiedOutputs() {
+        return COPIED_OUTPUTS.get();
     }
 
     /** Whether Core ML (macOS 13 or newer) can be used on this host. */
@@ -351,8 +366,11 @@ public final class CoreMLRuntime {
             if (array == 0) {
                 throw new TornadoRuntimeException("[ERROR] Core ML model " + model.getPath() + " returned no multi-array " + model.getOutputs().get(o).name());
             }
-            if (send(array, "dataPointer") != addresses[position]) {
+            if (send(array, "dataPointer") == addresses[position]) {
+                IN_PLACE_OUTPUTS.incrementAndGet();
+            } else {
                 copyOut(model, model.getOutputs().get(o), array, addresses[position], types[position], sizes[position]);
+                COPIED_OUTPUTS.incrementAndGet();
             }
         }
     }

@@ -96,6 +96,16 @@ public final class CoreMLLibraryProvider implements TornadoLibraryProvider {
         return PREDICTIONS.get();
     }
 
+    /** How many outputs Core ML wrote straight into their TornadoVM buffers, since start-up. */
+    public static long inPlaceOutputs() {
+        return CoreMLRuntime.inPlaceOutputs();
+    }
+
+    /** How many outputs were copied into their TornadoVM buffers after the prediction, since start-up. */
+    public static long copiedOutputs() {
+        return CoreMLRuntime.copiedOutputs();
+    }
+
     @Override
     public String libraryName() {
         return CoreML.LIBRARY_NAME;

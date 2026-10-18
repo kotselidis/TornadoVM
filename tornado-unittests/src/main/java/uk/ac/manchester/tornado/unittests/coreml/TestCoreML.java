@@ -111,6 +111,62 @@ public class TestCoreML extends CoreMLTestBase {
     }
 
     @Test
+    public void testOutputsWrittenInPlace() throws TornadoExecutionPlanException {
+        // On the CPU, Core ML writes both outputs straight into the TornadoVM buffers through the
+        // output backings: nothing is copied after the prediction.
+        FloatArray x = values(N, -1, 1, 7);
+        FloatArray y = values(N, -1, 1, 8);
+        FloatArray prod = new FloatArray(N);
+        FloatArray sum = new FloatArray(N);
+
+        try (CoreMLModel model = CoreML.load(addMulModel(), CoreMLOptions.computeUnits(ComputeUnits.CPU_ONLY))) {
+            TaskGraph taskGraph = new TaskGraph("g") //
+                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, x, y) //
+                    .libraryTask("addmul", CoreML::predict, model, x, y, prod, sum) //
+                    .transferToHost(DataTransferMode.EVERY_EXECUTION, prod, sum);
+
+            long inPlace = CoreMLLibraryProvider.inPlaceOutputs();
+            long copied = CoreMLLibraryProvider.copiedOutputs();
+            try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+                plan.execute();
+                plan.execute();
+            }
+            assertEquals(inPlace + 4, CoreMLLibraryProvider.inPlaceOutputs(), "outputs written in place");
+            assertEquals(copied, CoreMLLibraryProvider.copiedOutputs(), "outputs copied");
+        }
+        assertAddMul(x, y, prod, sum);
+    }
+
+    @Test
+    public void testEveryOutputAccountedFor() throws TornadoExecutionPlanException {
+        // On every compute unit each output is either written in place or copied, once per prediction.
+        FloatArray x = values(N, -1, 1, 9);
+        FloatArray y = values(N, -1, 1, 10);
+        for (ComputeUnits units : ComputeUnits.values()) {
+            FloatArray prod = new FloatArray(N);
+            FloatArray sum = new FloatArray(N);
+            try (CoreMLModel model = CoreML.load(addMulModel(), CoreMLOptions.computeUnits(units))) {
+                TaskGraph taskGraph = new TaskGraph("g") //
+                        .transferToDevice(DataTransferMode.EVERY_EXECUTION, x, y) //
+                        .libraryTask("addmul", CoreML::predict, model, x, y, prod, sum) //
+                        .transferToHost(DataTransferMode.EVERY_EXECUTION, prod, sum);
+                long inPlace = CoreMLLibraryProvider.inPlaceOutputs();
+                long copied = CoreMLLibraryProvider.copiedOutputs();
+                try (TornadoExecutionPlan plan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+                    plan.execute();
+                }
+                long newInPlace = CoreMLLibraryProvider.inPlaceOutputs() - inPlace;
+                long newCopied = CoreMLLibraryProvider.copiedOutputs() - copied;
+                if (Boolean.getBoolean("tornado.unittests.verbose")) {
+                    System.out.println("\t" + units + ": " + newInPlace + " outputs in place, " + newCopied + " copied");
+                }
+                assertEquals(2, newInPlace + newCopied, units + ": outputs accounted for");
+            }
+            assertAddMul(x, y, prod, sum);
+        }
+    }
+
+    @Test
     public void testBetweenKernels() throws TornadoExecutionPlanException {
         // kernel -> Core ML -> kernel with no host transfers in between: Core ML reads what the first
         // kernel wrote, the second kernel reads what Core ML wrote.
