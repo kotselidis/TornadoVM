@@ -70,6 +70,21 @@ Each array holds exactly as many elements as its feature's shape, in row-major o
 `model.getInputs()` and `model.getOutputs()` list the features in task order, with their shapes and
 types.
 
+## Where Core ML runs a model
+
+`model.computePlan()` (macOS 14.4 or newer) asks Core ML where it places each operation of the model
+under the model's compute units: the preferred device (`CPU`, `GPU` or `NEURAL_ENGINE`), the devices
+that could run it, and for ML programs the operation's estimated share of the model's cost.
+`CoreML.availableComputeDevices()` lists the devices of the host.
+
+```java
+try (CoreMLModel model = CoreML.load("Model.mlpackage", CoreMLOptions.computeUnits(ComputeUnits.CPU_AND_NEURAL_ENGINE))) {
+    CoreMLComputePlan plan = model.computePlan();
+    System.out.println(plan.countByDevice());           // e.g. {CPU=3, NEURAL_ENGINE=118}
+    plan.getOperations().forEach(System.out::println);  // name, type, preferred, supported, cost
+}
+```
+
 ## How a task runs
 
 - On the Metal backend every TornadoVM buffer is a shared-storage `MTLBuffer`, so the CPU can address

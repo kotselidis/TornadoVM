@@ -216,6 +216,7 @@ __TEST_THE_WORLD__ = [
     TestEntry(testName="uk.ac.manchester.tornado.unittests.mlx.TestMlxAsyncDispatch",
               testParameters=["-Dtornado.mlx.async=true"]),
     TestEntry("uk.ac.manchester.tornado.unittests.coreml.TestCoreML"),
+    TestEntry("uk.ac.manchester.tornado.unittests.coreml.TestCoreMLComputePlan"),
     TestEntry(testName="uk.ac.manchester.tornado.unittests.coreml.TestCoreMLAsyncDispatch",
               testParameters=["-Dtornado.mlx.async=true"]),
     TestEntry("uk.ac.manchester.tornado.unittests.virtualization.TestsVirtualLayer"),

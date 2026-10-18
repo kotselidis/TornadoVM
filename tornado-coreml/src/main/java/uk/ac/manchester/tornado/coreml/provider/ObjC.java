@@ -18,6 +18,7 @@
 package uk.ac.manchester.tornado.coreml.provider;
 
 import static uk.ac.manchester.tornado.runtime.ffm.FFMSupport.C_CHAR;
+import static uk.ac.manchester.tornado.runtime.ffm.FFMSupport.C_DOUBLE;
 import static uk.ac.manchester.tornado.runtime.ffm.FFMSupport.C_LONG;
 import static uk.ac.manchester.tornado.runtime.ffm.FFMSupport.C_POINTER;
 
@@ -148,6 +149,15 @@ final class ObjC {
     static boolean sendBoolean(long receiver, String selector, long argument) {
         try {
             return (byte) msgSend(FunctionDescriptor.of(C_CHAR, C_LONG, C_LONG, C_LONG)).invokeExact(receiver, sel(selector), argument) != 0;
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    /** A message whose result is a {@code double}. */
+    static double sendDouble(long receiver, String selector) {
+        try {
+            return (double) msgSend(FunctionDescriptor.of(C_DOUBLE, C_LONG, C_LONG)).invokeExact(receiver, sel(selector));
         } catch (Throwable t) {
             throw rethrow(t);
         }

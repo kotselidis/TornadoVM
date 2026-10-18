@@ -17,6 +17,8 @@
  */
 package uk.ac.manchester.tornado.coreml;
 
+import java.util.Set;
+
 import uk.ac.manchester.tornado.api.common.Access;
 import uk.ac.manchester.tornado.api.common.LibraryTaskDescriptor;
 import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
@@ -57,6 +59,11 @@ public final class CoreML {
     /** Whether Core ML can run library tasks on this host. */
     public static boolean isAvailable() {
         return CoreMLLibraryProvider.isAvailable();
+    }
+
+    /** The devices Core ML can use on this host (macOS 14 or newer). */
+    public static Set<ComputeDevice> availableComputeDevices() {
+        return CoreMLRuntime.availableComputeDevices();
     }
 
     /** Loads a model ({@code .mlpackage}, {@code .mlmodel} or compiled {@code .mlmodelc}) with Core ML's defaults. */

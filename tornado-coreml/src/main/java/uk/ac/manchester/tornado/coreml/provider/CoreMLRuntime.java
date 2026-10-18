@@ -37,10 +37,12 @@ import java.lang.foreign.ValueLayout;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,6 +53,8 @@ import uk.ac.manchester.tornado.api.types.arrays.DoubleArray;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+import uk.ac.manchester.tornado.coreml.ComputeDevice;
+import uk.ac.manchester.tornado.coreml.CoreMLComputePlan;
 import uk.ac.manchester.tornado.coreml.CoreMLDataType;
 import uk.ac.manchester.tornado.coreml.CoreMLModel;
 import uk.ac.manchester.tornado.coreml.CoreMLModel.Feature;
@@ -147,15 +151,9 @@ public final class CoreMLRuntime {
                     throw new TornadoRuntimeException("[ERROR] Cannot compile Core ML model " + path + ": " + errorMessage(error));
                 }
             }
-            long configuration = newObject("MLModelConfiguration");
+            String compiledPath = string(send(url, "path"));
+            long configuration = configuration(options);
             try {
-                send(configuration, "setComputeUnits:", options.getComputeUnits().value());
-                if (options.getFunction() != null) {
-                    if (!ObjC.sendBoolean(configuration, "respondsToSelector:", ObjC.sel("setFunctionName:"))) {
-                        throw new TornadoLibraryTaskNotSupported("Core ML model functions need macOS 15 or newer");
-                    }
-                    send(configuration, "setFunctionName:", nsString(options.getFunction()));
-                }
                 error = FFMSupport.scratchPointer();
                 model = send(objcClass("MLModel"), "modelWithContentsOfURL:configuration:error:", url, configuration, error.address());
             } finally {
@@ -168,13 +166,27 @@ public final class CoreMLRuntime {
             long description = send(model, "modelDescription");
             List<Feature> inputs = features(path, send(description, "inputDescriptionsByName"), options.getInputs(), options, true);
             List<Feature> outputs = features(path, send(description, "outputDescriptionsByName"), options.getOutputs(), options, false);
-            CoreMLModel loaded = new CoreMLModel(path, options, inputs, outputs, model);
+            CoreMLModel loaded = new CoreMLModel(path, compiledPath, options, inputs, outputs, model);
             model = 0;
             return loaded;
         } finally {
             ObjC.release(model);
             poolPop(pool);
         }
+    }
+
+    /** An {@code MLModelConfiguration} for these options, owned by the caller. */
+    private static long configuration(CoreMLOptions options) {
+        long configuration = newObject("MLModelConfiguration");
+        send(configuration, "setComputeUnits:", options.getComputeUnits().value());
+        if (options.getFunction() != null) {
+            if (!ObjC.sendBoolean(configuration, "respondsToSelector:", ObjC.sel("setFunctionName:"))) {
+                ObjC.release(configuration);
+                throw new TornadoLibraryTaskNotSupported("Core ML model functions need macOS 15 or newer");
+            }
+            send(configuration, "setFunctionName:", nsString(options.getFunction()));
+        }
+        return configuration;
     }
 
     /** The multi-array features of a description dictionary, in the requested order or by name. */
@@ -222,6 +234,116 @@ public final class CoreMLRuntime {
     /** Releases an object retained by {@link #load}. */
     public static void release(long object) {
         ObjC.release(object);
+    }
+
+    // ---------------------------------------------------------------- Placement
+
+    /** How long Core ML may take to build a compute plan. */
+    private static final long COMPUTE_PLAN_TIMEOUT_SECONDS = 120;
+
+    /** The devices Core ML can use on this host (macOS 14 or newer). */
+    public static Set<ComputeDevice> availableComputeDevices() {
+        checkAvailable();
+        long modelClass = objcClass("MLModel");
+        if (!ObjC.sendBoolean(modelClass, "respondsToSelector:", ObjC.sel("availableComputeDevices"))) {
+            throw new TornadoLibraryTaskNotSupported("Listing Core ML compute devices needs macOS 14 or newer");
+        }
+        long pool = poolPush();
+        try {
+            return devices(send(modelClass, "availableComputeDevices"));
+        } finally {
+            poolPop(pool);
+        }
+    }
+
+    private static ComputeDevice device(long device) {
+        if (ObjC.sendBoolean(device, "isKindOfClass:", objcClass("MLNeuralEngineComputeDevice"))) {
+            return ComputeDevice.NEURAL_ENGINE;
+        }
+        if (ObjC.sendBoolean(device, "isKindOfClass:", objcClass("MLGPUComputeDevice"))) {
+            return ComputeDevice.GPU;
+        }
+        return ComputeDevice.CPU;
+    }
+
+    private static Set<ComputeDevice> devices(long array) {
+        Set<ComputeDevice> devices = EnumSet.noneOf(ComputeDevice.class);
+        for (long i = 0; i < count(array); i++) {
+            devices.add(device(objectAt(array, i)));
+        }
+        return devices;
+    }
+
+    /** {@code MLComputePlan} of a loaded model, for its compiled model and options. */
+    public static CoreMLComputePlan computePlan(CoreMLModel model) {
+        checkAvailable();
+        long planClass = objcClass("MLComputePlan");
+        if (planClass == 0 || !ObjCBlock.isAvailable()) {
+            throw new TornadoLibraryTaskNotSupported("Core ML compute plans need macOS 14.4 or newer");
+        }
+        long plan = 0;
+        long pool = poolPush();
+        try {
+            long url = send(objcClass("NSURL"), "fileURLWithPath:", nsString(model.getCompiledPath()));
+            long configuration = configuration(model.getOptions());
+            ObjCBlock.ObjectHandler handler = new ObjCBlock.ObjectHandler();
+            try {
+                send(planClass, "loadContentsOfURL:configuration:completionHandler:", url, configuration, handler.block());
+            } finally {
+                ObjC.release(configuration);
+            }
+            plan = handler.await("Cannot build the Core ML compute plan of " + model.getPath(), COMPUTE_PLAN_TIMEOUT_SECONDS);
+
+            List<CoreMLComputePlan.Operation> operations = new ArrayList<>();
+            long structure = send(plan, "modelStructure");
+            long network = send(structure, "neuralNetwork");
+            long program = send(structure, "program");
+            if (network != 0) {
+                long layers = send(network, "layers");
+                for (long i = 0; i < count(layers); i++) {
+                    long layer = objectAt(layers, i);
+                    long usage = send(plan, "computeDeviceUsageForNeuralNetworkLayer:", layer);
+                    if (usage != 0) {
+                        operations.add(new CoreMLComputePlan.Operation(string(send(layer, "name")), string(send(layer, "type")), device(send(usage, "preferredComputeDevice")),
+                                devices(send(usage, "supportedComputeDevices")), Double.NaN));
+                    }
+                }
+            } else if (program != 0) {
+                String function = model.getOptions().getFunction() == null ? "main" : model.getOptions().getFunction();
+                long main = send(send(program, "functions"), "objectForKey:", nsString(function));
+                if (main == 0) {
+                    throw new TornadoRuntimeException("[ERROR] Core ML program " + model.getPath() + " has no function " + function);
+                }
+                addOperations(plan, send(main, "block"), operations);
+            } else {
+                throw new TornadoLibraryTaskNotSupported("Core ML compute plans cover neural networks and ML programs, not " + model.getPath());
+            }
+            return new CoreMLComputePlan(operations);
+        } finally {
+            ObjC.release(plan);
+            poolPop(pool);
+        }
+    }
+
+    /** The operations of a program block and of the blocks nested in them, skipping those with no device (constants). */
+    private static void addOperations(long plan, long block, List<CoreMLComputePlan.Operation> operations) {
+        long list = send(block, "operations");
+        for (long i = 0; i < count(list); i++) {
+            long operation = objectAt(list, i);
+            long usage = send(plan, "computeDeviceUsageForMLProgramOperation:", operation);
+            if (usage != 0) {
+                long outputs = send(operation, "outputs");
+                String name = count(outputs) > 0 ? string(send(objectAt(outputs, 0), "name")) : "";
+                long cost = send(plan, "estimatedCostOfMLProgramOperation:", operation);
+                double weight = cost == 0 ? Double.NaN : ObjC.sendDouble(cost, "weight");
+                operations.add(new CoreMLComputePlan.Operation(name, string(send(operation, "operatorName")), device(send(usage, "preferredComputeDevice")), devices(send(usage, "supportedComputeDevices")),
+                        weight));
+            }
+            long blocks = send(operation, "blocks");
+            for (long b = 0; b < count(blocks); b++) {
+                addOperations(plan, objectAt(blocks, b), operations);
+            }
+        }
     }
 
     // ---------------------------------------------------------------- Prediction

@@ -48,14 +48,16 @@ public final class CoreMLModel implements AutoCloseable {
     }
 
     private final String path;
+    private final String compiledPath;
     private final CoreMLOptions options;
     private final List<Feature> inputs;
     private final List<Feature> outputs;
     private volatile long handle;
 
-    /** A loaded model; {@code handle} is the retained {@code MLModel}. */
-    public CoreMLModel(String path, CoreMLOptions options, List<Feature> inputs, List<Feature> outputs, long handle) {
+    /** A loaded model, compiled at {@code compiledPath}; {@code handle} is the retained {@code MLModel}. */
+    public CoreMLModel(String path, String compiledPath, CoreMLOptions options, List<Feature> inputs, List<Feature> outputs, long handle) {
         this.path = path;
+        this.compiledPath = compiledPath;
         this.options = options;
         this.inputs = List.copyOf(inputs);
         this.outputs = List.copyOf(outputs);
@@ -65,6 +67,11 @@ public final class CoreMLModel implements AutoCloseable {
     /** The path the model was loaded from. */
     public String getPath() {
         return path;
+    }
+
+    /** The compiled model ({@code .mlmodelc}) Core ML loaded. */
+    public String getCompiledPath() {
+        return compiledPath;
     }
 
     public CoreMLOptions getOptions() {
@@ -89,6 +96,15 @@ public final class CoreMLModel implements AutoCloseable {
     /** The feature at a task argument position. */
     public Feature getFeature(int position) {
         return position < inputs.size() ? inputs.get(position) : outputs.get(position - inputs.size());
+    }
+
+    /**
+     * Where Core ML places each operation of this model under its compute units (macOS 14.4 or
+     * newer). Each call asks Core ML again.
+     */
+    public CoreMLComputePlan computePlan() {
+        nativeHandle();
+        return CoreMLRuntime.computePlan(this);
     }
 
     /** The {@code MLModel}; fails once the model is closed. */

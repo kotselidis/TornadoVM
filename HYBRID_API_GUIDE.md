@@ -503,6 +503,9 @@ TaskGraph graph = new TaskGraph("g")
   strides from the Neural Engine) is copied into the TornadoVM buffer after the prediction.
 - **Synchronisation.** Core ML runs on the host and returns when the prediction is done. The kernels
   queued before the task are finished first, and the kernels after it see its outputs.
+- **Placement.** `model.computePlan()` (macOS 14.4+) reports the device Core ML prefers for each
+  operation (`CPU`, `GPU`, `NEURAL_ENGINE`) and, for ML programs, its estimated cost; use it to check
+  that a model actually reaches the Neural Engine.
 - Close the model (`CoreMLModel` is `AutoCloseable`) after the last execution plan that uses it.
 
 See [`tornado-coreml/README.md`](tornado-coreml/README.md).
