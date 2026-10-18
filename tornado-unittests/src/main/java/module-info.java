@@ -14,6 +14,7 @@ open module tornado.unittests {
     requires tornado.cutlass;
     requires tornado.cuvs;
     requires tornado.mlx;
+    requires tornado.coreml;
     requires java.desktop;
     requires jdk.incubator.vector;
 
@@ -35,6 +36,7 @@ open module tornado.unittests {
     exports uk.ac.manchester.tornado.unittests.cutlass;
     exports uk.ac.manchester.tornado.unittests.cuvs;
     exports uk.ac.manchester.tornado.unittests.mlx;
+    exports uk.ac.manchester.tornado.unittests.coreml;
     exports uk.ac.manchester.tornado.unittests.fields;
     exports uk.ac.manchester.tornado.unittests.flatmap;
     exports uk.ac.manchester.tornado.unittests.fuzz;

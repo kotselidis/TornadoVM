@@ -215,6 +215,9 @@ __TEST_THE_WORLD__ = [
     TestEntry("uk.ac.manchester.tornado.unittests.mlx.TestMlxRandom"),
     TestEntry(testName="uk.ac.manchester.tornado.unittests.mlx.TestMlxAsyncDispatch",
               testParameters=["-Dtornado.mlx.async=true"]),
+    TestEntry("uk.ac.manchester.tornado.unittests.coreml.TestCoreML"),
+    TestEntry(testName="uk.ac.manchester.tornado.unittests.coreml.TestCoreMLAsyncDispatch",
+              testParameters=["-Dtornado.mlx.async=true"]),
     TestEntry("uk.ac.manchester.tornado.unittests.virtualization.TestsVirtualLayer"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestSingleTaskSingleDevice"),
     TestEntry("uk.ac.manchester.tornado.unittests.tasks.TestMultipleTasksSingleDevice"),
@@ -1069,6 +1072,8 @@ def runTestTheWorld(options, args):
             continue
         if args.mlx and ".unittests.mlx." not in t.testName:
             continue
+        if args.coreml and ".unittests.coreml." not in t.testName:
+            continue
         command = options
         if t.testParameters:
             for testParam in t.testParameters:
@@ -1167,6 +1172,8 @@ def parseArguments():
                         help="Quick pass without stress memory and output for logs in a file.")
     parser.add_argument('--mlx', action="store_true", dest="mlx", default=False,
                         help="Run only the Apple MLX library-task tests (Metal backend with MLX installed)")
+    parser.add_argument('--coreml', action="store_true", dest="coreml", default=False,
+                        help="Run only the Apple Core ML library-task tests (Metal backend, macOS 13 or newer)")
     parser.add_argument('--device', dest="device", default=None, help="Set an specific device. E.g `s0.t0.device=0:1`")
     parser.add_argument('--printExec', dest="printExecution", action="store_true", default=False,
                         help="Print OpenCL Kernel Execution Time")

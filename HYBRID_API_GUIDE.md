@@ -3,14 +3,14 @@
 The **hybrid API** lets a single TornadoVM `TaskGraph` mix JIT-compiled Java
 tasks (`@Parallel` / `KernelContext`) with calls into vendor-optimized native
 GPU libraries — **cuBLAS, cuBLASLt, cuFFT, cuDNN, cuSPARSE, CUTLASS and cuVS** on
-NVIDIA GPUs, and **Apple MLX** on Apple silicon.
+NVIDIA GPUs, and **Apple MLX** and **Core ML** on Apple silicon.
 A native call becomes a **library task**: it shares TornadoVM-managed device
 buffers with the surrounding kernels, runs on the same CUDA stream, and is
 captured into CUDA Graphs — so data produced by a JIT kernel feeds a library
 call (and vice-versa) with **no extra copies and no manual memory management**.
 
 > The NVIDIA providers require the **CUDA backend** (`make BACKEND=cuda`) and an NVIDIA GPU; the
-> Apple MLX provider requires the **Metal backend** (`make BACKEND=metal`) on Apple silicon. A library
+> Apple MLX and Core ML providers require the **Metal backend** (`make BACKEND=metal`) on Apple silicon. A library
 > task on a backend its provider does not support is reported as `UNSUPPORTED`.
 
 ---
@@ -19,7 +19,7 @@ call (and vice-versa) with **no extra copies and no manual memory management**.
 
 1. [Quick start](#1-quick-start)
 2. [Core concepts](#2-core-concepts)
-3. [Provider catalog](#3-provider-catalog) — cuBLAS · cuBLASLt · cuFFT · cuDNN · CUTLASS · cuSPARSE · cuVS · Apple MLX · NCCL
+3. [Provider catalog](#3-provider-catalog) — cuBLAS · cuBLASLt · cuFFT · cuDNN · CUTLASS · cuSPARSE · cuVS · Apple MLX · NCCL · Apple Core ML
 4. [Composition patterns](#4-composition-patterns)
 5. [CUDA Graphs](#5-cuda-graphs)
 6. [Execution-plan controls](#6-execution-plan-controls)
@@ -121,6 +121,7 @@ Each provider registers a unique id, matched by the factory:
 | `nvidia/cutlass` | `tornado-cutlass` |
 | `nvidia/cuvs` | `tornado-cuvs` |
 | `apple/mlx` | `tornado-mlx` |
+| `apple/coreml` | `tornado-coreml` |
 | `nvidia/nccl` | `tornado-nccl` |
 
 ---
@@ -465,6 +466,47 @@ refers to it.
 exchange against handing the buffers on through the host (`-Dtornado.nccl.benchmark.cudaGraph=true`
 runs every plan as a CUDA graph).
 
+### 3.10 Apple Core ML — whole-model inference on CPU, GPU and Neural Engine (`apple/coreml`)
+
+[Core ML](https://developer.apple.com/documentation/coreml) predictions as library tasks, through the
+Metal backend. Unlike the other providers, one task is a whole model: an `.mlpackage`, `.mlmodel` or
+compiled `.mlmodelc`, typically converted from PyTorch with
+[coremltools](https://github.com/apple/coremltools). Core ML decides which parts of the model run on
+the CPU, the GPU or the Neural Engine, within the compute units you allow; it is the only public way
+to reach the Neural Engine.
+
+A model is loaded once; each `CoreML::predict` task runs one prediction, with the model's inputs and
+then its outputs as TornadoVM arrays:
+
+```java
+CoreMLModel model = CoreML.load("Classifier.mlpackage", CoreMLOptions.computeUnits(ComputeUnits.ALL));
+
+TaskGraph graph = new TaskGraph("g")
+    .transferToDevice(DataTransferMode.EVERY_EXECUTION, image)
+    .task("pre", MyKernels::normalise, context, image, pixels)        // KernelContext kernel
+    .libraryTask("classify", CoreML::predict, model, pixels, logits)  // Core ML, in place
+    .task("post", MyKernels::softmax, context, logits, probabilities) // KernelContext kernel
+    .transferToHost(DataTransferMode.EVERY_EXECUTION, probabilities);
+```
+
+- **Feature order.** Inputs are passed in the order of their names, then outputs, also by name. Set
+  another order with `CoreMLOptions.inputs(...)` / `.outputs(...)`; `model.getInputs()` and
+  `model.getOutputs()` list it.
+- **Types.** Every input and output is a multi-array: `FloatArray` (float32), `HalfFloatArray`
+  (float16), `DoubleArray` (float64) or `IntArray` (int32). Each array has exactly as many elements
+  as its feature's shape. A feature with a flexible shape needs `CoreMLOptions.shape(name, dims...)`.
+- **Compute units.** `CPU_ONLY`, `CPU_AND_GPU`, `CPU_AND_NEURAL_ENGINE` or `ALL` (default).
+  `CoreMLOptions.function(name)` picks a function of a multi-function model (macOS 15+).
+- **No copies where Core ML allows it.** TornadoVM's Metal buffers are shared with the CPU, so each
+  input is wrapped in place as an `MLMultiArray`, and each output is handed to Core ML as an output
+  backing that it writes directly. An output Core ML returns elsewhere (for example with padded
+  strides from the Neural Engine) is copied into the TornadoVM buffer after the prediction.
+- **Synchronisation.** Core ML runs on the host and returns when the prediction is done. The kernels
+  queued before the task are finished first, and the kernels after it see its outputs.
+- Close the model (`CoreMLModel` is `AutoCloseable`) after the last execution plan that uses it.
+
+See [`tornado-coreml/README.md`](tornado-coreml/README.md).
+
 > **cuTENSOR** (`nvidia/cutensor`, tensor contractions / einsum) is implemented
 > on branch `hybrid-cutensor` but is **not part of this build**.
 
@@ -630,6 +672,8 @@ The Apple MLX provider (`tornado-mlx`) builds with the Metal backend and has no 
 make BACKEND=metal       # activates the metal-backend Maven profile
 ```
 
+The Apple Core ML provider (`tornado-coreml`) builds the same way, also with no native module.
+
 ### 8.2 Per-library install requirements
 
 | Provider | Extra dependency | How to get it |
@@ -640,6 +684,7 @@ make BACKEND=metal       # activates the metal-backend Maven profile
 | CUTLASS | header-only, **CUDA 12+** | fetched by CMake `FetchContent` (v3.5.1); no install |
 | cuSPARSE | in the CUDA toolkit | nothing |
 | Apple MLX | `mlx.metallib` (MLX) | `brew install mlx`; or `-Dtornado.mlx.metallib=<path>` |
+| Apple Core ML | `CoreML.framework`, macOS 13+ | part of macOS; models come from coremltools or Xcode |
 | cuVS | `libcuvs_c` (cuVS 26.08) | `pip install libcuvs-cu12` (or conda `libcuvs`), then add its `lib64` to `LD_LIBRARY_PATH` |
 | NCCL | `libnccl.so.2` (NCCL 2.x) | `apt install libnccl2` or `pip install nvidia-nccl-cu13` (then add its `nvidia/nccl/lib` to `LD_LIBRARY_PATH`) |
 
@@ -781,6 +826,8 @@ Key SPI types (in `tornado-runtime/.../runtime/library/spi/`):
 | CUTLASS FP16 rejects a shape | `k` or `n` not a multiple of 4 (8-byte alignment). Pad, or use `cutlassSgemm` (FP32, unconstrained). |
 | Wrong result from cuBLAS | Column-major mismatch — transpose (SGEMV) or swap operands (SGEMM). |
 | MLX task fails with ``Library `apple/mlx` is not supported`` | Default device is not Metal, or `mlx.metallib` is missing. Build `make BACKEND=metal`; `brew install mlx`. |
+| Core ML task fails with ``Library `apple/coreml` is not supported`` | Default device is not Metal, or macOS is older than 13. Build `make BACKEND=metal`. |
+| `Core ML model ... takes N inputs ... and M outputs ..., not K arrays` | Pass every input, then every output, in `model.getInputs()` / `getOutputs()` order. |
 | `MLX <op>: no TornadoVM/MLX kernel takes these arguments` | The arguments are outside what the TornadoVM/MLX kernels reproduce (dtype or shape). Change the shape (e.g. reduce trailing axes) or the dtype. |
 | `CUDA_ERROR_LAUNCH_FAILED` after a tensor-core call | The kernel was built for the wrong SM. Rebuild with `CUDA_ARCH=<your cc>`. |
 
@@ -790,6 +837,6 @@ Key SPI types (in `tornado-runtime/.../runtime/library/spi/`):
 
 - `docs/source/hybrid-api.rst` — architecture reference (SPI internals).
 - Per-provider READMEs: `tornado-cublas/`, `tornado-cufft/`, `tornado-cudnn/`,
-  `tornado-cutlass/`, `tornado-cusparse/`, `tornado-cuvs/`, `tornado-mlx/`.
+  `tornado-cutlass/`, `tornado-cusparse/`, `tornado-cuvs/`, `tornado-mlx/`, `tornado-coreml/`.
 - Unit tests double as worked examples:
-  `tornado-unittests/.../unittests/{cublas,cufft,cudnn,cusparse,cutlass,cuvs,mlx}/`.
+  `tornado-unittests/.../unittests/{cublas,cufft,cudnn,cusparse,cutlass,cuvs,mlx,coreml}/`.
