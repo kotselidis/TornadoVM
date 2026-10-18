@@ -155,6 +155,10 @@ public class TestCoreMLNeuralEngine extends CoreMLTestBase {
                     System.out.println("\t" + units + ": " + newInPlace + " output in place, " + newCopied + " copied");
                 }
                 assertEquals(1, newInPlace + newCopied, units + ": outputs accounted for");
+                if (units == ComputeUnits.CPU_AND_NEURAL_ENGINE) {
+                    // The Neural Engine writes its float16 output straight into the TornadoVM buffer.
+                    assertEquals(1, newInPlace, units + ": output written in place");
+                }
             }
             assertMlp(units.name(), expected, y);
         }
