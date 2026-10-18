@@ -19,12 +19,15 @@ open module tornado.examples {
     requires transitive java.desktop;
     requires transitive tornado.api;
     requires tornado.cublas;
+    // Only on the Metal backend, which adds the module; the Core ML examples are not loaded elsewhere.
+    requires static tornado.coreml;
     requires jdk.incubator.vector;
 
     exports uk.ac.manchester.tornado.examples;
     exports uk.ac.manchester.tornado.examples.arrays;
     exports uk.ac.manchester.tornado.examples.common;
     exports uk.ac.manchester.tornado.examples.compute;
+    exports uk.ac.manchester.tornado.examples.coreml;
     exports uk.ac.manchester.tornado.examples.fft;
     exports uk.ac.manchester.tornado.examples.flatmap;
     exports uk.ac.manchester.tornado.examples.kernelcontext.cdp;
