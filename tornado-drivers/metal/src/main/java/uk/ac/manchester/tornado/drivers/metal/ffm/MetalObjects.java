@@ -1058,6 +1058,10 @@ public final class MetalObjects {
                     MetalAPI.waitUntilCompleted(commandBuffer);
                 }
             }
+            // From now on the queue is tracked, so a later finish with nothing committed in between returns
+            // at once instead of waiting for another empty command buffer (a host library task calls this
+            // before every launch).
+            queueEvent(queue);
             return;
         }
         awaitForeignWork(queueEvent);
