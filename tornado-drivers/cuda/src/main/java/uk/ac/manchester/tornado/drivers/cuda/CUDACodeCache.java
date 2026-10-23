@@ -49,6 +49,7 @@ import uk.ac.manchester.tornado.api.exceptions.TornadoDeviceTileNotSupported;
 import uk.ac.manchester.tornado.drivers.cuda.enums.CUDABuildStatus;
 import uk.ac.manchester.tornado.drivers.cuda.enums.CUDADeviceType;
 import uk.ac.manchester.tornado.drivers.cuda.graal.CUDAInstalledCode;
+import uk.ac.manchester.tornado.drivers.cuda.graal.backend.CUDADynamicSharedMemory;
 import uk.ac.manchester.tornado.runtime.common.RuntimeUtilities;
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
@@ -315,6 +316,10 @@ public class CUDACodeCache {
         CUDAKernel kernel = null;
         if (status == CL_BUILD_SUCCESS) {
             kernel = program.clCreateKernel(entryPoint);
+            final int dynamicSharedMemory = CUDADynamicSharedMemory.bytesFor(new String(source, StandardCharsets.UTF_8), entryPoint);
+            if (dynamicSharedMemory > 0) {
+                kernel.setDynamicSharedMemory(dynamicSharedMemory);
+            }
             kernelAvailable = true;
         }
 

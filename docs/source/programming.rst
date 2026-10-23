@@ -194,6 +194,13 @@ Both barriers synchronise a work-group (a CUDA block), not the whole grid.
 accesses visible to the rest of the block, so it is the correct mapping for
 ``globalBarrier()`` as well.
 
+On the CUDA backend, local arrays are static ``__shared__`` arrays while a
+kernel's local arrays add up to 48 KB or less. Above that, the backend places
+them in dynamic shared memory and opts the kernel in to the device's larger
+per-block limit (for example, 99 KB on sm_86 and 227 KB on sm_90). A kernel
+that needs more than the device allows fails with an error that gives both
+sizes.
+
 Backend support for the advanced operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

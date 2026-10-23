@@ -474,6 +474,16 @@ public class CUDADevice implements CUDATargetDevice {
         return globalMemorySize;
     }
 
+    /**
+     * The most shared memory one block can use once a kernel opts in to it
+     * ({@code CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN}), above the 48 KB available by
+     * default. Zero when the query fails.
+     */
+    public int getMaxSharedMemoryPerBlockOptin() {
+        CUDAHandles.Device boxed = CUDAHandles.resolve(devicePtr, CUDAHandles.Device.class);
+        return boxed == null ? 0 : attribute(boxed.device(), CUDADriverAPI.CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN);
+    }
+
     @Override
     public long getDeviceLocalMemorySize() {
         if (localMemorySize != -1) {

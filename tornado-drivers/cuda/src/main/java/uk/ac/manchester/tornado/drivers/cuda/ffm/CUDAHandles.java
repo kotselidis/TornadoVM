@@ -213,6 +213,9 @@ public final class CUDAHandles {
          */
         public final List<byte[]> arguments = new ArrayList<>();
 
+        /** Dynamic shared memory each launch requests ({@code sharedMemBytes} of cuLaunchKernel). */
+        public int dynamicSharedMemoryBytes;
+
         public Kernel(long function, long module, String name) {
             this.function = function;
             this.module = module;
